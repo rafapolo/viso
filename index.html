@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluxo de Despesas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script type="module">
+        import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/+esm';
+        
+        let db;
+        let conn;
+        
+        async function initDuckDB() {
+            console.log('🚀 Initializing DuckDB...');
+            
+            // Initialize DuckDB
+            const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+            const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+            const worker = await duckdb.createWorker(bundle.mainWorker);
+            const logger = new duckdb.ConsoleLogger();
+            db = new duckdb.AsyncDuckDB(logger, worker);
+            await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+            
+            conn = await db.connect();
+            console.log('✅ DuckDB initialized');
+            
+            return { db, conn };
+        }
+        
+        async function loadParquetData() {
+            try {
+                console.log('📁 Loading parquet file into DuckDB...');
+                
+                // Fetch the parquet file as a blob
+                const response = await fetch('./public/despesas.parquet');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                console.log(`📊 Downloaded ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)} MB`);
+                
+                // Register the file with DuckDB
+                await db.registerFileBuffer('despesas.parquet', new Uint8Array(arrayBuffer));
+                
+                // Create a view from the registered parquet file
+                await conn.query(`
+                    CREATE VIEW despesas AS 
+                    SELECT * FROM read_parquet('despesas.parquet')
+                `);
+                
+                // Get total count
+                const countResult = await conn.query("SELECT COUNT(*) as total FROM despesas");
+                const totalRecords = countResult.toArray()[0].total;
+                console.log(`✅ Loaded ${totalRecords.toLocaleString()} records from parquet`);
+                
+                return totalRecords;
+                
+            } catch (error) {
+                console.error('❌ Error loading parquet:', error);
+                throw error;
+            }
+        }
+        
+        async function queryAggregatedData(minValue = 0, partyFilter = '', categoryFilter = '') {
+            console.log('🔍 Querying aggregated data...');
+            
+            let whereClause = "WHERE nome_parlamentar IS NOT NULL AND fornecedor IS NOT NULL";
+            
+            if (minValue > 0) {
+                whereClause += ` AND valor_liquido >= ${minValue}`;
+            }
+            
+            if (partyFilter) {
+                whereClause += ` AND sigla_partido = '${partyFilter}'`;
+            }
+            
+            if (categoryFilter) {
+                whereClause += ` AND categoria_despesa = '${categoryFilter}'`;
+            }
+            
+            const query = `
+                SELECT 
+                    nome_parlamentar,
+                    sigla_partido,
+                    fornecedor,
+                    categoria_despesa,
+                    SUM(valor_liquido) as valor_total,
+                    COUNT(*) as num_transacoes
+                FROM despesas 
+                ${whereClause}
+                GROUP BY nome_parlamentar, sigla_partido, fornecedor, categoria_despesa
+                HAVING SUM(valor_liquido) > 1000
+                ORDER BY valor_total DESC
+                LIMIT 10000
+            `;
+            
+            console.log('📊 Executing query:', query);
+            const result = await conn.query(query);
+            const data = result.toArray();
+            
+            console.log(`✅ Query returned ${data.length} aggregated records`);
+            return data;
+        }
+        
+        async function getFilterOptions() {
+            console.log('🔍 Getting filter options...');
+            
+            // Get unique parties
+            const partiesResult = await conn.query(`
+                SELECT DISTINCT sigla_partido 
+                FROM despesas 
+                WHERE sigla_partido IS NOT NULL 
+                ORDER BY sigla_partido
+            `);
+            const parties = partiesResult.toArray().map(r => r.sigla_partido);
+            
+            // Get unique categories
+            const categoriesResult = await conn.query(`
+                SELECT DISTINCT categoria_despesa 
+                FROM despesas 
+                WHERE categoria_despesa IS NOT NULL 
+                ORDER BY categoria_despesa
+            `);
+            const categories = categoriesResult.toArray().map(r => r.categoria_despesa);
+            
+            return { parties, categories };
+        }
+        
+        // Make functions globally available
+        window.duckdbAPI = {
+            initDuckDB,
+            loadParquetData,
+            queryAggregatedData,
+            getFilterOptions
+        };
+        
+    </script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'deputy': '#ff6b6b',
+                        'supplier': '#4ecdc4'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4ecdc4;
+            cursor: pointer;
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4ecdc4;
+            cursor: pointer;
+            border: none;
+        }
+        
+        /* Full screen visualization */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        #visualization {
+            position: fixed !important;
+            top: 0 !important;
+            left: 360px !important;
+            width: calc(100vw - 360px) !important;
+            height: 100vh !important;
+            z-index: 1;
+            border: none !important;
+            border-radius: 0 !important;
+        }
+        
+        .left-sidebar {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            bottom: 20px;
+            width: 320px;
+            z-index: 10;
+            background: rgba(17, 24, 39, 0.95);
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            max-height: calc(100vh - 40px);
+        }
+        
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+        }
+        
+        .sidebar-section:last-child {
+            border-bottom: none;
+            flex: 1;
+        }
+        
+        .sidebar-header {
+            text-align: center;
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .legend-items {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        #node-info-content {
+            display: none;
+            padding-top: 12px;
+            border-top: 1px solid rgba(75, 85, 99, 0.3);
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-white font-sans">
+    <!-- Left Sidebar -->
+    <div class="left-sidebar">
+        <!-- Header Section -->
+        <div class="sidebar-section sidebar-header">
+            <h1 class="text-lg font-bold bg-gradient-to-r from-deputy to-supplier bg-clip-text text-transparent mb-1">
+                Visualização de Despesas
+            </h1>
+            <p class="text-gray-400 text-xs">
+                Análise dos gastos públicos dos deputados
+            </p>
+        </div>
+        <!-- Legend Section -->
+        <div class="sidebar-section">
+            <h3 class="text-sm font-semibold text-gray-300 mb-3">Legenda</h3>
+            <div class="legend-items">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-deputy"></div>
+                    <span class="text-gray-300 text-xs">Deputados</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-supplier"></div>
+                    <span class="text-gray-300 text-xs">Empresas</span>
+                </div>
+            </div>
+        </div>        
+        <!-- Controls Section -->
+        <div class="sidebar-section">
+            <div class="space-y-4">
+                <div>
+                    <label for="partyFilter" class="text-xs font-medium text-gray-300 block mb-2">Partido:</label>
+                    <select id="partyFilter" class="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-xs">
+                        <option value="">Todos os Partidos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="categoryFilter" class="text-xs font-medium text-gray-300 block mb-2">Categoria:</label>
+                    <select id="categoryFilter" class="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-xs">
+                        <option value="">Todas as Categorias</option>
+                    </select>
+                </div>       
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="showCompanyNames" class="w-3 h-3 bg-gray-800 border border-gray-600 rounded">
+                    <label for="showCompanyNames" class="text-xs font-medium text-gray-300">Exibir nome das Empresas</label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="showEdgeAmounts" class="w-3 h-3 bg-gray-800 border border-gray-600 rounded">
+                    <label for="showEdgeAmounts" class="text-xs font-medium text-gray-300">Mostrar gasto</label>
+                </div>
+                <hr class="border-gray-600 border-t opacity-30">
+                <div>
+                    <label class="text-xs font-medium text-gray-300 block mb-1">Valor Mínimo (R$):</label>
+                    <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+                        <span id="minRange">Min: R$ 0</span>
+                        <span id="maxRange">Max: R$ 0</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <span class="text-supplier font-bold text-xs min-w-12" id="minValueValue">0</span>
+                        <input type="range" id="minValue" class="slider flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer opacity-70 hover:opacity-100 transition-opacity" min="0" max="100000" value="0" step="500">
+                    </div>
+                </div>                
+            </div>
+        </div>
+        
+        <!-- Stats Section -->
+        <div class="sidebar-section">
+            <h3 class="text-sm font-semibold text-gray-300 mb-3">Estatísticas</h3>
+            <div class="stats-grid" id="stats">
+                <div class="bg-gray-800 rounded p-3 border-l-2 border-supplier">
+                    <div class="text-lg font-bold text-supplier" id="totalDeputados">-</div>
+                    <div class="text-gray-400 text-xs">Deputados</div>
+                </div>
+                <div class="bg-gray-800 rounded p-3 border-l-2 border-supplier">
+                    <div class="text-lg font-bold text-supplier" id="totalFornecedores">-</div>
+                    <div class="text-gray-400 text-xs">Empresas</div>
+                </div>
+                <div class="bg-gray-800 rounded p-3 border-l-2 border-supplier">
+                    <div class="text-lg font-bold text-supplier" id="totalValue">-</div>
+                    <div class="text-gray-400 text-xs">Total (R$)</div>
+                </div>
+                <div class="bg-gray-800 rounded p-3 border-l-2 border-supplier">
+                    <div class="text-lg font-bold text-supplier" id="totalTransactions">-</div>
+                    <div class="text-gray-400 text-xs">Transações</div>
+                </div>
+            </div>
+        </div>        
+        
+        <!-- Node Info Section -->
+        <div class="sidebar-section" id="node-info-section">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-sm font-semibold text-gray-300">Painel da Entidade</h3>
+                <button id="close-panel" class="text-gray-400 hover:text-white text-lg font-bold hidden">&times;</button>
+            </div>
+            <div id="node-info-content">
+                <p class="text-xs text-gray-400">Clique em um nó para ver detalhes</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Visualization -->
+    <div id="visualization" class="bg-black relative overflow-hidden">
+        <svg id="network-svg" class="w-full h-full cursor-grab"></svg>
+        <div id="loading" class="absolute inset-0 flex flex-col justify-center items-center text-supplier text-lg">
+            <div>Inicializando DuckDB...</div>
+            <div id="loadingProgress" class="text-sm text-gray-400 mt-2"></div>
+        </div>
+        <!-- Zoom controls -->
+        <div class="absolute top-4 right-4 flex flex-col gap-2">
+            <button id="zoom-in" class="bg-gray-800 hover:bg-gray-700 text-white w-8 h-8 rounded flex items-center justify-center text-lg font-bold">+</button>
+            <button id="zoom-out" class="bg-gray-800 hover:bg-gray-700 text-white w-8 h-8 rounded flex items-center justify-center text-lg font-bold">−</button>
+            <button id="zoom-reset" class="bg-gray-800 hover:bg-gray-700 text-white w-8 h-8 rounded flex items-center justify-center text-xs font-bold">⌂</button>
+        </div>
+        <!-- Instructions -->
+        <div class="absolute bottom-2 left-2 text-xs text-gray-400">
+            Wheel: zoom • Drag: pan • Click nodes: info
+        </div>
+    </div>
+
+    <script>
+        let rawData = [];
+        let processedData = { nodes: [], links: [] };
+        
+        // Initialize DuckDB and load data
+        async function loadData() {
+            try {
+                const progressEl = document.getElementById('loadingProgress');
+                
+                progressEl.textContent = 'Inicializando DuckDB...';
+                await window.duckdbAPI.initDuckDB();
+                
+                progressEl.textContent = 'Carregando arquivo parquet...';
+                const totalRecords = await window.duckdbAPI.loadParquetData();
+                
+                progressEl.textContent = 'Configurando filtros...';
+                await populateFilters();
+                
+                progressEl.textContent = 'Processando dados...';
+                await updateVisualization();
+                
+                setupEventListeners();
+                
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                document.getElementById('loading').innerHTML = `Erro: ${error.message}`;
+            }
+        }
+        
+        async function populateFilters() {
+            const { parties, categories } = await window.duckdbAPI.getFilterOptions();
+            
+            const partySelect = document.getElementById('partyFilter');
+            parties.forEach(party => {
+                const option = document.createElement('option');
+                option.value = party;
+                option.textContent = party;
+                partySelect.appendChild(option);
+            });
+            
+            const categorySelect = document.getElementById('categoryFilter');
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category.length > 50 ? category.substring(0, 47) + '...' : category;
+                categorySelect.appendChild(option);
+            });
+        }
+        
+        async function processData() {
+            const minValue = parseFloat(document.getElementById('minValue').value) || 0;
+            const partyFilter = document.getElementById('partyFilter').value;
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            
+            console.log(`🔍 Filters - minValue: ${minValue}, party: ${partyFilter}, category: ${categoryFilter}`);
+            
+            // First, get data without minimum value filter to calculate range
+            const rangeData = await window.duckdbAPI.queryAggregatedData(0, partyFilter, categoryFilter);
+            
+            // Update min/max range based on current party/category filters
+            if (rangeData.length > 0) {
+                const values = rangeData.map(r => Number(r.valor_total));
+                const minVal = Math.min(...values);
+                const maxVal = Math.max(...values);
+                
+                // Update slider range
+                const slider = document.getElementById('minValue');
+                const currentValue = parseInt(slider.value);
+                slider.min = Math.floor(minVal);
+                slider.max = Math.ceil(maxVal);
+                
+                // Ensure current value is within new range
+                if (currentValue > maxVal) {
+                    slider.value = Math.floor(minVal);
+                }
+                
+                // Update range display
+                const formatCurrency = (value) => `R$ ${value.toLocaleString('pt-BR')}`;
+                document.getElementById('minRange').textContent = `Min: ${formatCurrency(minVal)}`;
+                document.getElementById('maxRange').textContent = `Max: ${formatCurrency(maxVal)}`;
+            }
+            
+            // Query DuckDB with all filters including minimum value
+            const aggregatedData = await window.duckdbAPI.queryAggregatedData(minValue, partyFilter, categoryFilter);
+            
+            // Create nodes and links with totals
+            const nodeMap = new Map();
+            const nodeTotals = new Map();
+            const nodes = [];
+            const links = [];
+            
+            let nodeId = 0;
+            
+            // First pass: collect totals for each node
+            aggregatedData.forEach(record => {
+                const deputado = `${record.nome_parlamentar} (${record.sigla_partido})`;
+                const fornecedor = record.fornecedor;
+                
+                // Track deputado totals
+                if (!nodeTotals.has(deputado)) {
+                    nodeTotals.set(deputado, { 
+                        total: 0, 
+                        transactions: 0, 
+                        connections: 0,
+                        type: 'deputado',
+                        party: record.sigla_partido 
+                    });
+                }
+                const deputadoTotals = nodeTotals.get(deputado);
+                deputadoTotals.total += Number(record.valor_total);
+                deputadoTotals.transactions += Number(record.num_transacoes);
+                deputadoTotals.connections += 1;
+                
+                // Track fornecedor totals
+                if (!nodeTotals.has(fornecedor)) {
+                    nodeTotals.set(fornecedor, { 
+                        total: 0, 
+                        transactions: 0, 
+                        connections: 0,
+                        type: 'fornecedor' 
+                    });
+                }
+                const fornecedorTotals = nodeTotals.get(fornecedor);
+                fornecedorTotals.total += Number(record.valor_total);
+                fornecedorTotals.transactions += Number(record.num_transacoes);
+                fornecedorTotals.connections += 1;
+            });
+            
+            // Second pass: create nodes and links
+            aggregatedData.forEach(record => {
+                const deputado = `${record.nome_parlamentar} (${record.sigla_partido})`;
+                const fornecedor = record.fornecedor;
+                
+                // Add deputado node
+                if (!nodeMap.has(deputado)) {
+                    const totals = nodeTotals.get(deputado);
+                    nodeMap.set(deputado, nodeId);
+                    nodes.push({
+                        id: nodeId.toString(),
+                        label: deputado,
+                        type: 'deputado',
+                        party: record.sigla_partido,
+                        totalValue: totals.total,
+                        totalTransactions: totals.transactions,
+                        totalConnections: totals.connections,
+                        size: Math.log(totals.total) * 2
+                    });
+                    nodeId++;
+                }
+                
+                // Add fornecedor node
+                if (!nodeMap.has(fornecedor)) {
+                    const totals = nodeTotals.get(fornecedor);
+                    nodeMap.set(fornecedor, nodeId);
+                    nodes.push({
+                        id: nodeId.toString(),
+                        label: fornecedor,
+                        type: 'fornecedor',
+                        totalValue: totals.total,
+                        totalTransactions: totals.transactions,
+                        totalConnections: totals.connections,
+                        size: Math.log(totals.total) * 1.5
+                    });
+                    nodeId++;
+                }
+                
+                // Add link
+                links.push({
+                    source: nodeMap.get(deputado).toString(),
+                    target: nodeMap.get(fornecedor).toString(),
+                    value: Number(record.valor_total),
+                    count: Number(record.num_transacoes),
+                    width: Math.max(1, Math.log(Number(record.valor_total)) * 0.5)
+                });
+            });
+            
+            processedData = { nodes, links };
+            
+            // Update stats
+            const deputados = new Set(aggregatedData.map(r => `${r.nome_parlamentar} (${r.sigla_partido})`));
+            const fornecedores = new Set(aggregatedData.map(r => r.fornecedor));
+            const totalValue = aggregatedData.reduce((sum, r) => sum + Number(r.valor_total), 0);
+            const totalTransactions = aggregatedData.reduce((sum, r) => sum + Number(r.num_transacoes), 0);
+            
+            document.getElementById('totalDeputados').textContent = deputados.size;
+            document.getElementById('totalFornecedores').textContent = fornecedores.size;
+            document.getElementById('totalValue').textContent = `R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            document.getElementById('totalTransactions').textContent = totalTransactions.toLocaleString();
+            
+            console.log(`Processados ${nodes.length} nós e ${links.length} links`);
+        }
+        
+        function initializeVisualization() {
+            // Clear loading message
+            const loadingEl = document.querySelector('#loading');
+            if (loadingEl) loadingEl.style.display = 'none';
+            
+            // Check if we have data to visualize
+            if (!processedData.nodes || processedData.nodes.length === 0) {
+                console.log('Nenhum dado para visualizar');
+                if (loadingEl) {
+                    loadingEl.style.display = 'flex';
+                    loadingEl.innerHTML = 'Nenhum dado encontrado com os filtros aplicados';
+                }
+                return;
+            }
+            
+            console.log('🎨 Criando visualização D3.js...');
+            
+            const svg = d3.select("#network-svg");
+            const container = svg.node().parentElement;
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            svg.attr("width", width).attr("height", height);
+            svg.selectAll("*").remove(); // Clear previous content
+            
+            // Add zoom behavior with mouse wheel
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 10])
+                .wheelDelta((event) => -event.deltaY * (event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002))
+                .on("zoom", (event) => {
+                    g.attr("transform", event.transform);
+                });
+            
+            svg.call(zoom)
+                .on("dblclick.zoom", null); // Disable double-click zoom
+            
+            // Create main group for zooming/panning
+            const g = svg.append("g");
+            
+            // Prepare data for D3
+            const nodes = processedData.nodes.map(d => ({
+                ...d,
+                id: d.id,
+                x: Math.random() * width,
+                y: Math.random() * height
+            }));
+            
+            const links = processedData.links.map(d => ({
+                ...d,
+                source: d.source,
+                target: d.target
+            }));
+            
+            console.log(`Creating D3 visualization: ${nodes.length} nodes, ${links.length} links`);
+            
+            // Function to calculate node radius
+            const getNodeRadius = (d) => {
+                return d.type === 'deputado' ? 8 : 6;
+            };
+            
+            // Create force simulation
+            const simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(50))
+                .force("charge", d3.forceManyBody().strength(-200))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collision", d3.forceCollide().radius(10));
+            
+            // Add links
+            const link = g.append("g")
+                .selectAll("line")
+                .data(links)
+                .enter().append("line")
+                .attr("stroke", "#999")
+                .attr("stroke-opacity", 0.4)
+                .attr("stroke-width", 0.5);
+
+            // Add nodes
+            const node = g.append("g")
+                .selectAll("circle")
+                .data(nodes)
+                .enter().append("circle")
+                .attr("r", getNodeRadius)
+                .attr("fill", d => d.type === 'deputado' ? '#ff6b6b' : '#4ecdc4')
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 1.5)
+                .style("cursor", "pointer")
+                .on("click", (event, d) => {
+                    event.stopPropagation();
+                    showNodeInfo(d);
+                })
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+            
+            // Add labels for nodes
+            const label = g.append("g")
+                .selectAll("text")
+                .data(nodes)
+                .enter().append("text")
+                .text(d => {
+                    if (d.type === 'deputado') {
+                        const words = d.label.split(' ');
+                        // Get first two words for deputies
+                        return words.slice(0, 2).join(' ');
+                    } else {
+                        // Don't show company names by default
+                        return '';
+                    }
+                })
+                .attr("font-size", "10px")
+                .attr("fill", "white")
+                .attr("text-anchor", "middle")
+                .attr("dy", 20)
+                .attr("class", "node-label");
+            
+            // Add edge labels for spending amounts
+            const formatCurrency = (value) => {
+                if (value >= 1000000) return `R$ ${(value/1000000).toFixed(1)}M`;
+                if (value >= 1000) return `R$ ${(value/1000).toFixed(0)}K`;
+                return `R$ ${value.toFixed(0)}`;
+            };
+            
+            // Create edge labels (initially hidden)
+            const edgeLabels = g.append("g")
+                .selectAll("text")
+                .data(links)
+                .enter().append("text")
+                .text(d => formatCurrency(d.value))
+                .attr("font-size", "8px")
+                .attr("fill", "#ffd93d")
+                .attr("text-anchor", "middle")
+                .attr("dy", 3)
+                .style("pointer-events", "none")
+                .style("opacity", 0)
+                .style("display", "none");
+            
+            // Update positions on tick
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+                
+                node
+                    .attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+                
+                label
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y);
+                
+                // Position edge labels at link midpoints
+                edgeLabels
+                    .attr("x", d => (d.source.x + d.target.x) / 2)
+                    .attr("y", d => (d.source.y + d.target.y) / 2);
+            });
+            
+            // Drag functions
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+            
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+            
+            // Zoom button controls
+            const fitToView = () => {
+                const bounds = g.node().getBBox();
+                const fullWidth = bounds.width;
+                const fullHeight = bounds.height;
+                const centerX = bounds.x + fullWidth / 2;
+                const centerY = bounds.y + fullHeight / 2;
+                
+                const scale = Math.min(width / fullWidth, height / fullHeight) * 0.8;
+                const translate = [width / 2 - scale * centerX, height / 2 - scale * centerY];
+                
+                svg.transition()
+                    .duration(750)
+                    .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
+            };
+            
+            // Zoom controls
+            d3.select("#zoom-in").on("click", () => {
+                svg.transition().duration(300).call(zoom.scaleBy, 1.5);
+            });
+            
+            d3.select("#zoom-out").on("click", () => {
+                svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.5);
+            });
+            
+            d3.select("#zoom-reset").on("click", fitToView);
+            
+            // Initial zoom out to show full network
+            setTimeout(fitToView, 2000);
+            
+            console.log('✅ D3.js visualization created successfully!');
+            
+            // Store references for updating labels
+            window.currentVisualization = { label, nodes, edgeLabels };
+        }
+        
+        function updateCompanyLabels(showNames) {
+            if (window.currentVisualization && window.currentVisualization.label) {
+                window.currentVisualization.label.text(d => {
+                    if (d.type === 'deputado') {
+                        const words = d.label.split(' ');
+                        return words.slice(0, 2).join(' ');
+                    } else {
+                        return showNames ? d.label : '';
+                    }
+                });
+            }
+        }
+        
+        function updateEdgeAmounts(showAmounts) {
+            if (window.currentVisualization && window.currentVisualization.edgeLabels) {
+                if (showAmounts) {
+                    // Show edge labels with fade-in effect
+                    window.currentVisualization.edgeLabels
+                        .style("display", "block")
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 0.8);
+                } else {
+                    // Hide edge labels with fade-out effect
+                    window.currentVisualization.edgeLabels
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 0)
+                        .on("end", function() {
+                            d3.select(this).style("display", "none");
+                        });
+                }
+            }
+        }
+        
+        
+        function showNodeInfo(nodeData) {
+            const content = document.getElementById('node-info-content');
+            const closeBtn = document.getElementById('close-panel');
+            
+            // Create details content
+            const formatCurrency = (value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            const formatNumber = (value) => value.toLocaleString('pt-BR');
+            
+            let contentHTML = '';
+            
+            if (nodeData.type === 'deputado') {
+                contentHTML = `
+                    <div class="mb-3">
+                        <h4 class="text-sm font-bold text-deputy mb-1">${nodeData.label}</h4>
+                        <p class="text-xs text-gray-400">Deputado • ${nodeData.party}</p>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="bg-gray-700 rounded p-2">
+                            <div class="text-sm font-bold text-deputy">${formatCurrency(nodeData.totalValue)}</div>
+                            <div class="text-xs text-gray-300">Total Gasto</div>
+                        </div>
+                        <div class="bg-gray-700 rounded p-2">
+                            <div class="text-sm font-bold text-yellow-400">${formatNumber(nodeData.totalTransactions)}</div>
+                            <div class="text-xs text-gray-300">Transações</div>
+                        </div>
+                        <div class="bg-gray-700 rounded p-2">
+                            <div class="text-sm font-bold text-green-400">${formatNumber(nodeData.totalConnections)}</div>
+                            <div class="text-xs text-gray-300">Empresas</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                contentHTML = `
+                    <div class="mb-3">
+                        <h4 class="text-sm font-bold text-supplier mb-1">${nodeData.label}</h4>
+                        <p class="text-xs text-gray-400">Empresa</p>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="bg-gray-700 rounded p-2">
+                            <div class="text-sm font-bold text-supplier">${formatCurrency(nodeData.totalValue)}</div>
+                            <div class="text-xs text-gray-300">Total Recebido</div>
+                        </div>
+                        <div class="bg-gray-700 rounded p-2">
+                            <div class="text-sm font-bold text-yellow-400">${formatNumber(nodeData.totalTransactions)}</div>
+                            <div class="text-xs text-gray-300">Transações</div>
+                        </div>
+                        <div class="bg-gray-700 rounded p-2">
+                            <div class="text-sm font-bold text-green-400">${formatNumber(nodeData.totalConnections)}</div>
+                            <div class="text-xs text-gray-300">Deputados</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            content.innerHTML = contentHTML;
+            content.style.display = 'block';
+            closeBtn.classList.remove('hidden');
+        }
+        
+        async function updateVisualization() {
+            await processData();
+            initializeVisualization();
+        }
+        
+        function setupEventListeners() {
+            // Update slider display
+            const minValueSlider = document.getElementById('minValue');
+            const minValueDisplay = document.getElementById('minValueValue');
+            const partyFilter = document.getElementById('partyFilter');
+            const categoryFilter = document.getElementById('categoryFilter');
+            const showCompanyNames = document.getElementById('showCompanyNames');
+            
+            function updateSliderDisplay() {
+                const value = parseInt(minValueSlider.value);
+                const formatValue = (val) => {
+                    if (val >= 1000000) return `${(val/1000000).toFixed(1)}M`;
+                    if (val >= 1000) return `${(val/1000).toFixed(0)}K`;
+                    return val.toLocaleString('pt-BR');
+                };
+                minValueDisplay.textContent = formatValue(value);
+            }
+            
+            // Auto-update with debounce for slider
+            let sliderTimeout;
+            minValueSlider.addEventListener('input', () => {
+                updateSliderDisplay();
+                clearTimeout(sliderTimeout);
+                sliderTimeout = setTimeout(() => {
+                    updateVisualization();
+                }, 500); // 500ms debounce
+            });
+            
+            // Auto-update immediately for select boxes
+            partyFilter.addEventListener('change', updateVisualization);
+            categoryFilter.addEventListener('change', updateVisualization);
+            
+            // Handle company names checkbox
+            showCompanyNames.addEventListener('change', (e) => {
+                updateCompanyLabels(e.target.checked);
+            });
+            
+            // Handle edge amounts checkbox
+            const showEdgeAmounts = document.getElementById('showEdgeAmounts');
+            showEdgeAmounts.addEventListener('change', (e) => {
+                updateEdgeAmounts(e.target.checked);
+            });
+            
+            updateSliderDisplay();
+            
+            // Close panel
+            document.getElementById('close-panel').addEventListener('click', () => {
+                const content = document.getElementById('node-info-content');
+                const closeBtn = document.getElementById('close-panel');
+                content.style.display = 'none';
+                content.innerHTML = '<p class="text-xs text-gray-400">Clique em um nó para ver detalhes</p>';
+                closeBtn.classList.add('hidden');
+            });
+        }
+        
+        // Initialize everything when page loads
+        window.onload = loadData;
+        
+    </script>
+</body>
+</html>
