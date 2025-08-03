@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuckDB UI - Despesas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Monda:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FFC000'><path d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/></svg>">
+    <script type="module">
+        import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/+esm';
+        
+        let db;
+        let conn;
+        let editor;
+        
+        window.duckdbAPI = {
+            async initDuckDB() {
+                console.log('🚀 Initializing DuckDB...');
+                
+                const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+                const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+                const worker = await duckdb.createWorker(bundle.mainWorker);
+                const logger = new duckdb.ConsoleLogger();
+                db = new duckdb.AsyncDuckDB(logger, worker);
+                await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+                
+                conn = await db.connect();
+                console.log('✅ DuckDB initialized');
+                
+                return { db, conn };
+            },
+            
+            async loadParquetData() {
+                try {
+                    console.log('📁 Loading parquet file into DuckDB...');
+                    
+                    const response = await fetch('./public/despesas.parquet');
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const arrayBuffer = await response.arrayBuffer();
+                    console.log(`📊 Downloaded ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)} MB`);
+                    
+                    await db.registerFileBuffer('despesas.parquet', new Uint8Array(arrayBuffer));
+                    
+                    await conn.query(`
+                        CREATE VIEW despesas AS 
+                        SELECT * FROM read_parquet('despesas.parquet')
+                    `);
+                    
+                    const countResult = await conn.query("SELECT COUNT(*) as total FROM despesas");
+                    const totalRecords = countResult.toArray()[0].total;
+                    console.log(`✅ Loaded ${totalRecords.toLocaleString()} records from parquet`);
+                    
+                    return totalRecords;
+                    
+                } catch (error) {
+                    console.error('❌ Error loading parquet:', error);
+                    throw error;
+                }
+            },
+            
+            async executeQuery(sql) {
+                try {
+                    const startTime = performance.now();
+                    const result = await conn.query(sql);
+                    const endTime = performance.now();
+                    const executionTime = endTime - startTime;
+                    
+                    return {
+                        data: result.toArray(),
+                        columns: result.schema.fields.map(f => f.name),
+                        rowCount: result.numRows,
+                        executionTime: executionTime
+                    };
+                } catch (error) {
+                    throw new Error(error.message);
+                }
+            },
+            
+            async getSchema() {
+                try {
+                    const result = await conn.query("DESCRIBE despesas");
+                    return result.toArray();
+                } catch (error) {
+                    console.error('Error getting schema:', error);
+                    return [];
+                }
+            }
+        };
+    </script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'duckdb': {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            200: '#fde68a',
+                            300: '#fcd34d',
+                            400: '#fbbf24', 
+                            500: '#FFC000', // DuckDB yellow
+                            600: '#d97706',
+                            700: '#b45309',
+                            800: '#92400e',
+                            900: '#78350f'
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Monda', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .loading-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #374151;
+            border-radius: 50%;
+            border-top-color: #FFC000;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .resize-handle {
+            height: 4px;
+            cursor: row-resize;
+            position: relative;
+        }
+
+        .resize-handle:hover {
+            background-color: #FFC000;
+        }
+    </style>
+</head>
+<body class="font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen overflow-hidden">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-70 bg-gray-100 dark:bg-gray-900 border-r border-gray-300 dark:border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-300 dark:border-gray-700 flex items-center gap-3">
+                <div class="w-6 h-6 bg-duckdb-500 rounded flex items-center justify-center font-bold text-black text-sm">
+                    🦆
+                </div>
+                <div class="text-base font-semibold">DuckDB</div>
+                <button id="theme-toggle" class="ml-auto p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800">
+                    🌙
+                </button>
+            </div>
+            
+            <div class="py-2 border-b border-gray-300 dark:border-gray-700">
+                <div class="nav-item flex items-center px-4 py-2 cursor-pointer transition-colors text-sm gap-2 bg-gray-200 dark:bg-gray-800 border-r-2 border-duckdb-500" data-nav="query">
+                    <span class="w-4 h-4 opacity-70">📊</span>
+                    Query
+                </div>
+                <div class="nav-item flex items-center px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-sm gap-2" data-nav="tables">
+                    <span class="w-4 h-4 opacity-70">📋</span>
+                    Tables
+                </div>
+                <div class="nav-item flex items-center px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-sm gap-2" data-nav="schema">
+                    <span class="w-4 h-4 opacity-70">🔍</span>
+                    Schema
+                </div>
+            </div>
+            
+            <div class="p-4 border-b border-gray-300 dark:border-gray-700">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Database</div>
+                <div id="connection-status" class="text-xs text-gray-500 dark:text-gray-400">
+                    <span class="loading-spinner"></span> Initializing...
+                </div>
+            </div>
+            
+            <div class="p-4 border-b border-gray-300 dark:border-gray-700">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Schema</div>
+                <div class="text-xs" id="schema-tree">
+                    <div class="text-gray-500 dark:text-gray-400 text-xs">Loading...</div>
+                </div>
+            </div>
+            
+            <div class="p-4 flex-1 overflow-y-auto">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Sample Queries</div>
+                <div id="sample-queries-list" class="space-y-1">
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT * FROM despesas LIMIT 10">
+                        📄 View first 10 records
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT sigla_partido, COUNT(*) as total, SUM(valor_liquido) as value FROM despesas GROUP BY sigla_partido ORDER BY value DESC">
+                        📊 Expenses by party
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT categoria_despesa, COUNT(*) as count, AVG(valor_liquido) as avg FROM despesas GROUP BY categoria_despesa ORDER BY count DESC LIMIT 10">
+                        📈 Top categories
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT nome_parlamentar, SUM(valor_liquido) as total FROM despesas GROUP BY nome_parlamentar ORDER BY total DESC LIMIT 20">
+                        👥 Top deputies
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT fornecedor, COUNT(DISTINCT nome_parlamentar) as deputies, SUM(valor_liquido) as total FROM despesas GROUP BY fornecedor HAVING deputies > 5 ORDER BY total DESC LIMIT 15">
+                        🏢 Multi-deputy suppliers
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col">
+            <div class="h-15 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-5 justify-between">
+                <div class="flex items-center gap-1">
+                    <div class="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-800 border border-gray-400 dark:border-gray-600 border-b-0 cursor-pointer text-xs rounded-t gap-2 min-w-30 tab-active">
+                        <span>📝</span>
+                        Query 1
+                        <span class="opacity-50 cursor-pointer p-0.5 rounded hover:opacity-100 hover:bg-gray-300 dark:hover:bg-gray-700">×</span>
+                    </div>
+                    <button id="new-tab-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors ml-2">
+                        + New
+                    </button>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button id="export-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center gap-2" disabled>
+                        📤 Export
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex-1 flex flex-col">
+                <div class="editor-container h-96 border-b border-gray-300 dark:border-gray-700">
+                    <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 gap-2">
+                        <button id="run-query-btn" class="px-3 py-1.5 bg-duckdb-500 text-black rounded text-xs hover:bg-duckdb-600 transition-colors disabled:opacity-50 flex items-center gap-1.5" disabled>
+                            ▶️ Run
+                        </button>
+                        <button id="clear-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5">
+                            🗑️ Clear
+                        </button>
+                        <div class="flex-1"></div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Ctrl+Enter to execute</span>
+                    </div>
+                    <div id="sql-editor" class="h-[calc(100%-2.5rem)]"></div>
+                </div>
+                
+                <div class="resize-handle h-1 bg-gray-300 dark:bg-gray-700 hover:bg-duckdb-500 transition-colors" id="resize-handle"></div>
+
+                <div class="flex-1 flex flex-col">
+                    <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 justify-between">
+                        <span class="font-medium text-sm">Results</span>
+                        <div id="result-stats" class="text-xs text-gray-500 dark:text-gray-400"></div>
+                    </div>
+                    
+                    <div class="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
+                        <div id="results-content" class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2">
+                            <div class="text-5xl opacity-30">📊</div>
+                            <div>Execute a query to see results</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="h-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-300 dark:border-gray-700 flex items-center px-3 text-xs text-gray-500 dark:text-gray-400 justify-between">
+                <div id="execution-stats">Ready</div>
+                <div id="row-count"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentResults = null;
+        
+        async function initializeApp() {
+            try {
+                // Initialize DuckDB
+                await window.duckdbAPI.initDuckDB();
+                
+                // Load parquet data
+                updateStatus('Loading data...');
+                const totalRecords = await window.duckdbAPI.loadParquetData();
+                
+                // Load schema
+                updateStatus('Loading schema...');
+                await loadSchema();
+                
+                // Initialize Monaco Editor
+                updateStatus('Setting up editor...');
+                await initializeEditor();
+                
+                // Setup event listeners
+                setupEventListeners();
+                
+                // Enable controls
+                const runBtn = document.getElementById('run-query-btn');
+                const exportBtn = document.getElementById('export-btn');
+                if (runBtn) runBtn.disabled = false;
+                if (exportBtn) exportBtn.disabled = false;
+                
+                updateStatus(`Ready - ${totalRecords.toLocaleString()} records loaded`);
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                updateStatus('Error: ' + error.message, true);
+            }
+        }
+        
+        function updateStatus(message, isError = false) {
+            const statusEl = document.getElementById('connection-status');
+            statusEl.innerHTML = isError ? 
+                `❌ ${message}` : 
+                `✅ ${message}`;
+            statusEl.className = isError ? 'text-xs text-red-500 dark:text-red-400' : 'text-xs text-duckdb-500';
+        }
+        
+        function getDataTypeIcon(columnType) {
+            const type = columnType.toUpperCase();
+            
+            // String/Text types
+            if (type.includes('VARCHAR') || type.includes('TEXT') || type.includes('CHAR') || type.includes('STRING')) {
+                return '📝';
+            }
+            
+            // Integer types
+            if (type.includes('BIGINT') || type.includes('INTEGER') || type.includes('INT') || type.includes('TINYINT') || type.includes('SMALLINT')) {
+                return '🔢';
+            }
+            
+            // Decimal/Float types
+            if (type.includes('DOUBLE') || type.includes('FLOAT') || type.includes('REAL') || type.includes('DECIMAL') || type.includes('NUMERIC')) {
+                return '#️⃣';
+            }
+            
+            // Date/Time types
+            if (type.includes('TIMESTAMP') || type.includes('DATETIME') || type.includes('DATE') || type.includes('TIME')) {
+                return '🕐';
+            }
+            
+            // Boolean types
+            if (type.includes('BOOLEAN') || type.includes('BOOL') || type.includes('BIT')) {
+                return '☑️';
+            }
+            
+            // JSON/Object types
+            if (type.includes('JSON') || type.includes('OBJECT')) {
+                return '🧩';
+            }
+            
+            // Array/List types
+            if (type.includes('ARRAY') || type.includes('LIST')) {
+                return '📋';
+            }
+            
+            // UUID types
+            if (type.includes('UUID')) {
+                return '🆔';
+            }
+            
+            // Binary/Blob types
+            if (type.includes('BLOB') || type.includes('BINARY') || type.includes('VARBINARY')) {
+                return '📦';
+            }
+            
+            // Default fallback
+            return '📌';
+        }
+        
+        async function loadSchema() {
+            try {
+                const schema = await window.duckdbAPI.getSchema();
+                const schemaTree = document.getElementById('schema-tree');
+                
+                if (schema.length > 0) {
+                    const schemaHTML = `
+                        <div class="py-1 cursor-pointer flex items-center gap-1.5 font-medium mb-1">
+                            <span class="w-3 h-3 opacity-60">📋</span>
+                            despesas (${schema.length} columns)
+                        </div>
+                        ${schema.map(col => 
+                            `<div class="py-1 cursor-pointer flex items-center gap-1.5 ml-4 text-xs hover:text-duckdb-500">
+                                <span class="w-3 h-3 opacity-60">${getDataTypeIcon(col.column_type)}</span>
+                                <span>${col.column_name}</span>
+                                <span class="text-gray-500 dark:text-gray-400 text-xs ml-auto">${col.column_type}</span>
+                            </div>`
+                        ).join('')}`;
+                    schemaTree.innerHTML = schemaHTML;
+                } else {
+                    schemaTree.innerHTML = '<div class="text-red-500 dark:text-red-400">Failed to load schema</div>';
+                }
+            } catch (error) {
+                document.getElementById('schema-tree').innerHTML = '<div class="text-red-500 dark:text-red-400">Error loading schema</div>';
+            }
+        }
+        
+        async function initializeEditor() {
+            return new Promise((resolve) => {
+                require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
+                require(['vs/editor/editor.main'], function () {
+                    editor = monaco.editor.create(document.getElementById('sql-editor'), {
+                        value: 'SELECT * FROM despesas LIMIT 10;',
+                        language: 'sql',
+                        theme: 'vs-dark',
+                        automaticLayout: true,
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        lineNumbers: 'on',
+                        wordWrap: 'on',
+                        scrollBeyondLastLine: false
+                    });
+                    
+                    // Add keyboard shortcut for running query
+                    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, executeQuery);
+                    
+                    resolve();
+                });
+            });
+        }
+        
+        function setupEventListeners() {
+            // Run query button
+            const runBtn = document.getElementById('run-query-btn');
+            if (runBtn) {
+                runBtn.addEventListener('click', executeQuery);
+            }
+            
+            // Clear button
+            const clearBtn = document.getElementById('clear-btn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    if (editor) {
+                        editor.setValue('');
+                    }
+                    clearResults();
+                });
+            }
+            
+            // Sample query buttons
+            document.querySelectorAll('.sample-query').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const query = e.target.dataset.query;
+                    if (editor && query) {
+                        editor.setValue(query);
+                        executeQuery();
+                    }
+                });
+            });
+            
+            // Export button
+            const exportBtn = document.getElementById('export-btn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', exportResults);
+            }
+        }
+        
+        async function executeQuery() {
+            const sql = editor.getValue().trim();
+            if (!sql) return;
+            
+            const runBtn = document.getElementById('run-query-btn');
+            const resultsContent = document.getElementById('results-content');
+            const statsBar = document.getElementById('stats-bar');
+            const executionStats = document.getElementById('execution-stats');
+            
+            try {
+                // Show loading state
+                runBtn.disabled = true;
+                runBtn.innerHTML = '<span class="loading-spinner"></span> Running';
+                resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><span class="loading-spinner"></span><div>Executing query...</div></div>';
+                
+                // Execute query
+                const result = await window.duckdbAPI.executeQuery(sql);
+                currentResults = result;
+                
+                // Display results
+                displayResults(result);
+                
+                // Update stats
+                const executionTime = result.executionTime.toFixed(2);
+                executionStats.textContent = `Query executed in ${executionTime}ms`;
+                document.getElementById('result-stats').textContent = `${result.rowCount} rows`;
+                
+            } catch (error) {
+                // Display error
+                resultsContent.innerHTML = `<div class="bg-red-900/20 border border-red-500 text-red-200 p-3 m-3 rounded">
+                    <strong>Error:</strong> ${error.message}
+                </div>`;
+                executionStats.textContent = 'Query failed';
+                
+            } finally {
+                // Reset button
+                runBtn.disabled = false;
+                runBtn.innerHTML = '▶️ Run';
+            }
+        }
+        
+        function displayResults(result) {
+            const resultsContent = document.getElementById('results-content');
+            
+            if (result.rowCount === 0) {
+                resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><div class="text-2xl opacity-50">📄</div><div>No results found</div></div>';
+                return;
+            }
+            
+                // Create table
+            let tableHTML = '<div class="overflow-auto h-full text-left"><table class="w-full border-collapse text-xs">';
+            
+            // Headers
+            tableHTML += '<thead><tr>';
+            result.columns.forEach(col => {
+                tableHTML += `<th class="bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 p-2 border-b border-r border-gray-300 dark:border-gray-700 font-medium text-left sticky top-0 z-10">${col}</th>`;
+            });
+            tableHTML += '</tr></thead>';
+            
+            // Rows (limit to first 1000 for performance)
+            tableHTML += '<tbody>';
+            const displayRows = result.data.slice(0, 1000);
+            displayRows.forEach((row, index) => {
+                tableHTML += `<tr class="hover:bg-gray-100 dark:hover:bg-gray-900">`;
+                result.columns.forEach(col => {
+                    const value = row[col];
+                    const displayValue = value === null ? '<span class="text-gray-500 dark:text-gray-400 italic">NULL</span>' : 
+                                       typeof value === 'number' ? value.toLocaleString() : 
+                                       String(value).length > 100 ? String(value).substring(0, 97) + '...' : 
+                                       String(value);
+                    tableHTML += `<td class="p-1.5 border-b border-r border-gray-300 dark:border-gray-700 whitespace-nowrap">${displayValue}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+            tableHTML += '</tbody></table></div>';
+            
+            if (result.rowCount > 1000) {
+                tableHTML += `<div class="p-3 text-center text-gray-500 dark:text-gray-400 text-xs bg-gray-100 dark:bg-gray-900">
+                    Showing first 1000 of ${result.rowCount.toLocaleString()} rows
+                </div>`;
+            }
+            
+            resultsContent.innerHTML = tableHTML;
+        }
+        
+        function clearResults() {
+            document.getElementById('results-content').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><div class="text-5xl opacity-30">📊</div><div>Execute a query to see results</div></div>';
+            document.getElementById('execution-stats').textContent = 'Ready';
+            document.getElementById('result-stats').textContent = '';
+            currentResults = null;
+        }
+        
+        function exportResults() {
+            if (!currentResults || !currentResults.data.length) {
+                alert('No results to export');
+                return;
+            }
+            
+            // Convert to CSV
+            const headers = currentResults.columns.join(',');
+            const rows = currentResults.data.map(row => 
+                currentResults.columns.map(col => {
+                    const value = row[col];
+                    if (value === null) return '';
+                    if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                        return `"${value.replace(/"/g, '""')}"`;
+                    }
+                    return value;
+                }).join(',')
+            );
+            
+            const csv = [headers, ...rows].join('\n');
+            
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'query_results.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Add resize functionality
+        function initializeResize() {
+            const resizeHandle = document.getElementById('resize-handle');
+            const editorContainer = document.querySelector('.editor-container');
+            const resultsArea = document.querySelector('.results-area');
+            let isResizing = false;
+            
+            resizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                document.addEventListener('mousemove', handleResize);
+                document.addEventListener('mouseup', stopResize);
+                e.preventDefault();
+            });
+            
+            function handleResize(e) {
+                if (!isResizing) return;
+                
+                const containerRect = document.querySelector('.content-area').getBoundingClientRect();
+                const newHeight = e.clientY - containerRect.top;
+                const minHeight = 200;
+                const maxHeight = containerRect.height - 200;
+                
+                if (newHeight >= minHeight && newHeight <= maxHeight) {
+                    editorContainer.style.height = newHeight + 'px';
+                }
+            }
+            
+            function stopResize() {
+                isResizing = false;
+                document.removeEventListener('mousemove', handleResize);
+                document.removeEventListener('mouseup', stopResize);
+            }
+        }
+        
+        // Add navigation functionality
+        function setupNavigation() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    // Remove active state from all nav items
+                    document.querySelectorAll('.nav-item').forEach(i => {
+                        i.classList.remove('bg-gray-200', 'dark:bg-gray-800', 'border-r-2', 'border-duckdb-500');
+                        i.classList.add('hover:bg-gray-200', 'dark:hover:bg-gray-800');
+                    });
+                    // Add active state to clicked item
+                    item.classList.remove('hover:bg-gray-200', 'dark:hover:bg-gray-800');
+                    item.classList.add('bg-gray-200', 'dark:bg-gray-800', 'border-r-2', 'border-duckdb-500');
+                });
+            });
+        }
+        
+        // Add dark mode toggle functionality
+        function setupThemeToggle() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const html = document.documentElement;
+            
+            if (themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                if (html.classList.contains('dark')) {
+                    html.classList.remove('dark');
+                    themeToggle.textContent = '🌞';
+                    document.body.className = 'font-sans bg-white text-gray-900 h-screen overflow-hidden';
+                    // Update Monaco editor theme
+                    if (editor) {
+                        editor.updateOptions({ theme: 'vs' });
+                    }
+                } else {
+                    html.classList.add('dark');
+                    themeToggle.textContent = '🌙';
+                    document.body.className = 'font-sans bg-gray-950 text-white h-screen overflow-hidden';
+                    // Update Monaco editor theme
+                    if (editor) {
+                        editor.updateOptions({ theme: 'vs-dark' });
+                    }
+                }
+                });
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            initializeApp();
+            initializeResize();
+            setupNavigation();
+            setupThemeToggle();
+        });
+    </script>
+</body>
+</html>
