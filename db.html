@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DuckDB UI - Despesas</title>
+    <title>Viso UI - Despesas</title>
     <link href="https://fonts.googleapis.com/css2?family=Monda:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FFC000'><path d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/></svg>">
+    <link rel="shortcut icon" type="image/x-icon" href="https://extrapolo.com/favicon.ico">
     <script type="module">
         import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/+esm';
         
         let db;
         let conn;
-        let editor;
         
         window.duckdbAPI = {
             async initDuckDB() {
@@ -142,68 +141,60 @@
         .resize-handle:hover {
             background-color: #FFC000;
         }
+
     </style>
 </head>
 <body class="font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen overflow-hidden">
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <div class="w-70 bg-gray-100 dark:bg-gray-900 border-r border-gray-300 dark:border-gray-700 flex flex-col">
+        <div class="w-80 bg-gray-100 dark:bg-gray-900 border-r border-gray-300 dark:border-gray-700 flex flex-col">
             <div class="p-4 border-b border-gray-300 dark:border-gray-700 flex items-center gap-3">
                 <div class="w-6 h-6 bg-duckdb-500 rounded flex items-center justify-center font-bold text-black text-sm">
                     🦆
                 </div>
-                <div class="text-base font-semibold">DuckDB</div>
-                <button id="theme-toggle" class="ml-auto p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800">
+                <div class="text-base font-semibold">Viso UI</div>
+                <button onclick="window.location.href='index.html'" class="ml-auto px-3 py-1.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg text-xs font-medium transition-all duration-200 transform hover:scale-105 flex items-center gap-2">
+                    <span>📊</span>
+                    <span>Ver Grafo</span>
+                </button>
+                <button id="theme-toggle" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800">
                     🌙
                 </button>
             </div>
             
-            <div class="py-2 border-b border-gray-300 dark:border-gray-700">
-                <div class="nav-item flex items-center px-4 py-2 cursor-pointer transition-colors text-sm gap-2 bg-gray-200 dark:bg-gray-800 border-r-2 border-duckdb-500" data-nav="query">
-                    <span class="w-4 h-4 opacity-70">📊</span>
-                    Query
-                </div>
-                <div class="nav-item flex items-center px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-sm gap-2" data-nav="tables">
-                    <span class="w-4 h-4 opacity-70">📋</span>
-                    Tables
-                </div>
-                <div class="nav-item flex items-center px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-sm gap-2" data-nav="schema">
-                    <span class="w-4 h-4 opacity-70">🔍</span>
-                    Schema
-                </div>
-            </div>
             
             <div class="p-4 border-b border-gray-300 dark:border-gray-700">
                 <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Database</div>
                 <div id="connection-status" class="text-xs text-gray-500 dark:text-gray-400">
-                    <span class="loading-spinner"></span> Initializing...
+                    <span class="loading-spinner"></span> Inicializando...
                 </div>
             </div>
             
             <div class="p-4 border-b border-gray-300 dark:border-gray-700">
-                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Schema</div>
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Esquema</div>
                 <div class="text-xs" id="schema-tree">
-                    <div class="text-gray-500 dark:text-gray-400 text-xs">Loading...</div>
+                    <div class="text-gray-500 dark:text-gray-400 text-xs">Carregando...</div>
                 </div>
             </div>
             
+
             <div class="p-4 flex-1 overflow-y-auto">
-                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Sample Queries</div>
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Consultas de Exemplo</div>
                 <div id="sample-queries-list" class="space-y-1">
                     <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT * FROM despesas LIMIT 10">
-                        📄 View first 10 records
+                        📄 Ver primeiros 10 registros
                     </div>
                     <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT sigla_partido, COUNT(*) as total, SUM(valor_liquido) as value FROM despesas GROUP BY sigla_partido ORDER BY value DESC">
-                        📊 Expenses by party
+                        📊 Despesas por partido
                     </div>
                     <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT categoria_despesa, COUNT(*) as count, AVG(valor_liquido) as avg FROM despesas GROUP BY categoria_despesa ORDER BY count DESC LIMIT 10">
-                        📈 Top categories
+                        📈 Top categorias
                     </div>
                     <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT nome_parlamentar, SUM(valor_liquido) as total FROM despesas GROUP BY nome_parlamentar ORDER BY total DESC LIMIT 20">
-                        👥 Top deputies
+                        👥 Top deputados
                     </div>
                     <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT fornecedor, COUNT(DISTINCT nome_parlamentar) as deputies, SUM(valor_liquido) as total FROM despesas GROUP BY fornecedor HAVING deputies > 5 ORDER BY total DESC LIMIT 15">
-                        🏢 Multi-deputy suppliers
+                        🏢 Fornecedores multi-deputados
                     </div>
                 </div>
             </div>
@@ -211,59 +202,58 @@
 
         <!-- Main Content -->
         <div class="flex-1 flex flex-col">
-            <div class="h-15 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-5 justify-between">
+            <div class="h-16 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-5 justify-between">
                 <div class="flex items-center gap-1">
-                    <div class="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-800 border border-gray-400 dark:border-gray-600 border-b-0 cursor-pointer text-xs rounded-t gap-2 min-w-30 tab-active">
-                        <span>📝</span>
-                        Query 1
-                        <span class="opacity-50 cursor-pointer p-0.5 rounded hover:opacity-100 hover:bg-gray-300 dark:hover:bg-gray-700">×</span>
+                    <div id="tabs-container" class="flex items-center gap-1">
+                        <!-- Tabs will be dynamically generated here -->
                     </div>
                     <button id="new-tab-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors ml-2">
-                        + New
+                        + Nova
                     </button>
                 </div>
                 
                 <div class="flex items-center gap-3">
                     <button id="export-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center gap-2" disabled>
-                        📤 Export
+                        📤 Exportar
                     </button>
                 </div>
             </div>
             
-            <div class="flex-1 flex flex-col">
+            <div class="flex-1 flex flex-col min-h-0">
                 <div class="editor-container h-96 border-b border-gray-300 dark:border-gray-700">
                     <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 gap-2">
                         <button id="run-query-btn" class="px-3 py-1.5 bg-duckdb-500 text-black rounded text-xs hover:bg-duckdb-600 transition-colors disabled:opacity-50 flex items-center gap-1.5" disabled>
-                            ▶️ Run
+                            ▶️ Executar
                         </button>
                         <button id="clear-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5">
-                            🗑️ Clear
+                            🗑️ Limpar
                         </button>
                         <div class="flex-1"></div>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">Ctrl+Enter to execute</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Ctrl+Enter para executar</span>
                     </div>
-                    <div id="sql-editor" class="h-[calc(100%-2.5rem)]"></div>
+                    <div id="editors-container" class="h-[calc(100%-2.5rem)] relative">
+                        <!-- Editor containers will be dynamically generated here -->
+                    </div>
                 </div>
                 
                 <div class="resize-handle h-1 bg-gray-300 dark:bg-gray-700 hover:bg-duckdb-500 transition-colors" id="resize-handle"></div>
 
-                <div class="flex-1 flex flex-col">
+                <div class="flex-1 flex flex-col min-h-0">
                     <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 justify-between">
-                        <span class="font-medium text-sm">Results</span>
+                        <span class="font-medium text-sm">Resultados</span>
                         <div id="result-stats" class="text-xs text-gray-500 dark:text-gray-400"></div>
                     </div>
                     
-                    <div class="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
-                        <div id="results-content" class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2">
-                            <div class="text-5xl opacity-30">📊</div>
-                            <div>Execute a query to see results</div>
+                    <div class="flex-1 bg-gray-50 dark:bg-gray-950 min-h-0">
+                        <div id="results-container" class="h-full w-full">
+                            <!-- Results containers will be dynamically generated here -->
                         </div>
                     </div>
                 </div>
             </div>
             
             <div class="h-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-300 dark:border-gray-700 flex items-center px-3 text-xs text-gray-500 dark:text-gray-400 justify-between">
-                <div id="execution-stats">Ready</div>
+                <div id="execution-stats">Pronto</div>
                 <div id="row-count"></div>
             </div>
         </div>
@@ -271,6 +261,9 @@
 
     <script>
         let currentResults = null;
+        let tabs = {};
+        let activeTabId = null;
+        let tabCounter = 0;
         
         async function initializeApp() {
             try {
@@ -278,15 +271,16 @@
                 await window.duckdbAPI.initDuckDB();
                 
                 // Load parquet data
-                updateStatus('Loading data...');
+                updateStatus('Carregando dados...');
                 const totalRecords = await window.duckdbAPI.loadParquetData();
                 
                 // Load schema
-                updateStatus('Loading schema...');
+                updateStatus('Carregando esquema...');
                 await loadSchema();
                 
+                
                 // Initialize Monaco Editor
-                updateStatus('Setting up editor...');
+                updateStatus('Configurando editor...');
                 await initializeEditor();
                 
                 // Setup event listeners
@@ -298,11 +292,11 @@
                 if (runBtn) runBtn.disabled = false;
                 if (exportBtn) exportBtn.disabled = false;
                 
-                updateStatus(`Ready - ${totalRecords.toLocaleString()} records loaded`);
+                updateStatus(`Pronto - ${totalRecords.toLocaleString()} registros carregados`);
                 
             } catch (error) {
                 console.error('Initialization error:', error);
-                updateStatus('Error: ' + error.message, true);
+                updateStatus('Erro: ' + error.message, true);
             }
         }
         
@@ -366,6 +360,159 @@
             return '📌';
         }
         
+        // Tab Management Functions
+        function createNewTab(name = null) {
+            tabCounter++;
+            const tabId = `tab-${tabCounter}`;
+            const tabName = name || `Consulta ${tabCounter}`;
+            
+            // Create tab data structure
+            tabs[tabId] = {
+                id: tabId,
+                name: tabName,
+                editor: null,
+                results: null
+            };
+            
+            // Create tab HTML elements
+            createTabElements(tabId, tabName);
+            
+            // Switch to new tab
+            switchToTab(tabId);
+            
+            return tabId;
+        }
+        
+        function createTabElements(tabId, tabName) {
+            // Create tab button
+            const tabButton = document.createElement('div');
+            tabButton.className = 'flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-800 border border-gray-400 dark:border-gray-600 border-b-0 cursor-pointer text-xs rounded-t gap-2 min-w-32';
+            tabButton.dataset.tabId = tabId;
+            tabButton.innerHTML = `
+                <span>📝</span>
+                <span class="tab-name">${tabName}</span>
+                <span class="opacity-50 cursor-pointer p-0.5 rounded hover:opacity-100 hover:bg-gray-300 dark:hover:bg-gray-700 close-tab" data-tab-id="${tabId}">×</span>
+            `;
+            
+            // Add click handlers
+            tabButton.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('close-tab')) {
+                    switchToTab(tabId);
+                }
+            });
+            
+            tabButton.querySelector('.close-tab').addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeTab(tabId);
+            });
+            
+            // Create editor container
+            const editorContainer = document.createElement('div');
+            editorContainer.id = `editor-${tabId}`;
+            editorContainer.className = 'w-full h-full hidden';
+            
+            // Create results container
+            const resultsContainer = document.createElement('div');
+            resultsContainer.id = `results-${tabId}`;
+            resultsContainer.className = 'w-full h-full hidden flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 gap-2';
+            resultsContainer.innerHTML = `
+                <div class="text-5xl opacity-30">📊</div>
+                <div>Execute uma consulta para ver os resultados</div>
+            `;
+            
+            // Add to containers
+            document.getElementById('tabs-container').appendChild(tabButton);
+            document.getElementById('editors-container').appendChild(editorContainer);
+            document.getElementById('results-container').appendChild(resultsContainer);
+        }
+        
+        function switchToTab(tabId) {
+            // Remove active class from all tabs
+            document.querySelectorAll('#tabs-container > div').forEach(tab => {
+                tab.classList.remove('tab-active');
+                tab.classList.remove('bg-gray-200', 'dark:bg-gray-800');
+                tab.classList.add('bg-gray-100', 'dark:bg-gray-700');
+            });
+            
+            // Hide all editors and results
+            document.querySelectorAll('#editors-container > div').forEach(editor => {
+                editor.classList.add('hidden');
+            });
+            
+            document.querySelectorAll('#results-container > div').forEach(result => {
+                result.classList.add('hidden');
+            });
+            
+            // Show active tab
+            const activeTab = document.querySelector(`[data-tab-id="${tabId}"]`);
+            if (activeTab) {
+                activeTab.classList.add('tab-active');
+                activeTab.classList.remove('bg-gray-100', 'dark:bg-gray-700');
+                activeTab.classList.add('bg-gray-200', 'dark:bg-gray-800');
+            }
+            
+            // Show active editor and results
+            const editorContainer = document.getElementById(`editor-${tabId}`);
+            const resultsContainer = document.getElementById(`results-${tabId}`);
+            
+            if (editorContainer) editorContainer.classList.remove('hidden');
+            if (resultsContainer) resultsContainer.classList.remove('hidden');
+            
+            // Set as active tab
+            activeTabId = tabId;
+            
+            // Initialize editor if not already created
+            if (tabs[tabId] && !tabs[tabId].editor) {
+                initializeTabEditor(tabId);
+            }
+            
+            // Update stats display
+            updateTabStats(tabId);
+        }
+        
+        function closeTab(tabId) {
+            // Don't close if it's the only tab
+            if (Object.keys(tabs).length <= 1) {
+                return;
+            }
+            
+            // Dispose Monaco editor
+            if (tabs[tabId] && tabs[tabId].editor) {
+                tabs[tabId].editor.dispose();
+            }
+            
+            // Remove from tabs object
+            delete tabs[tabId];
+            
+            // Remove DOM elements
+            const tabButton = document.querySelector(`[data-tab-id="${tabId}"]`);
+            const editorContainer = document.getElementById(`editor-${tabId}`);
+            const resultsContainer = document.getElementById(`results-${tabId}`);
+            
+            if (tabButton) tabButton.remove();
+            if (editorContainer) editorContainer.remove();
+            if (resultsContainer) resultsContainer.remove();
+            
+            // Switch to another tab if this was active
+            if (activeTabId === tabId) {
+                const remainingTabs = Object.keys(tabs);
+                if (remainingTabs.length > 0) {
+                    switchToTab(remainingTabs[0]);
+                }
+            }
+        }
+        
+        function updateTabStats(tabId) {
+            const tab = tabs[tabId];
+            if (tab && tab.results) {
+                document.getElementById('result-stats').textContent = `${tab.results.rowCount} linhas`;
+                document.getElementById('execution-stats').textContent = `Consulta executada em ${tab.results.executionTime.toFixed(2)}ms`;
+            } else {
+                document.getElementById('result-stats').textContent = '';
+                document.getElementById('execution-stats').textContent = 'Pronto';
+            }
+        }
+        
         async function loadSchema() {
             try {
                 const schema = await window.duckdbAPI.getSchema();
@@ -386,10 +533,10 @@
                         ).join('')}`;
                     schemaTree.innerHTML = schemaHTML;
                 } else {
-                    schemaTree.innerHTML = '<div class="text-red-500 dark:text-red-400">Failed to load schema</div>';
+                    schemaTree.innerHTML = '<div class="text-red-500 dark:text-red-400">Falha ao carregar esquema</div>';
                 }
             } catch (error) {
-                document.getElementById('schema-tree').innerHTML = '<div class="text-red-500 dark:text-red-400">Error loading schema</div>';
+                document.getElementById('schema-tree').innerHTML = '<div class="text-red-500 dark:text-red-400">Erro ao carregar esquema</div>';
             }
         }
         
@@ -397,24 +544,35 @@
             return new Promise((resolve) => {
                 require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
                 require(['vs/editor/editor.main'], function () {
-                    editor = monaco.editor.create(document.getElementById('sql-editor'), {
-                        value: 'SELECT * FROM despesas LIMIT 10;',
-                        language: 'sql',
-                        theme: 'vs-dark',
-                        automaticLayout: true,
-                        minimap: { enabled: false },
-                        fontSize: 13,
-                        lineNumbers: 'on',
-                        wordWrap: 'on',
-                        scrollBeyondLastLine: false
-                    });
-                    
-                    // Add keyboard shortcut for running query
-                    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, executeQuery);
-                    
+                    // Create the first tab
+                    createNewTab('Consulta 1');
                     resolve();
                 });
             });
+        }
+        
+        function initializeTabEditor(tabId) {
+            const editorContainer = document.getElementById(`editor-${tabId}`);
+            if (!editorContainer || tabs[tabId].editor) return;
+            
+            const isDark = document.documentElement.classList.contains('dark');
+            const editor = monaco.editor.create(editorContainer, {
+                value: 'SELECT * FROM despesas LIMIT 10;',
+                language: 'sql',
+                theme: isDark ? 'vs-dark' : 'vs',
+                automaticLayout: true,
+                minimap: { enabled: false },
+                fontSize: 13,
+                lineNumbers: 'on',
+                wordWrap: 'on',
+                scrollBeyondLastLine: false
+            });
+            
+            // Add keyboard shortcut for running query
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, executeQuery);
+            
+            // Store editor reference
+            tabs[tabId].editor = editor;
         }
         
         function setupEventListeners() {
@@ -428,10 +586,18 @@
             const clearBtn = document.getElementById('clear-btn');
             if (clearBtn) {
                 clearBtn.addEventListener('click', () => {
-                    if (editor) {
-                        editor.setValue('');
+                    if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor) {
+                        tabs[activeTabId].editor.setValue('');
                     }
                     clearResults();
+                });
+            }
+            
+            // New tab button
+            const newTabBtn = document.getElementById('new-tab-btn');
+            if (newTabBtn) {
+                newTabBtn.addEventListener('click', () => {
+                    createNewTab();
                 });
             }
             
@@ -439,8 +605,8 @@
             document.querySelectorAll('.sample-query').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const query = e.target.dataset.query;
-                    if (editor && query) {
-                        editor.setValue(query);
+                    if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor && query) {
+                        tabs[activeTabId].editor.setValue(query);
                         executeQuery();
                     }
                 });
@@ -451,64 +617,67 @@
             if (exportBtn) {
                 exportBtn.addEventListener('click', exportResults);
             }
+
         }
         
         async function executeQuery() {
-            const sql = editor.getValue().trim();
+            if (!activeTabId || !tabs[activeTabId] || !tabs[activeTabId].editor) return;
+            
+            const sql = tabs[activeTabId].editor.getValue().trim();
             if (!sql) return;
             
             const runBtn = document.getElementById('run-query-btn');
-            const resultsContent = document.getElementById('results-content');
-            const statsBar = document.getElementById('stats-bar');
+            const resultsContent = document.getElementById(`results-${activeTabId}`);
             const executionStats = document.getElementById('execution-stats');
             
             try {
                 // Show loading state
                 runBtn.disabled = true;
-                runBtn.innerHTML = '<span class="loading-spinner"></span> Running';
-                resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><span class="loading-spinner"></span><div>Executing query...</div></div>';
+                runBtn.innerHTML = '<span class="loading-spinner"></span> Executando';
+                resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><span class="loading-spinner"></span><div>Executando consulta...</div></div>';
                 
                 // Execute query
                 const result = await window.duckdbAPI.executeQuery(sql);
-                currentResults = result;
+                tabs[activeTabId].results = result;
                 
                 // Display results
-                displayResults(result);
+                displayResults(result, activeTabId);
                 
                 // Update stats
-                const executionTime = result.executionTime.toFixed(2);
-                executionStats.textContent = `Query executed in ${executionTime}ms`;
-                document.getElementById('result-stats').textContent = `${result.rowCount} rows`;
+                updateTabStats(activeTabId);
                 
             } catch (error) {
                 // Display error
                 resultsContent.innerHTML = `<div class="bg-red-900/20 border border-red-500 text-red-200 p-3 m-3 rounded">
-                    <strong>Error:</strong> ${error.message}
+                    <strong>Erro:</strong> ${error.message}
                 </div>`;
-                executionStats.textContent = 'Query failed';
+                executionStats.textContent = 'Consulta falhou';
                 
             } finally {
                 // Reset button
                 runBtn.disabled = false;
-                runBtn.innerHTML = '▶️ Run';
+                runBtn.innerHTML = '▶️ Executar';
             }
         }
         
-        function displayResults(result) {
-            const resultsContent = document.getElementById('results-content');
+        function displayResults(result, tabId) {
+            const resultsContent = document.getElementById(`results-${tabId}`);
+            
+            // Ensure the results container has proper classes for scrolling
+            resultsContent.className = 'w-full h-full overflow-auto';
             
             if (result.rowCount === 0) {
-                resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><div class="text-2xl opacity-50">📄</div><div>No results found</div></div>';
+                resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><div class="text-2xl opacity-50">📄</div><div>Nenhum resultado encontrado</div></div>';
                 return;
             }
             
                 // Create table
-            let tableHTML = '<div class="overflow-auto h-full text-left"><table class="w-full border-collapse text-xs">';
+            let tableHTML = '<div class="p-4"><table class="border-collapse text-xs" style="width: auto; min-width: max-content;">';
             
             // Headers
             tableHTML += '<thead><tr>';
             result.columns.forEach(col => {
-                tableHTML += `<th class="bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 p-2 border-b border-r border-gray-300 dark:border-gray-700 font-medium text-left sticky top-0 z-10">${col}</th>`;
+                tableHTML += `<th class="bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 p-2 border-b border-r border-gray-300 dark:border-gray-700 font-medium text-left sticky top-0 z-10 whitespace-nowrap" style="min-width: 150px;">${col}</th>`;
             });
             tableHTML += '</tr></thead>';
             
@@ -523,7 +692,7 @@
                                        typeof value === 'number' ? value.toLocaleString() : 
                                        String(value).length > 100 ? String(value).substring(0, 97) + '...' : 
                                        String(value);
-                    tableHTML += `<td class="p-1.5 border-b border-r border-gray-300 dark:border-gray-700 whitespace-nowrap">${displayValue}</td>`;
+                    tableHTML += `<td class="p-1.5 border-b border-r border-gray-300 dark:border-gray-700 whitespace-nowrap" style="min-width: 150px;">${displayValue}</td>`;
                 });
                 tableHTML += '</tr>';
             });
@@ -531,7 +700,7 @@
             
             if (result.rowCount > 1000) {
                 tableHTML += `<div class="p-3 text-center text-gray-500 dark:text-gray-400 text-xs bg-gray-100 dark:bg-gray-900">
-                    Showing first 1000 of ${result.rowCount.toLocaleString()} rows
+                    Mostrando primeiras 1000 de ${result.rowCount.toLocaleString()} linhas
                 </div>`;
             }
             
@@ -539,17 +708,29 @@
         }
         
         function clearResults() {
-            document.getElementById('results-content').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><div class="text-5xl opacity-30">📊</div><div>Execute a query to see results</div></div>';
-            document.getElementById('execution-stats').textContent = 'Ready';
+            if (!activeTabId) return;
+            
+            const resultsContent = document.getElementById(`results-${activeTabId}`);
+            if (resultsContent) {
+                resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><div class="text-5xl opacity-30">📊</div><div>Execute uma consulta para ver os resultados</div></div>';
+            }
+            
+            document.getElementById('execution-stats').textContent = 'Pronto';
             document.getElementById('result-stats').textContent = '';
-            currentResults = null;
+            
+            if (tabs[activeTabId]) {
+                tabs[activeTabId].results = null;
+            }
         }
+
         
         function exportResults() {
-            if (!currentResults || !currentResults.data.length) {
-                alert('No results to export');
+            if (!activeTabId || !tabs[activeTabId] || !tabs[activeTabId].results || !tabs[activeTabId].results.data.length) {
+                alert('Nenhum resultado para exportar');
                 return;
             }
+            
+            const currentResults = tabs[activeTabId].results;
             
             // Convert to CSV
             const headers = currentResults.columns.join(',');
@@ -571,7 +752,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'query_results.csv';
+            a.download = `query_results_${tabs[activeTabId].name.replace(/\s+/g, '_')}.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -639,18 +820,22 @@
                     html.classList.remove('dark');
                     themeToggle.textContent = '🌞';
                     document.body.className = 'font-sans bg-white text-gray-900 h-screen overflow-hidden';
-                    // Update Monaco editor theme
-                    if (editor) {
-                        editor.updateOptions({ theme: 'vs' });
-                    }
+                    // Update Monaco editor themes for all tabs
+                    Object.values(tabs).forEach(tab => {
+                        if (tab.editor) {
+                            tab.editor.updateOptions({ theme: 'vs' });
+                        }
+                    });
                 } else {
                     html.classList.add('dark');
                     themeToggle.textContent = '🌙';
                     document.body.className = 'font-sans bg-gray-950 text-white h-screen overflow-hidden';
-                    // Update Monaco editor theme
-                    if (editor) {
-                        editor.updateOptions({ theme: 'vs-dark' });
-                    }
+                    // Update Monaco editor themes for all tabs
+                    Object.values(tabs).forEach(tab => {
+                        if (tab.editor) {
+                            tab.editor.updateOptions({ theme: 'vs-dark' });
+                        }
+                    });
                 }
                 });
             }
