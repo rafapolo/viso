@@ -1,198 +1,117 @@
-## Project Overview
+# 🕸️ VISO - Visualização de Despesas Parlamentares
 
-**Viso** is a standalone web-based visualization component for the POLIS project that creates interactive network visualizations of Brazilian parliamentary expenses. It shows connections between deputies (deputados) and companies (fornecedores) based on expense data, enabling exploration of business-political relationships through an intuitive graph interface.
+> **Transparência através da visualização de dados públicos**
 
-## Architecture
+Uma ferramenta interativa para explorar os gastos dos deputados federais brasileiros e suas conexões com empresas fornecedoras.
 
-The visualization is built as a self-contained web application that runs entirely in the browser:
+## 🎯 Por que isso importa?
 
-- **Frontend**: Pure HTML/CSS/JavaScript with Tailwind CSS for styling
-- **Data Processing**: DuckDB WASM for in-browser SQL queries on parquet data
-- **Visualization**: D3.js force-directed network graph with zoom/pan capabilities
-- **Deployment**: Static hosting compatible (GitHub Pages, Netlify, etc.)
+### Dados Públicos = Poder Cidadão
+- **Transparência**: Todo real gasto pelos deputados vem dos nossos impostos
+- **Accountability**: Visualizar padrões de gastos ajuda a identificar irregularidades
+- **Democracia**: Cidadãos informados fazem escolhas melhores nas eleições
+- **Fiscalização**: A sociedade civil pode acompanhar como o dinheiro público é usado
 
-## Key Components
+### O que você pode descobrir:
+- 💰 **Quanto cada deputado gasta** e com quais empresas
+- 🏛️ **Padrões por partido político** - quem gasta mais/menos
+- 🏢 **Empresas que mais faturam** com dinheiro público
+- 🔍 **Conexões suspeitas** entre políticos e fornecedores
 
-### Main Files
-- `index.html` - Complete web application with embedded JavaScript, CSS, and HTML
-- `public/despesas.parquet` - Main expense dataset in Parquet format
-- `.nojekyll` - GitHub Pages configuration file
+## 🎮 Funcionalidades
 
-### Data Structure
-The application expects expense data with these key columns:
-- `nome_parlamentar` - Deputy name
-- `sigla_partido` - Political party abbreviation  
-- `fornecedor` - Company/supplier name
-- `categoria_despesa` - Expense category
-- `valor_liquido` - Net expense value
-- `ano` - Year of expense
+### 📊 Rede Interativa
+- **Nós vermelhos**: Deputados federais
+- **Nós azuis**: Empresas fornecedoras
+- **Linhas**: Conexões financeiras (quanto mais grossa = mais dinheiro)
 
-## Development Workflows
+### 🔧 Controles Interativos
+- **🎚️ Filtro por Partido**: Veja gastos de PT, PSDB, PL, etc.
+- **📂 Filtro por Categoria**: Combustível, consultoria, aluguel...
+- **💵 Valor Mínimo**: Ajuste para ver apenas gastos acima de R$ X
+- **🏷️ Mostrar Empresas**: Exibe nomes das empresas na rede
+- **💰 Mostrar Gastos**: Valores em R$ nas conexões
 
-### Local Development
-```bash
-# Serve the application locally
-python -m http.server 8000
+### 🔍 Exploração
+- **Clique nos nós**: Veja detalhes financeiros
+- **Arraste**: Reorganize a visualização
+- **Zoom**: Use a roda do mouse ou botões de zoom
 
-# Access at http://localhost:8000
-```
+## 📈 Exemplos do que descobrir
 
-### GitHub Pages Deployment
-```bash
-# 1. Push to GitHub repository
-git add .
-git commit -m "Deploy viso visualization"
-git push origin main
+### Padrões Suspeitos
+- Deputado que gasta só com uma empresa
+- Empresa que recebe de muitos deputados do mesmo partido
+- Gastos muito acima da média
 
-# 2. Enable GitHub Pages in repository settings
-# - Go to repository Settings → Pages
-# - Select "Deploy from a branch"
-# - Choose "main" branch and "/ (root)" folder
-# - Wait for deployment (usually 1-2 minutes)
+### Análises Possíveis
+- Qual partido gasta mais com combustível?
+- Quais empresas dominam contratos públicos?
+- Há concentração de gastos em poucas empresas?
 
-# 3. Access at https://yourusername.github.io/repository-name/
-```
+## 🛠️ Para Desenvolvedores
 
-### Static Hosting (Netlify, Vercel, etc.)
-1. Create new site from Git repository
-2. Set build command: (none needed)
-3. Set publish directory: `/` or leave empty
-4. Deploy automatically on each push
+### Tecnologias
+- **Frontend**: HTML5, CSS3, JavaScript
+- **Dados**: DuckDB WASM + Parquet
+- **Visualização**: D3.js
+- **Deploy**: GitHub Pages, Netlify, Vercel
 
-## Key Features
-
-### Network Visualization
-- **Nodes**: Deputies (red circles) and companies (teal circles)
-- **Edges**: Financial relationships with thickness based on transaction value
-- **Edge Labels**: Optional display of spending amounts with smart currency formatting
-- **Layout**: Force-directed graph with collision detection
-- **Interactivity**: Click nodes for detailed information, drag to reposition
-
-### Interactive Controls
-- **Party Filter**: Filter by political party (sigla_partido)
-- **Category Filter**: Filter by expense category (categoria_despesa)
-- **Minimum Value Slider**: Set threshold for transaction amounts
-- **Company Names Toggle**: Show/hide company labels
-- **Edge Amounts Toggle**: Show/hide spending amounts (R$) on connection lines
-- **Zoom Controls**: Zoom in/out and reset view
-
-### Real-time Data Processing
-- In-browser SQL queries using DuckDB WASM
-- Aggregates transactions by deputy-company pairs
-- Calculates totals, counts, and connection statistics
-- Updates visualization automatically when filters change
-
-## Technical Implementation
-
-### Browser Requirements
-- **WASM Support**: Required for DuckDB (all modern browsers)
-- **JavaScript**: ES6+ features used throughout
-- **Performance**: Best with hardware acceleration enabled
-- **Memory**: Handles datasets up to several hundred MB efficiently
-
-### Data Loading
-```javascript
-// Automatically detects environment and loads data
-const response = await fetch('./public/despesas.parquet');
-const arrayBuffer = await response.arrayBuffer();
-await db.registerFileBuffer('despesas.parquet', new Uint8Array(arrayBuffer));
-```
-
-### Optimization Features
-- Limits results to 10,000 aggregated records for performance
-- Edge labels with smart currency formatting (R$ 1.5M, R$ 500K, R$ 250)
-- Smooth fade-in/fade-out transitions for edge label visibility
-- Debounced slider updates (500ms delay)
-- Efficient D3.js rendering with proper data binding
-
-## File Structure
+### Estrutura
 ```
 viso/
-├── index.html          # Main application
+├── index.html          # Aplicação completa
 ├── public/
-│   └── despesas.parquet # Data file
-├── .nojekyll           # GitHub Pages config
-└── CLAUDE.md           # This documentation
+│   └── despesas.parquet # Dados dos gastos
+└── README.md           # Esta documentação
 ```
 
-## Common Development Tasks
+## 🤝 Contribuindo
 
-### Adding New Filters
-1. Add UI control to the sidebar section in `index.html`
-2. Update `getFilterOptions()` to fetch distinct values from data
-3. Modify `queryAggregatedData()` to include new WHERE clause
-4. Add event listener in `setupEventListeners()`
+## 🚀 Como usar
 
-### Managing Edge Labels
-- **Toggle Display**: Use "Mostrar gasto" checkbox to show/hide spending amounts
-- **Currency Format**: Automatic formatting for readability (M for millions, K for thousands)
-- **Performance**: Labels are rendered for all edges but hidden by default
-- **Styling**: Yellow color (#ffd93d) for visibility against dark background
-
-### Customizing Appearance
-- **Node colors**: Modify `fill` attribute in D3 node creation (lines 630-631)
-- **Force simulation**: Adjust parameters in `d3.forceSimulation()` (lines 609-613)
-- **Styling**: Edit Tailwind classes or custom CSS in `<style>` section
-- **Layout**: Change sidebar width by updating CSS variables (line 184)
-
-### Performance Tuning
-- **Query limits**: Adjust `LIMIT` clause in SQL queries (line 97)
-- **Force parameters**: Modify strength values for better graph layout
-- **Debounce timing**: Change timeout duration for filter responsiveness (line 867)
-- **Edge labels**: Modify currency formatting or transition duration in `updateEdgeAmounts()`
-
-## Data Requirements
-
-### Parquet File Format
-- Must be accessible at `./public/despesas.parquet`
-- Should contain parliamentary expense records
-- Compatible with DuckDB SQL queries
-- Recommended size: < 500MB for optimal browser performance
-
-### Expected Schema
-```sql
-CREATE TABLE despesas (
-    nome_parlamentar VARCHAR,
-    sigla_partido VARCHAR,
-    fornecedor VARCHAR,
-    categoria_despesa VARCHAR,
-    valor_liquido DECIMAL,
-    ano INTEGER,
-    -- additional columns as needed
-);
+### Executar localmente
+```bash
+# Clone o repositório
+git clone https://github.com/rafapolo/viso.git
+cd viso
+# Inicie um servidor local
+python -m http.server 8000
+# Abra no navegador
+http://localhost:8000
 ```
 
-## Troubleshooting
+### Como ajudar
+- 🐛 **Reporte bugs** - encontrou algo estranho?
+- 💡 **Sugira melhorias** - que análise falta?
+- 📊 **Atualize dados** - tem dados mais recentes?
+- 🎨 **Melhore a interface** - como tornar mais fácil de usar?
 
-### GitHub Pages Issues
-- **404 Error**: Ensure repository is public and Pages is enabled
-- **Loading Issues**: Check browser console for CORS errors
-- **Data Not Loading**: Verify parquet file is in correct location
-- **WASM Errors**: Ensure browser supports WebAssembly
+### Dados Abertos
+Esta ferramenta usa dados públicos da Câmara dos Deputados, disponíveis em:
+- **Portal da Transparência**
+- **Dados Abertos da Câmara**
+- **Lei de Acesso à Informação**
 
-### Performance Issues
-- **Slow Loading**: Consider compressing or splitting large parquet files
-- **Browser Freeze**: Reduce query limits or add pagination
-- **Memory Issues**: Check browser memory usage in dev tools
+## 🌟 Impacto Social
 
-### Development Issues
-- **Local Server**: Some browsers require HTTPS for WASM modules
-- **File Paths**: Use relative paths (`./`) not absolute paths (`/`)
-- **CORS**: Serve files from HTTP server, don't open directly in browser
+### Casos de Uso
+- **Jornalismo Investigativo**: Identificar pautas sobre gastos públicos
+- **Ativismo Cívico**: Pressionar por mais transparência
+- **Educação**: Ensinar sobre democracia e controle social
+- **Pesquisa Acadêmica**: Estudos sobre política e corrupção
 
-## Browser Compatibility
+### Resultados Esperados
+- ✅ Mais cidadãos fiscalizando gastos públicos
+- ✅ Deputados mais cuidadosos com despesas
+- ✅ Maior transparência no uso de recursos
+- ✅ Democracia mais forte e participativa
 
-| Browser | Version | Support | Notes |
-|---------|---------|---------|-------|
-| Chrome | 57+ | ✅ Full | Best performance |
-| Firefox | 52+ | ✅ Full | Good performance |  
-| Safari | 11+ | ✅ Full | Requires recent version |
-| Edge | 16+ | ✅ Full | Works well |
-| Mobile | iOS 11+, Android 8+ | ✅ Limited | May be slower |
+---
 
-## External Dependencies (CDN)
-- **Tailwind CSS**: `https://cdn.tailwindcss.com`
-- **D3.js**: `https://d3js.org/d3.v7.min.js`
-- **DuckDB WASM**: `https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/+esm`
+**💡 Lembre-se**: Dados públicos pertencem ao povo. Use-os para tornar nossa democracia mais transparente!
 
-All dependencies are loaded via CDN, making the application completely self-contained for static hosting.
+**🔗 Compartilhe**: Ajude outros cidadãos a descobrir como seus impostos são gastos.
+
+---
+*Desenvolvido com ❤️ para fortalecer a democracia brasileira*
