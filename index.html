@@ -66,7 +66,7 @@
             }
         }
         
-        async function queryAggregatedData(minValue = 0, partyFilter = '', categoryFilter = '') {
+        async function queryAggregatedData(minValue = 0, partyFilter = '', categoryFilter = '', searchFilter = '') {
             console.log('🔍 Querying aggregated data...');
             
             let whereClause = "WHERE nome_parlamentar IS NOT NULL AND fornecedor IS NOT NULL";
@@ -81,6 +81,10 @@
             
             if (categoryFilter) {
                 whereClause += ` AND categoria_despesa = '${categoryFilter}'`;
+            }
+            
+            if (searchFilter) {
+                whereClause += ` AND (LOWER(nome_parlamentar) LIKE '%${searchFilter.toLowerCase()}%' OR LOWER(fornecedor) LIKE '%${searchFilter.toLowerCase()}%')`;
             }
             
             const query = `
@@ -105,6 +109,45 @@
             
             console.log(`✅ Query returned ${data.length} aggregated records`);
             return data;
+        }
+        
+        async function getValueRange(partyFilter = '', categoryFilter = '', searchFilter = '') {
+            console.log('🔍 Querying value range...');
+            
+            let whereClause = "WHERE nome_parlamentar IS NOT NULL AND fornecedor IS NOT NULL";
+            
+            if (partyFilter) {
+                whereClause += ` AND sigla_partido = '${partyFilter}'`;
+            }
+            
+            if (categoryFilter) {
+                whereClause += ` AND categoria_despesa = '${categoryFilter}'`;
+            }
+            
+            if (searchFilter) {
+                whereClause += ` AND (LOWER(nome_parlamentar) LIKE '%${searchFilter.toLowerCase()}%' OR LOWER(fornecedor) LIKE '%${searchFilter.toLowerCase()}%')`;
+            }
+            
+            const query = `
+                SELECT 
+                    MIN(valor_liquido) as min_valor,
+                    MAX(valor_liquido) as max_valor
+                FROM despesas 
+                ${whereClause}
+            `;
+            
+            console.log('📊 Executing value range query:', query);
+            const result = await conn.query(query);
+            const data = result.toArray();
+            
+            if (data.length > 0 && data[0].min_valor !== null) {
+                return {
+                    min: Math.max(0, Number(data[0].min_valor)) || 0,
+                    max: Number(data[0].max_valor)
+                };
+            }
+            
+            return { min: 0, max: 100000 };
         }
         
         async function getFilterOptions() {
@@ -136,6 +179,7 @@
             initDuckDB,
             loadParquetData,
             queryAggregatedData,
+            getValueRange,
             getFilterOptions
         };
         
@@ -329,6 +373,16 @@
                         <span class="text-gray-600 dark:text-gray-300 text-xs">Empresas</span>
                     </div>
                 </div>
+                <div class="legend-items mt-2 pt-2 border-t border-gray-300 dark:border-gray-600" id="searchLegend" style="display: none;">
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded-full" style="background-color: #ffdd59;"></div>
+                        <span class="text-gray-600 dark:text-gray-300 text-xs">Deputado (busca)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded-full" style="background-color: #59ffdd;"></div>
+                        <span class="text-gray-600 dark:text-gray-300 text-xs">Empresa (busca)</span>
+                    </div>
+                </div>
             </div>
             
             <div class="p-4 border-b border-gray-300 dark:border-gray-700">
@@ -410,6 +464,21 @@
                     <div>Inicializando DuckDB...</div>
                     <div id="loadingProgress" class="text-sm text-gray-400 mt-2"></div>
                 </div>
+                <!-- Search box -->
+                <div class="absolute top-4 left-1/2 transform -translate-x-1/2 flex flex-col gap-2">
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="searchBox" 
+                            placeholder="Buscar deputado ou empresa..." 
+                            class="w-64 px-3 py-2 text-sm bg-gray-800 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-duckdb-500 focus:ring-1 focus:ring-duckdb-500"
+                        >
+                        <button id="clearSearch" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white text-sm hidden">
+                            ✕
+                        </button>
+                    </div>
+                </div>
+                
                 <!-- Zoom controls -->
                 <div class="absolute top-4 right-4 flex flex-col gap-2">
                     <button id="zoom-in" class="bg-gray-800 hover:bg-gray-700 text-white w-8 h-8 rounded flex items-center justify-center text-lg font-bold">+</button>
@@ -477,17 +546,17 @@
             const minValue = parseFloat(document.getElementById('minValue').value) || 0;
             const partyFilter = document.getElementById('partyFilter').value;
             const categoryFilter = document.getElementById('categoryFilter').value;
+            const searchFilter = document.getElementById('searchBox').value.trim();
             
-            console.log(`🔍 Filters - minValue: ${minValue}, party: ${partyFilter}, category: ${categoryFilter}`);
+            console.log(`🔍 Filters - minValue: ${minValue}, party: ${partyFilter}, category: ${categoryFilter}, search: ${searchFilter}`);
             
-            // Get all data that matches party/category filters (without minValue filter) to set slider range
-            const rangeData = await window.duckdbAPI.queryAggregatedData(0, partyFilter, categoryFilter);
+            // Get the individual transaction value range (not aggregated sums)
+            const valueRange = await window.duckdbAPI.getValueRange(partyFilter, categoryFilter, searchFilter);
+            const minVal = valueRange.min;
+            const maxVal = valueRange.max;
             
-            // Update min/max range based on available data after party/category filtering
-            if (rangeData.length > 0) {
-                const values = rangeData.map(r => Number(r.valor_total));
-                const minVal = Math.min(...values);
-                const maxVal = Math.max(...values);
+            // Update min/max range based on individual transaction values
+            if (minVal !== null && maxVal !== null && maxVal > minVal) {
                 
                 // Update slider range to reflect actual data range
                 const slider = document.getElementById('minValue');
@@ -495,16 +564,14 @@
                 
                 // Set slider bounds to actual data range
                 // Ensure we have a reasonable range even if min and max are very close
-                const rangeMin = Math.floor(minVal);
+                const rangeMin = Math.max(0, Math.floor(minVal)) || 0;
                 const rangeMax = Math.max(Math.ceil(maxVal), rangeMin + 1000); // Ensure at least 1000 range
                 
                 slider.min = rangeMin;
                 slider.max = rangeMax;
                 
                 // If current slider value is outside the new range, adjust it
-                if (currentValue < rangeMin) {
-                    slider.value = rangeMin;
-                } else if (currentValue > rangeMax) {
+                if (currentValue < rangeMin || currentValue > rangeMax) {
                     slider.value = rangeMin;
                 }
                 
@@ -513,7 +580,7 @@
                 document.getElementById('minRange').textContent = `Min: ${formatCurrency(minVal)}`;
                 document.getElementById('maxRange').textContent = `Max: ${formatCurrency(maxVal)}`;
                 
-                // Update the current value display
+                // Update the current value display with the corrected slider value
                 const actualMinValue = parseFloat(slider.value) || 0;
                 const minValueDisplay = document.getElementById('minValueValue');
                 const formatValue = (val) => {
@@ -522,6 +589,8 @@
                     return val.toLocaleString('pt-BR');
                 };
                 minValueDisplay.textContent = formatValue(actualMinValue);
+                
+                console.log(`📊 Range updated: min=${rangeMin}, max=${rangeMax}, current=${actualMinValue}`);
             } else {
                 // No data available - reset to defaults
                 const slider = document.getElementById('minValue');
@@ -529,13 +598,43 @@
                 slider.max = 100000;
                 slider.value = 0;
                 document.getElementById('minRange').textContent = 'Min: R$ 0';
-                document.getElementById('maxRange').textContent = 'Max: R$ 0';
+                document.getElementById('maxRange').textContent = 'Max: R$ 100.000';
                 document.getElementById('minValueValue').textContent = '0';
             }
             
             // Query DuckDB with all filters including the current minimum value
             const actualMinValue = parseFloat(document.getElementById('minValue').value) || 0;
-            const aggregatedData = await window.duckdbAPI.queryAggregatedData(actualMinValue, partyFilter, categoryFilter);
+            let aggregatedData = await window.duckdbAPI.queryAggregatedData(actualMinValue, partyFilter, categoryFilter, searchFilter);
+            
+            // If search filter exists, filter to show only relations of the searched entity
+            if (searchFilter) {
+                const searchLower = searchFilter.toLowerCase();
+                const matchingEntities = new Set();
+                
+                // Find all entities that match the search term
+                aggregatedData.forEach(record => {
+                    const deputado = `${record.nome_parlamentar} (${record.sigla_partido})`;
+                    const fornecedor = record.fornecedor;
+                    
+                    if (deputado.toLowerCase().includes(searchLower)) {
+                        matchingEntities.add(deputado);
+                    }
+                    if (fornecedor.toLowerCase().includes(searchLower)) {
+                        matchingEntities.add(fornecedor);
+                    }
+                });
+                
+                // If we found matching entities, filter to show only their relations
+                if (matchingEntities.size > 0) {
+                    aggregatedData = aggregatedData.filter(record => {
+                        const deputado = `${record.nome_parlamentar} (${record.sigla_partido})`;
+                        const fornecedor = record.fornecedor;
+                        
+                        // Show this record if either the deputado or fornecedor is in our matching entities
+                        return matchingEntities.has(deputado) || matchingEntities.has(fornecedor);
+                    });
+                }
+            }
             
             // Create nodes and links with totals
             const nodeMap = new Map();
@@ -721,14 +820,33 @@
                 .attr("stroke-width", 0.5);
 
             // Add nodes
+            const searchFilter = document.getElementById('searchBox').value.trim().toLowerCase();
             const node = g.append("g")
                 .selectAll("circle")
                 .data(nodes)
                 .enter().append("circle")
                 .attr("r", getNodeRadius)
-                .attr("fill", d => d.type === 'deputado' ? '#ff6b6b' : '#4ecdc4')
-                .attr("stroke", "#fff")
-                .attr("stroke-width", 1.5)
+                .attr("fill", d => {
+                    // Highlight matching search results
+                    if (searchFilter && d.label.toLowerCase().includes(searchFilter)) {
+                        return d.type === 'deputado' ? '#ffdd59' : '#59ffdd'; // Brighter colors for matches
+                    }
+                    return d.type === 'deputado' ? '#ff6b6b' : '#4ecdc4';
+                })
+                .attr("stroke", d => {
+                    // Special stroke for search matches
+                    if (searchFilter && d.label.toLowerCase().includes(searchFilter)) {
+                        return "#fff";
+                    }
+                    return "#fff";
+                })
+                .attr("stroke-width", d => {
+                    // Thicker stroke for search matches
+                    if (searchFilter && d.label.toLowerCase().includes(searchFilter)) {
+                        return 3;
+                    }
+                    return 1.5;
+                })
                 .style("cursor", "pointer")
                 .on("click", (event, d) => {
                     event.stopPropagation();
@@ -964,6 +1082,8 @@
             const partyFilter = document.getElementById('partyFilter');
             const categoryFilter = document.getElementById('categoryFilter');
             const showCompanyNames = document.getElementById('showCompanyNames');
+            const searchBox = document.getElementById('searchBox');
+            const clearSearch = document.getElementById('clearSearch');
             
             function updateSliderDisplay() {
                 const value = parseInt(minValueSlider.value);
@@ -985,9 +1105,55 @@
                 }, 500); // 500ms debounce
             });
             
-            // Auto-update immediately for select boxes
-            partyFilter.addEventListener('change', updateVisualization);
-            categoryFilter.addEventListener('change', updateVisualization);
+            // Auto-update immediately for select boxes with slider display refresh
+            partyFilter.addEventListener('change', () => {
+                updateVisualization();
+                setTimeout(updateSliderDisplay, 100); // Ensure slider display is updated after range change
+            });
+            categoryFilter.addEventListener('change', () => {
+                updateVisualization();
+                setTimeout(updateSliderDisplay, 100); // Ensure slider display is updated after range change
+            });
+            
+            // Search functionality with debounce
+            let searchTimeout;
+            searchBox.addEventListener('input', (e) => {
+                const value = e.target.value.trim();
+                
+                // Show/hide clear button and search legend
+                const searchLegend = document.getElementById('searchLegend');
+                if (value) {
+                    clearSearch.classList.remove('hidden');
+                    searchLegend.style.display = 'flex';
+                } else {
+                    clearSearch.classList.add('hidden');
+                    searchLegend.style.display = 'none';
+                }
+                
+                // Update visualization with debounce
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    updateVisualization();
+                }, 300); // 300ms debounce for search
+            });
+            
+            // Clear search button
+            clearSearch.addEventListener('click', () => {
+                searchBox.value = '';
+                clearSearch.classList.add('hidden');
+                document.getElementById('searchLegend').style.display = 'none';
+                updateVisualization();
+            });
+            
+            // Clear search on Escape key
+            searchBox.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    searchBox.value = '';
+                    clearSearch.classList.add('hidden');
+                    document.getElementById('searchLegend').style.display = 'none';
+                    updateVisualization();
+                }
+            });
             
             // Handle company names checkbox
             showCompanyNames.addEventListener('change', (e) => {
