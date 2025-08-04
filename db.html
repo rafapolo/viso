@@ -144,7 +144,7 @@
 
     </style>
 </head>
-<body class="font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen overflow-hidden">
+<body class="font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen">
     <div class="flex h-screen">
         <!-- Sidebar -->
         <div class="w-80 bg-gray-100 dark:bg-gray-900 border-r border-gray-300 dark:border-gray-700 flex flex-col">
@@ -201,7 +201,7 @@
         </div>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col">
+        <div class="flex-1 flex flex-col min-w-0">
             <div class="h-16 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-5 justify-between">
                 <div class="flex items-center gap-1">
                     <div id="tabs-container" class="flex items-center gap-1">
@@ -219,8 +219,8 @@
                 </div>
             </div>
             
-            <div class="flex-1 flex flex-col min-h-0">
-                <div class="editor-container h-96 border-b border-gray-300 dark:border-gray-700">
+            <div class="flex-1 flex flex-col min-h-0 min-w-0">
+                <div class="editor-container h-96 border-b border-gray-300 dark:border-gray-700 min-w-0">
                     <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 gap-2">
                         <button id="run-query-btn" class="px-3 py-1.5 bg-duckdb-500 text-black rounded text-xs hover:bg-duckdb-600 transition-colors disabled:opacity-50 flex items-center gap-1.5" disabled>
                             ▶️ Executar
@@ -238,15 +238,47 @@
                 
                 <div class="resize-handle h-1 bg-gray-300 dark:bg-gray-700 hover:bg-duckdb-500 transition-colors" id="resize-handle"></div>
 
-                <div class="flex-1 flex flex-col min-h-0">
+                <div class="flex-1 flex flex-col min-h-0 min-w-0">
                     <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 justify-between">
                         <span class="font-medium text-sm">Resultados</span>
                         <div id="result-stats" class="text-xs text-gray-500 dark:text-gray-400"></div>
                     </div>
                     
-                    <div class="flex-1 bg-gray-50 dark:bg-gray-950 min-h-0">
-                        <div id="results-container" class="h-full w-full">
+                    <div class="flex-1 bg-gray-50 dark:bg-gray-950 min-h-0 flex flex-col min-w-0">
+                        <div id="results-container" class="flex-1 overflow-auto min-w-0">
                             <!-- Results containers will be dynamically generated here -->
+                        </div>
+                        
+                        <!-- Pagination Controls -->
+                        <div id="pagination-container" class="border-t border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 hidden flex-shrink-0 min-w-0">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1 flex justify-between sm:hidden">
+                                    <button id="pagination-prev-mobile" class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        Anterior
+                                    </button>
+                                    <button id="pagination-next-mobile" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        Próximo
+                                    </button>
+                                </div>
+                                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                    <div>
+                                        <p class="text-sm text-gray-700 dark:text-gray-300">
+                                            Mostrando
+                                            <span id="pagination-start" class="font-medium">0</span>
+                                            a
+                                            <span id="pagination-end" class="font-medium">0</span>
+                                            de
+                                            <span id="pagination-total" class="font-medium">0</span>
+                                            resultados
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" id="pagination-nav">
+                                            <!-- Pagination buttons will be generated here -->
+                                        </nav>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -264,6 +296,10 @@
         let tabs = {};
         let activeTabId = null;
         let tabCounter = 0;
+        
+        // Pagination constants
+        const ROWS_PER_PAGE = 100;
+        const MAX_VISIBLE_PAGES = 10;
         
         async function initializeApp() {
             try {
@@ -371,7 +407,9 @@
                 id: tabId,
                 name: tabName,
                 editor: null,
-                results: null
+                results: null,
+                currentPage: 1,
+                totalPages: 0
             };
             
             // Create tab HTML elements
@@ -617,6 +655,26 @@
             if (exportBtn) {
                 exportBtn.addEventListener('click', exportResults);
             }
+            
+            // Mobile pagination buttons
+            const prevMobileBtn = document.getElementById('pagination-prev-mobile');
+            const nextMobileBtn = document.getElementById('pagination-next-mobile');
+            
+            if (prevMobileBtn) {
+                prevMobileBtn.addEventListener('click', () => {
+                    if (activeTabId && tabs[activeTabId]) {
+                        goToPage(activeTabId, tabs[activeTabId].currentPage - 1);
+                    }
+                });
+            }
+            
+            if (nextMobileBtn) {
+                nextMobileBtn.addEventListener('click', () => {
+                    if (activeTabId && tabs[activeTabId]) {
+                        goToPage(activeTabId, tabs[activeTabId].currentPage + 1);
+                    }
+                });
+            }
 
         }
         
@@ -639,6 +697,7 @@
                 // Execute query
                 const result = await window.duckdbAPI.executeQuery(sql);
                 tabs[activeTabId].results = result;
+                tabs[activeTabId].currentPage = 1; // Reset to first page
                 
                 // Display results
                 displayResults(result, activeTabId);
@@ -668,10 +727,29 @@
             
             if (result.rowCount === 0) {
                 resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><div class="text-2xl opacity-50">📄</div><div>Nenhum resultado encontrado</div></div>';
+                hidePagination();
                 return;
             }
             
-                // Create table
+            // Calculate pagination
+            const tab = tabs[tabId];
+            const totalPages = Math.ceil(result.rowCount / ROWS_PER_PAGE);
+            tab.totalPages = totalPages;
+            
+            // Show pagination only if more than 100 rows
+            if (result.rowCount > ROWS_PER_PAGE) {
+                showPagination(tabId);
+                updatePaginationInfo(tabId);
+            } else {
+                hidePagination();
+            }
+            
+            // Calculate current page data
+            const startIndex = (tab.currentPage - 1) * ROWS_PER_PAGE;
+            const endIndex = Math.min(startIndex + ROWS_PER_PAGE, result.rowCount);
+            const displayRows = result.data.slice(startIndex, endIndex);
+            
+            // Create table
             let tableHTML = '<div class="p-4"><table class="border-collapse text-xs" style="width: auto; min-width: max-content;">';
             
             // Headers
@@ -681,9 +759,8 @@
             });
             tableHTML += '</tr></thead>';
             
-            // Rows (limit to first 1000 for performance)
+            // Rows for current page
             tableHTML += '<tbody>';
-            const displayRows = result.data.slice(0, 1000);
             displayRows.forEach((row, index) => {
                 tableHTML += `<tr class="hover:bg-gray-100 dark:hover:bg-gray-900">`;
                 result.columns.forEach(col => {
@@ -698,13 +775,149 @@
             });
             tableHTML += '</tbody></table></div>';
             
-            if (result.rowCount > 1000) {
-                tableHTML += `<div class="p-3 text-center text-gray-500 dark:text-gray-400 text-xs bg-gray-100 dark:bg-gray-900">
-                    Mostrando primeiras 1000 de ${result.rowCount.toLocaleString()} linhas
-                </div>`;
+            resultsContent.innerHTML = tableHTML;
+        }
+        
+        function showPagination(tabId) {
+            const paginationContainer = document.getElementById('pagination-container');
+            paginationContainer.classList.remove('hidden');
+            generatePaginationButtons(tabId);
+        }
+        
+        function hidePagination() {
+            const paginationContainer = document.getElementById('pagination-container');
+            paginationContainer.classList.add('hidden');
+        }
+        
+        function updatePaginationInfo(tabId) {
+            const tab = tabs[tabId];
+            const result = tab.results;
+            
+            if (!result) return;
+            
+            const startIndex = (tab.currentPage - 1) * ROWS_PER_PAGE + 1;
+            const endIndex = Math.min(tab.currentPage * ROWS_PER_PAGE, result.rowCount);
+            
+            document.getElementById('pagination-start').textContent = startIndex.toLocaleString();
+            document.getElementById('pagination-end').textContent = endIndex.toLocaleString();
+            document.getElementById('pagination-total').textContent = result.rowCount.toLocaleString();
+        }
+        
+        function generatePaginationButtons(tabId) {
+            const tab = tabs[tabId];
+            const totalPages = tab.totalPages;
+            const currentPage = tab.currentPage;
+            const paginationNav = document.getElementById('pagination-nav');
+            
+            // Update mobile buttons
+            const prevMobileBtn = document.getElementById('pagination-prev-mobile');
+            const nextMobileBtn = document.getElementById('pagination-next-mobile');
+            
+            if (prevMobileBtn) {
+                prevMobileBtn.disabled = currentPage === 1;
+                prevMobileBtn.classList.toggle('opacity-50', currentPage === 1);
+                prevMobileBtn.classList.toggle('cursor-not-allowed', currentPage === 1);
             }
             
-            resultsContent.innerHTML = tableHTML;
+            if (nextMobileBtn) {
+                nextMobileBtn.disabled = currentPage === totalPages;
+                nextMobileBtn.classList.toggle('opacity-50', currentPage === totalPages);
+                nextMobileBtn.classList.toggle('cursor-not-allowed', currentPage === totalPages);
+            }
+            
+            let buttonsHTML = '';
+            
+            // Previous button
+            buttonsHTML += `
+                <button onclick="goToPage('${tabId}', ${currentPage - 1})" 
+                        class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 ${currentPage === 1 ? 'cursor-not-allowed opacity-50' : ''}"
+                        ${currentPage === 1 ? 'disabled' : ''}>
+                    <span class="sr-only">Anterior</span>
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            `;
+            
+            // Calculate visible page range
+            let startPage = Math.max(1, currentPage - Math.floor(MAX_VISIBLE_PAGES / 2));
+            let endPage = Math.min(totalPages, startPage + MAX_VISIBLE_PAGES - 1);
+            
+            // Adjust start if we're near the end
+            if (endPage - startPage < MAX_VISIBLE_PAGES - 1) {
+                startPage = Math.max(1, endPage - MAX_VISIBLE_PAGES + 1);
+            }
+            
+            // First page and ellipsis if needed
+            if (startPage > 1) {
+                buttonsHTML += `
+                    <button onclick="goToPage('${tabId}', 1)" 
+                            class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        1
+                    </button>
+                `;
+                if (startPage > 2) {
+                    buttonsHTML += `
+                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200">
+                            ...
+                        </span>
+                    `;
+                }
+            }
+            
+            // Page numbers
+            for (let i = startPage; i <= endPage; i++) {
+                const isActive = i === currentPage;
+                buttonsHTML += `
+                    <button onclick="goToPage('${tabId}', ${i})" 
+                            class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                isActive 
+                                    ? 'z-10 bg-duckdb-500 border-duckdb-500 text-black' 
+                                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }">
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            // Last page and ellipsis if needed
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    buttonsHTML += `
+                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200">
+                            ...
+                        </span>
+                    `;
+                }
+                buttonsHTML += `
+                    <button onclick="goToPage('${tabId}', ${totalPages})" 
+                            class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        ${totalPages}
+                    </button>
+                `;
+            }
+            
+            // Next button
+            buttonsHTML += `
+                <button onclick="goToPage('${tabId}', ${currentPage + 1})" 
+                        class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 ${currentPage === totalPages ? 'cursor-not-allowed opacity-50' : ''}"
+                        ${currentPage === totalPages ? 'disabled' : ''}>
+                    <span class="sr-only">Próximo</span>
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            `;
+            
+            paginationNav.innerHTML = buttonsHTML;
+        }
+        
+        function goToPage(tabId, page) {
+            const tab = tabs[tabId];
+            if (!tab || !tab.results || page < 1 || page > tab.totalPages) return;
+            
+            tab.currentPage = page;
+            displayResults(tab.results, tabId);
         }
         
         function clearResults() {
@@ -718,8 +931,13 @@
             document.getElementById('execution-stats').textContent = 'Pronto';
             document.getElementById('result-stats').textContent = '';
             
+            // Hide pagination
+            hidePagination();
+            
             if (tabs[activeTabId]) {
                 tabs[activeTabId].results = null;
+                tabs[activeTabId].currentPage = 1;
+                tabs[activeTabId].totalPages = 0;
             }
         }
 
