@@ -142,6 +142,72 @@
             background-color: #FFC000;
         }
 
+        /* Query button types */
+        .query-basic {
+            background: linear-gradient(to right, #f3f4f6, #e5e7eb);
+        }
+        .dark .query-basic {
+            background: linear-gradient(to right, #374151, #4b5563);
+        }
+        
+        .query-complex {
+            background: linear-gradient(to right, #dbeafe, #bfdbfe);
+            border-left: 3px solid #3b82f6;
+        }
+        .dark .query-complex {
+            background: linear-gradient(to right, #1e3a8a, #1d4ed8);
+        }
+        
+        .query-audit {
+            background: linear-gradient(to right, #fee2e2, #fecaca);
+            border-left: 3px solid #ef4444;
+        }
+        .dark .query-audit {
+            background: linear-gradient(to right, #7f1d1d, #991b1b);
+        }
+
+        /* Tooltip styles */
+        .tooltip {
+            position: relative;
+        }
+        
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 50%;
+            bottom: 100%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            margin-bottom: 5px;
+        }
+        
+        .tooltip::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 100%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.9);
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+        }
+        
+        .tooltip:hover::after,
+        .tooltip:hover::before {
+            opacity: 1;
+        }
+
     </style>
 </head>
 <body class="font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen">
@@ -162,22 +228,23 @@
                 </button>
             </div>
             
-            
             <div class="p-4 border-b border-gray-300 dark:border-gray-700">
-                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Database</div>
-                <div id="connection-status" class="text-xs text-gray-500 dark:text-gray-400">
-                    <span class="loading-spinner"></span> Inicializando...
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">ANÁLISES</div>
+                
+                <!-- Search Box -->
+                <div class="mb-3">
+                    <input type="text" id="query-search" 
+                           placeholder="🔍 Buscar análises..." 
+                           class="w-full px-3 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-duckdb-500 focus:border-transparent">
                 </div>
-            </div>
-            
-            <div class="p-4 border-b border-gray-300 dark:border-gray-700">
-                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">ANáLISES</div>
+                
+                
                 <div id="sample-queries-list" class="space-y-1">
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT * FROM despesas LIMIT 10">
+                    <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT * FROM despesas LIMIT 10" data-tooltip="Visualização rápida dos dados - Execução: ~0.1s">
                         📄 Ver primeiros 10 registros
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT sigla_partido, COUNT(*) as total, SUM(valor_liquido) as value FROM despesas GROUP BY sigla_partido ORDER BY value DESC">
-                        📊 Despesas por partido
+                    <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT fornecedor, COUNT(*) as total, SUM(valor_liquido) as value FROM despesas GROUP BY fornecedor ORDER BY value DESC LIMIT 15" data-tooltip="Ranking de fornecedores por receita total - Execução: ~0.5s">
+                        📊 Top fornecedores por valor
                     </div>
                     <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT categoria_despesa, COUNT(*) as count, AVG(valor_liquido) as avg FROM despesas GROUP BY categoria_despesa ORDER BY count DESC LIMIT 10">
                         📈 Top categorias
@@ -188,15 +255,141 @@
                     <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT fornecedor, COUNT(DISTINCT nome_parlamentar) as deputies, SUM(valor_liquido) as total FROM despesas GROUP BY fornecedor HAVING deputies > 5 ORDER BY total DESC LIMIT 15">
                         🏢 Fornecedores multi-deputados
                     </div>
+                    
+                    <!-- Temporal Analysis -->
+                    <div class="category-section" data-category="temporal">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" onclick="toggleCategory('temporal')">
+                            <span class="text-xs font-medium text-blue-700 dark:text-blue-300 uppercase tracking-wide">📈 Análise Temporal</span>
+                            <svg class="category-chevron w-4 h-4 text-blue-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div class="category-content space-y-1" style="display: none;">
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT EXTRACT(YEAR FROM data_emissao) as ano, EXTRACT(MONTH FROM data_emissao) as mes, SUM(valor_liquido) as total, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano, mes ORDER BY ano DESC, mes DESC LIMIT 24">
+                        📅 Tendências mensais (2 anos)
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT CASE EXTRACT(DOW FROM data_emissao) WHEN 0 THEN 'Domingo' WHEN 1 THEN 'Segunda' WHEN 2 THEN 'Terça' WHEN 3 THEN 'Quarta' WHEN 4 THEN 'Quinta' WHEN 5 THEN 'Sexta' WHEN 6 THEN 'Sábado' END as dia_semana, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE data_emissao IS NOT NULL GROUP BY EXTRACT(DOW FROM data_emissao) ORDER BY EXTRACT(DOW FROM data_emissao)">
+                        📊 Padrão por dia da semana
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT EXTRACT(YEAR FROM data_emissao) as ano, SUM(valor_liquido) as total_ano, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano ORDER BY ano DESC">
+                        📈 Comparação ano a ano
+                    </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Advanced Category Analysis -->
+                    <div class="category-section" data-category="category">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors" onclick="toggleCategory('category')">
+                            <span class="text-xs font-medium text-green-700 dark:text-green-300 uppercase tracking-wide">🔍 Análise de Categorias</span>
+                            <svg class="category-chevron w-4 h-4 text-green-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div class="category-content space-y-1" style="display: none;">
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT nome_parlamentar, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas ORDER BY valor_liquido DESC LIMIT 20">
+                        💰 Top transações mais caras
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT categoria_despesa, subcategoria_despesa, COUNT(*) as total_transacoes, SUM(valor_liquido) as total_valor, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY categoria_despesa, subcategoria_despesa ORDER BY total_valor DESC LIMIT 30">
+                        🏛️ Categorias e subcategorias
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT categoria_despesa, MAX(valor_liquido) as maior_valor, AVG(valor_liquido) as valor_medio, MIN(valor_liquido) as menor_valor, COUNT(*) as total FROM despesas GROUP BY categoria_despesa ORDER BY maior_valor DESC">
+                        📊 Estatísticas por categoria
+                    </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Travel & Expense Analysis -->
+                    <div class="category-section" data-category="travel">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors" onclick="toggleCategory('travel')">
+                            <span class="text-xs font-medium text-purple-700 dark:text-purple-300 uppercase tracking-wide">✈️ Análise de Viagens</span>
+                            <svg class="category-chevron w-4 h-4 text-purple-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div class="category-content space-y-1" style="display: none;">
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT subcategoria_despesa, COUNT(*) as total, SUM(valor_liquido) as valor FROM despesas WHERE subcategoria_despesa ILIKE '%passag%' OR subcategoria_despesa ILIKE '%viag%' OR subcategoria_despesa ILIKE '%hosp%' OR subcategoria_despesa ILIKE '%combust%' GROUP BY subcategoria_despesa ORDER BY valor DESC">
+                        ✈️ Gastos relacionados a viagens
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT ano_competencia, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE ano_competencia IS NOT NULL GROUP BY ano_competencia ORDER BY ano_competencia DESC">
+                        📅 Despesas por ano de competência
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT nome_parlamentar, SUM(valor_liquido) as total_gastos, COUNT(*) as num_despesas FROM despesas GROUP BY nome_parlamentar ORDER BY total_gastos DESC LIMIT 25">
+                        📍 Top gastos por deputado
+                    </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Vendor Intelligence -->
+                    <div class="category-section" data-category="vendor">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors" onclick="toggleCategory('vendor')">
+                            <span class="text-xs font-medium text-orange-700 dark:text-orange-300 uppercase tracking-wide">🏪 Inteligência de Fornecedores</span>
+                            <svg class="category-chevron w-4 h-4 text-orange-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div class="category-content space-y-1" style="display: none;">
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT fornecedor, SUM(valor_liquido) as receita_total, COUNT(*) as total_transacoes, COUNT(DISTINCT nome_parlamentar) as deputados_atendidos, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY fornecedor ORDER BY receita_total DESC LIMIT 20">
+                        💼 Top fornecedores por receita
+                    </div>
+                    <div class="sample-query query-complex tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH market_share AS (SELECT fornecedor, SUM(valor_liquido) as receita, (SUM(valor_liquido) * 100.0 / (SELECT SUM(valor_liquido) FROM despesas)) as participacao FROM despesas GROUP BY fornecedor ORDER BY receita DESC) SELECT fornecedor, receita, ROUND(participacao, 2) as participacao_pct FROM market_share LIMIT 15" data-tooltip="Análise avançada com CTE - Market share dos fornecedores - Execução: ~1.2s">
+                        📈 Concentração do mercado (%)
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT fornecedor, nome_parlamentar, SUM(valor_liquido) as total_gasto, COUNT(*) as transacoes FROM despesas GROUP BY fornecedor, nome_parlamentar HAVING SUM(valor_liquido) > 50000 ORDER BY total_gasto DESC LIMIT 30">
+                        🤝 Relacionamentos de alto valor
+                    </div>
+                    <div class="sample-query query-complex tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH fornecedor_categoria AS (SELECT categoria_despesa, fornecedor, COUNT(*) as num_transacoes, SUM(valor_liquido) as gasto_total, ROW_NUMBER() OVER (PARTITION BY categoria_despesa ORDER BY COUNT(*) DESC, SUM(valor_liquido) DESC) as rank_transacoes FROM despesas GROUP BY categoria_despesa, fornecedor) SELECT categoria_despesa, fornecedor as principal_fornecedor, num_transacoes, gasto_total FROM fornecedor_categoria WHERE rank_transacoes = 1 ORDER BY num_transacoes DESC" data-tooltip="🏆 Análise avançada - Principal fornecedor por categoria - Window functions - Execução: ~2.8s">
+                        👑 Principal fornecedor por categoria
+                    </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Parliamentary Insights -->
+                    <div class="category-section" data-category="parliamentary">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors" onclick="toggleCategory('parliamentary')">
+                            <span class="text-xs font-medium text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">🏛️ Insights Parlamentares</span>
+                            <svg class="category-chevron w-4 h-4 text-indigo-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div class="category-content space-y-1" style="display: none;">
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT nome_parlamentar, SUM(valor_liquido) as total_gasto, COUNT(*) as num_transacoes, AVG(valor_liquido) as gasto_medio FROM despesas GROUP BY nome_parlamentar ORDER BY total_gasto DESC LIMIT 20">
+                        📊 Ranking de gastos por deputado
+                    </div>
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="WITH activity_stats AS (SELECT nome_parlamentar, COUNT(*) as num_transacoes, SUM(valor_liquido) as total_gasto FROM despesas GROUP BY nome_parlamentar) SELECT 'Mais ativos' as tipo, nome_parlamentar, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes DESC LIMIT 10 UNION ALL SELECT 'Menos ativos' as tipo, nome_parlamentar, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes ASC LIMIT 10">
+                        🎯 Deputados mais/menos ativos
+                    </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Data Quality & Audit -->
+                    <div class="category-section" data-category="audit">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors" onclick="toggleCategory('audit')">
+                            <span class="text-xs font-medium text-red-700 dark:text-red-300 uppercase tracking-wide">🔍 Qualidade & Auditoria</span>
+                            <svg class="category-chevron w-4 h-4 text-red-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div class="category-content space-y-1" style="display: none;">
+                    <div class="sample-query query-audit tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, categoria_despesa, fornecedor, valor_liquido, data_emissao, COUNT(*) as duplicatas FROM despesas GROUP BY nome_parlamentar, categoria_despesa, fornecedor, valor_liquido, data_emissao HAVING COUNT(*) > 1 ORDER BY duplicatas DESC, valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta possíveis duplicatas - Execução: ~2.1s">
+                        🔄 Possíveis despesas duplicadas
+                    </div>
+                    <div class="sample-query query-audit tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT valor_liquido, COUNT(*) as frequencia FROM despesas WHERE valor_liquido % 100 = 0 AND valor_liquido >= 1000 GROUP BY valor_liquido ORDER BY frequencia DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Identifica valores redondos suspeitos - Execução: ~0.8s">
+                        🎯 Valores redondos suspeitos
+                    </div>
+                    <div class="sample-query query-audit tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas WHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) AND valor_liquido > 5000 ORDER BY valor_liquido DESC LIMIT 25" data-tooltip="⚠️ Auditoria - Gastos suspeitos em fins de semana - Execução: ~1.3s">
+                        🏖️ Gastos altos em fins de semana
+                    </div>
+                    <div class="sample-query query-complex tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH outliers AS (SELECT *, (valor_liquido - AVG(valor_liquido) OVER (PARTITION BY categoria_despesa)) / STDDEV(valor_liquido) OVER (PARTITION BY categoria_despesa) as z_score FROM despesas WHERE valor_liquido IS NOT NULL) SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, ROUND(z_score, 2) as desvio_padrao FROM outliers WHERE ABS(z_score) > 3 ORDER BY ABS(z_score) DESC LIMIT 30" data-tooltip="🧮 Análise estatística avançada - Window functions - Execução: ~3.2s">
+                        📊 Outliers estatísticos (Z > 3)
+                    </div>
+                    <div class="sample-query query-audit tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT valor_liquido, valor_documento, (valor_liquido - valor_documento) as diferenca FROM despesas WHERE valor_documento IS NOT NULL AND ABS(valor_liquido - valor_documento) > 100 ORDER BY ABS(diferenca) DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Verifica inconsistências entre valores - Execução: ~0.9s">
+                        ⚖️ Diferenças valor líquido vs documento
+                    </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <div class="p-4 flex-1 overflow-y-auto">
-                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Esquema</div>
-                <div class="text-xs" id="schema-tree">
-                    <div class="text-gray-500 dark:text-gray-400 text-xs">Carregando...</div>
-                </div>
-            </div>
         </div>
 
         <!-- Main Content -->
@@ -212,6 +405,9 @@
                 </div>
                 
                 <div class="flex items-center gap-3">
+                    <button id="share-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-2" onclick="shareCurrentQuery()">
+                        🔗 Compartilhar
+                    </button>
                     <button id="export-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center gap-2" disabled>
                         📤 Exportar
                     </button>
@@ -288,6 +484,30 @@
                 <div id="row-count"></div>
             </div>
         </div>
+        
+        <!-- Right Sidebar - Schema Panel -->
+        <div class="w-80 bg-gray-100 dark:bg-gray-900 border-l border-gray-300 dark:border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-300 dark:border-gray-700">
+                <div class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>🗄️</span>
+                    Database
+                </div>
+            </div>
+            
+            <div class="p-4 border-b border-gray-300 dark:border-gray-700">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Conexão</div>
+                <div id="connection-status" class="text-xs text-gray-500 dark:text-gray-400">
+                    <span class="loading-spinner"></span> Inicializando...
+                </div>
+            </div>
+            
+            <div class="p-4 flex-1 overflow-y-auto">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 pr-4">Esquema: despesas</div>
+                <div class="text-xs" id="schema-tree">
+                    <div class="text-gray-500 dark:text-gray-400 text-xs">Carregando...</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -327,7 +547,7 @@
                 if (runBtn) runBtn.disabled = false;
                 if (exportBtn) exportBtn.disabled = false;
                 
-                updateStatus(`despesas - ${totalRecords.toLocaleString()} registros carregados`);
+                updateStatus(`despesas - ${totalRecords.toLocaleString()} registros`);
                 
             } catch (error) {
                 console.error('Initialization error:', error);
@@ -644,6 +864,10 @@
                     const query = e.target.dataset.query;
                     if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor && query) {
                         tabs[activeTabId].editor.setValue(query);
+                        
+                        // Update URL with query for sharing
+                        updateURLWithQuery(query, e.target.textContent.trim());
+                        
                         executeQuery();
                     }
                 });
@@ -1058,12 +1282,187 @@
             }
         }
         
+        // Category collapse/expand functionality
+        function toggleCategory(categoryId) {
+            const categorySection = document.querySelector(`[data-category="${categoryId}"]`);
+            if (!categorySection) return;
+            
+            const content = categorySection.querySelector('.category-content');
+            const chevron = categorySection.querySelector('.category-chevron');
+            
+            if (!content || !chevron) return;
+            
+            if (content.style.display === 'none' || content.style.display === '') {
+                content.style.display = 'block';
+                chevron.style.transform = 'rotate(0deg)';
+            } else {
+                content.style.display = 'none';
+                chevron.style.transform = 'rotate(-90deg)';
+            }
+        }
+        
+        // Search functionality
+        function setupSearchAndFilters() {
+            const searchInput = document.getElementById('query-search');
+            
+            // Search functionality
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                filterQueries(searchTerm, 'all');
+            });
+        }
+        
+        function filterQueries(searchTerm, category) {
+            const categorySections = document.querySelectorAll('.category-section');
+            
+            categorySections.forEach(section => {
+                const queries = section.querySelectorAll('.sample-query');
+                let hasVisibleQueries = false;
+                
+                queries.forEach(query => {
+                    const queryText = query.textContent.toLowerCase();
+                    const matchesSearch = !searchTerm || queryText.includes(searchTerm);
+                    
+                    if (matchesSearch) {
+                        query.style.display = 'block';
+                        hasVisibleQueries = true;
+                        
+                        // Highlight search terms
+                        if (searchTerm) {
+                            highlightSearchTerm(query, searchTerm);
+                        } else {
+                            removeHighlight(query);
+                        }
+                    } else {
+                        query.style.display = 'none';
+                    }
+                });
+                
+                // Show/hide entire section based on whether it has visible queries
+                section.style.display = hasVisibleQueries ? 'block' : 'none';
+                
+                // Auto-expand sections with matches
+                if (hasVisibleQueries && searchTerm) {
+                    const content = section.querySelector('.category-content');
+                    const chevron = section.querySelector('.category-chevron');
+                    if (content && chevron) {
+                        content.style.display = 'block';
+                        chevron.style.transform = 'rotate(0deg)';
+                    }
+                }
+            });
+        }
+        
+        function highlightSearchTerm(element, searchTerm) {
+            const text = element.textContent;
+            const regex = new RegExp(`(${searchTerm})`, 'gi');
+            const highlightedText = text.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>');
+            element.innerHTML = highlightedText;
+        }
+        
+        function removeHighlight(element) {
+            // Remove highlights and restore original text
+            const text = element.textContent;
+            element.innerHTML = text;
+        }
+        
+        // URL sharing functionality
+        function updateURLWithQuery(query, analysisName) {
+            const url = new URL(window.location);
+            url.searchParams.set('query', btoa(encodeURIComponent(query))); // Base64 encode for URL safety
+            url.searchParams.set('name', encodeURIComponent(analysisName));
+            
+            // Update URL without page reload
+            window.history.pushState({query, analysisName}, analysisName, url);
+        }
+        
+        function loadQueryFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedQuery = urlParams.get('query');
+            const analysisName = urlParams.get('name');
+            
+            if (encodedQuery) {
+                try {
+                    // Decode the query
+                    const query = decodeURIComponent(atob(encodedQuery));
+                    const name = analysisName ? decodeURIComponent(analysisName) : 'Consulta Compartilhada';
+                    
+                    // Wait for editor to be ready, then load the query
+                    if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor) {
+                        tabs[activeTabId].editor.setValue(query);
+                        
+                        // Update tab name to reflect the shared query
+                        const tabButton = document.querySelector(`[data-tab-id="${activeTabId}"] .tab-name`);
+                        if (tabButton) {
+                            tabButton.textContent = name;
+                        }
+                        
+                        // Auto-execute the shared query
+                        setTimeout(() => executeQuery(), 500);
+                    }
+                } catch (error) {
+                    console.error('Error loading query from URL:', error);
+                }
+            }
+        }
+        
+        // Handle browser back/forward buttons
+        window.addEventListener('popstate', (event) => {
+            if (event.state && event.state.query) {
+                if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor) {
+                    tabs[activeTabId].editor.setValue(event.state.query);
+                    executeQuery();
+                }
+            }
+        });
+        
+        // Share current query function
+        function shareCurrentQuery() {
+            if (!activeTabId || !tabs[activeTabId] || !tabs[activeTabId].editor) {
+                alert('Nenhuma consulta ativa para compartilhar');
+                return;
+            }
+            
+            const query = tabs[activeTabId].editor.getValue().trim();
+            if (!query) {
+                alert('Editor vazio - não há consulta para compartilhar');
+                return;
+            }
+            
+            const tabName = document.querySelector(`[data-tab-id="${activeTabId}"] .tab-name`)?.textContent || 'Consulta Personalizada';
+            
+            // Update URL and copy to clipboard
+            updateURLWithQuery(query, tabName);
+            
+            // Copy URL to clipboard
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                // Show success feedback
+                const shareBtn = document.getElementById('share-btn');
+                const originalText = shareBtn.innerHTML;
+                shareBtn.innerHTML = '✅ Copiado!';
+                shareBtn.classList.add('bg-green-200', 'dark:bg-green-800', 'text-green-900', 'dark:text-green-100');
+                shareBtn.classList.remove('bg-blue-200', 'dark:bg-blue-800', 'text-blue-900', 'dark:text-blue-100');
+                
+                setTimeout(() => {
+                    shareBtn.innerHTML = originalText;
+                    shareBtn.classList.remove('bg-green-200', 'dark:bg-green-800', 'text-green-900', 'dark:text-green-100');
+                    shareBtn.classList.add('bg-blue-200', 'dark:bg-blue-800', 'text-blue-900', 'dark:text-blue-100');
+                }, 2000);
+            }).catch(() => {
+                alert('Link copiado para a área de transferência:\n\n' + window.location.href);
+            });
+        }
+
         // Initialize when page loads
         window.addEventListener('load', () => {
-            initializeApp();
+            initializeApp().then(() => {
+                // Load query from URL after app is initialized
+                setTimeout(() => loadQueryFromURL(), 1000);
+            });
             initializeResize();
             setupNavigation();
             setupThemeToggle();
+            setupSearchAndFilters();
         });
     </script>
 </body>
