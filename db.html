@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Viso UI - Despesas</title>
+    <title>Viso / Despesas / DB</title>
     <link href="https://fonts.googleapis.com/css2?family=Monda:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
@@ -171,15 +171,7 @@
             </div>
             
             <div class="p-4 border-b border-gray-300 dark:border-gray-700">
-                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Esquema</div>
-                <div class="text-xs" id="schema-tree">
-                    <div class="text-gray-500 dark:text-gray-400 text-xs">Carregando...</div>
-                </div>
-            </div>
-            
-
-            <div class="p-4 flex-1 overflow-y-auto">
-                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Consultas de Exemplo</div>
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">ANáLISES</div>
                 <div id="sample-queries-list" class="space-y-1">
                     <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT * FROM despesas LIMIT 10">
                         📄 Ver primeiros 10 registros
@@ -196,6 +188,13 @@
                     <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT fornecedor, COUNT(DISTINCT nome_parlamentar) as deputies, SUM(valor_liquido) as total FROM despesas GROUP BY fornecedor HAVING deputies > 5 ORDER BY total DESC LIMIT 15">
                         🏢 Fornecedores multi-deputados
                     </div>
+                </div>
+            </div>
+            
+            <div class="p-4 flex-1 overflow-y-auto">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Esquema</div>
+                <div class="text-xs" id="schema-tree">
+                    <div class="text-gray-500 dark:text-gray-400 text-xs">Carregando...</div>
                 </div>
             </div>
         </div>
@@ -285,7 +284,7 @@
             </div>
             
             <div class="h-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-300 dark:border-gray-700 flex items-center px-3 text-xs text-gray-500 dark:text-gray-400 justify-between">
-                <div id="execution-stats">Pronto</div>
+                <div id="execution-stats">despesas</div>
                 <div id="row-count"></div>
             </div>
         </div>
@@ -328,7 +327,7 @@
                 if (runBtn) runBtn.disabled = false;
                 if (exportBtn) exportBtn.disabled = false;
                 
-                updateStatus(`Pronto - ${totalRecords.toLocaleString()} registros carregados`);
+                updateStatus(`despesas - ${totalRecords.toLocaleString()} registros carregados`);
                 
             } catch (error) {
                 console.error('Initialization error:', error);
@@ -547,7 +546,7 @@
                 document.getElementById('execution-stats').textContent = `Consulta executada em ${tab.results.executionTime.toFixed(2)}ms`;
             } else {
                 document.getElementById('result-stats').textContent = '';
-                document.getElementById('execution-stats').textContent = 'Pronto';
+                document.getElementById('execution-stats').textContent = 'despesas';
             }
         }
         
@@ -928,7 +927,7 @@
                 resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><div class="text-5xl opacity-30">📊</div><div>Execute uma consulta para ver os resultados</div></div>';
             }
             
-            document.getElementById('execution-stats').textContent = 'Pronto';
+            document.getElementById('execution-stats').textContent = 'despesas';
             document.getElementById('result-stats').textContent = '';
             
             // Hide pagination
