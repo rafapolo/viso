@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sankey Diagram - Despesas</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12"></script>
+    <script type="module">
+        import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/+esm';
+        
+        let db;
+        let conn;
+        
+        async function initDuckDB() {
+            console.log('🚀 Initializing DuckDB...');
+            
+            const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+            const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+            const worker = await duckdb.createWorker(bundle.mainWorker);
+            const logger = new duckdb.ConsoleLogger();
+            db = new duckdb.AsyncDuckDB(logger, worker);
+            await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+            
+            conn = await db.connect();
+            console.log('✅ DuckDB initialized');
+            
+            return { db, conn };
+        }
+        
+        async function loadParquetData() {
+            try {
+                console.log('📁 Loading parquet file into DuckDB...');
+                
+                const response = await fetch('./public/despesas.parquet');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                console.log(`📊 Downloaded ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)} MB`);
+                
+                await db.registerFileBuffer('despesas.parquet', new Uint8Array(arrayBuffer));
+                
+                await conn.query(`
+                    CREATE VIEW despesas AS 
+                    SELECT * FROM read_parquet('despesas.parquet')
+                `);
+                
+                const countResult = await conn.query("SELECT COUNT(*) as total FROM despesas");
+                const totalRecords = countResult.toArray()[0].total;
+                console.log(`✅ Loaded ${totalRecords.toLocaleString()} records from parquet`);
+                
+                return totalRecords;
+                
+            } catch (error) {
+                console.error('❌ Error loading parquet:', error);
+                throw error;
+            }
+        }
+        
+        window.duckdbAPI = {
+            initDuckDB,
+            loadParquetData,
+            conn: () => conn
+        };
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .node rect {
+            cursor: move;
+            fill-opacity: .9;
+            shape-rendering: crispEdges;
+        }
+        .node text {
+            pointer-events: none;
+            text-shadow: 0 1px 0 #000;
+            font-size: 12px;
+            fill: white;
+        }
+        .link {
+            fill: none;
+            stroke-opacity: .5;
+        }
+        .link:hover {
+            stroke-opacity: .8;
+        }
+        #loading {
+            text-align: center;
+            font-size: 18px;
+            margin: 50px;
+        }
+        .stats {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Fluxo: Partido → Categoria de Despesa → Fornecedor</h1>
+    <p>Visualização dos fornecedores com mais de 100 registros</p>
+    <div id="stats" class="stats" style="display: none;">
+        <div>Total de partidos: <span id="totalPartidos">0</span></div>
+        <div>Total de categorias: <span id="totalCategorias">0</span></div>
+        <div>Total de fornecedores: <span id="totalFornecedores">0</span></div>
+        <div>Valor total: <span id="totalRegistros">R$ 0</span></div>
+    </div>
+    <div id="loading">Carregando dados...</div>
+    <svg id="sankey" width="1200" height="800"></svg>
+
+    <script>
+        const width = 1200;
+        const height = 800;
+        const margin = {top: 10, right: 10, bottom: 10, left: 10};
+
+        const svg = d3.select("#sankey");
+        
+        const sankey = d3.sankey()
+            .nodeId(d => d.id)
+            .nodeWidth(20)
+            .nodePadding(15)
+            .nodeSort((a, b) => a.sortOrder - b.sortOrder) // Sort by our explicit order
+            .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]]);
+
+        async function loadData() {
+            try {
+                document.getElementById('loading').innerHTML = 'Inicializando DuckDB...';
+                await window.duckdbAPI.initDuckDB();
+                
+                document.getElementById('loading').innerHTML = 'Carregando dados...';
+                await window.duckdbAPI.loadParquetData();
+                
+                document.getElementById('loading').innerHTML = 'Processando fornecedores...';
+                const conn = window.duckdbAPI.conn();
+                
+                // Get top 25 suppliers by total amount received
+                const topSuppliersQuery = `
+                    SELECT fornecedor, SUM(CAST(valor_liquido AS DOUBLE)) as total_received
+                    FROM despesas 
+                    WHERE fornecedor IS NOT NULL 
+                    AND valor_liquido IS NOT NULL
+                    GROUP BY fornecedor
+                    ORDER BY total_received DESC
+                    LIMIT 25
+                `;
+                
+                const topSuppliersResult = await conn.query(topSuppliersQuery);
+                const topSuppliers = topSuppliersResult.toArray();
+                
+                console.log(`Found top 25 suppliers by amount received`);
+                
+                if (topSuppliers.length === 0) {
+                    throw new Error('Nenhum fornecedor encontrado');
+                }
+                
+                // Get flow data for these top suppliers using valor_liquido sums
+                const supplierList = topSuppliers.map(f => `'${f.fornecedor.replace(/'/g, "''")}'`).join(',');
+                
+                const dataQuery = `
+                    SELECT 
+                        sigla_partido, 
+                        categoria_despesa, 
+                        fornecedor, 
+                        SUM(CAST(valor_liquido AS DOUBLE)) as valor_total
+                    FROM despesas 
+                    WHERE fornecedor IN (${supplierList})
+                    AND sigla_partido IS NOT NULL
+                    AND categoria_despesa IS NOT NULL
+                    AND valor_liquido IS NOT NULL
+                    GROUP BY sigla_partido, categoria_despesa, fornecedor
+                    ORDER BY valor_total DESC
+                `;
+                
+                const dataResult = await conn.query(dataQuery);
+                const data = dataResult.toArray().map(row => ({
+                    sigla_partido: row.sigla_partido,
+                    categoria_despesa: row.categoria_despesa,
+                    fornecedor: row.fornecedor,
+                    valor_total: Number(row.valor_total)
+                }));
+
+                console.log(`Total flow records: ${data.length}`);
+                
+                if (data.length === 0) {
+                    throw new Error('Nenhum dado encontrado após filtragem');
+                }
+
+                return processData(data);
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loading').innerHTML = 'Erro ao carregar dados: ' + error.message;
+                throw error;
+            }
+        }
+
+        function processData(data) {
+            // Calculate totals for each entity to enable sorting
+            const partidoTotals = new Map();
+            const categoriaTotals = new Map();
+            const fornecedorTotals = new Map();
+            
+            // Calculate totals
+            data.forEach(row => {
+                partidoTotals.set(row.sigla_partido, (partidoTotals.get(row.sigla_partido) || 0) + row.valor_total);
+                categoriaTotals.set(row.categoria_despesa, (categoriaTotals.get(row.categoria_despesa) || 0) + row.valor_total);
+                fornecedorTotals.set(row.fornecedor, (fornecedorTotals.get(row.fornecedor) || 0) + row.valor_total);
+            });
+            
+            // Sort entities by total value (descending)
+            const partidosOrdered = Array.from(partidoTotals.entries()).sort((a, b) => b[1] - a[1]).map(([partido]) => partido);
+            const categoriasOrdered = Array.from(categoriaTotals.entries()).sort((a, b) => b[1] - a[1]).map(([categoria]) => categoria);
+            const fornecedoresOrdered = Array.from(fornecedorTotals.entries()).sort((a, b) => b[1] - a[1]).map(([fornecedor]) => fornecedor);
+            
+            // Update stats
+            const totalValue = data.reduce((sum, row) => sum + row.valor_total, 0);
+            document.getElementById('totalPartidos').textContent = partidosOrdered.length;
+            document.getElementById('totalCategorias').textContent = categoriasOrdered.length;
+            document.getElementById('totalFornecedores').textContent = fornecedoresOrdered.length;
+            document.getElementById('totalRegistros').textContent = `R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            document.getElementById('stats').style.display = 'block';
+            
+            // Create nodes with unique IDs in order
+            const nodes = [];
+            const nodeMap = new Map();
+            let nodeId = 0;
+            
+            // Add partido nodes (ordered by total spending DESC) with explicit positioning
+            partidosOrdered.forEach((partido, index) => {
+                const id = `partido_${nodeId++}`;
+                nodes.push({
+                    id: id,
+                    name: partido,
+                    type: 'partido',
+                    level: 0,
+                    totalValue: partidoTotals.get(partido),
+                    sortOrder: index // Explicit sort order to maintain DESC ordering
+                });
+                nodeMap.set(`partido_${partido}`, id);
+            });
+            
+            // Add categoria nodes (ordered by total amount DESC) with explicit positioning
+            categoriasOrdered.forEach((categoria, index) => {
+                const id = `categoria_${nodeId++}`;
+                nodes.push({
+                    id: id,
+                    name: categoria.length > 30 ? categoria.substring(0, 30) + '...' : categoria,
+                    fullName: categoria,
+                    type: 'categoria',
+                    level: 1,
+                    totalValue: categoriaTotals.get(categoria),
+                    sortOrder: index // Explicit sort order to maintain DESC ordering
+                });
+                nodeMap.set(`categoria_${categoria}`, id);
+            });
+            
+            // Add fornecedor nodes (ordered by total received DESC) with explicit positioning
+            fornecedoresOrdered.forEach((fornecedor, index) => {
+                const id = `fornecedor_${nodeId++}`;
+                nodes.push({
+                    id: id,
+                    name: fornecedor.length > 25 ? fornecedor.substring(0, 25) + '...' : fornecedor,
+                    fullName: fornecedor,
+                    type: 'fornecedor',
+                    level: 2,
+                    totalValue: fornecedorTotals.get(fornecedor),
+                    sortOrder: index // Explicit sort order to maintain DESC ordering
+                });
+                nodeMap.set(`fornecedor_${fornecedor}`, id);
+            });
+            
+            // Create flows
+            const partidoCategoriaFlows = new Map();
+            const categoriaFornecedorFlows = new Map();
+            
+            data.forEach(row => {
+                // Partido -> Categoria flow
+                const pcKey = `${row.sigla_partido}|${row.categoria_despesa}`;
+                partidoCategoriaFlows.set(pcKey, (partidoCategoriaFlows.get(pcKey) || 0) + row.valor_total);
+                
+                // Categoria -> Fornecedor flow
+                const cfKey = `${row.categoria_despesa}|${row.fornecedor}`;
+                categoriaFornecedorFlows.set(cfKey, (categoriaFornecedorFlows.get(cfKey) || 0) + row.valor_total);
+            });
+            
+            // Create links
+            const links = [];
+            
+            // Partido -> Categoria links
+            partidoCategoriaFlows.forEach((value, key) => {
+                const [partido, categoria] = key.split('|');
+                const sourceId = nodeMap.get(`partido_${partido}`);
+                const targetId = nodeMap.get(`categoria_${categoria}`);
+                
+                if (sourceId && targetId) {
+                    links.push({
+                        source: sourceId,
+                        target: targetId,
+                        value: value
+                    });
+                }
+            });
+            
+            // Categoria -> Fornecedor links
+            categoriaFornecedorFlows.forEach((value, key) => {
+                const [categoria, fornecedor] = key.split('|');
+                const sourceId = nodeMap.get(`categoria_${categoria}`);
+                const targetId = nodeMap.get(`fornecedor_${fornecedor}`);
+                
+                if (sourceId && targetId) {
+                    links.push({
+                        source: sourceId,
+                        target: targetId,
+                        value: value
+                    });
+                }
+            });
+            
+            console.log(`Created ${nodes.length} nodes and ${links.length} links`);
+            
+            return { nodes, links };
+        }
+
+        function createSankey(data) {
+            document.getElementById('loading').style.display = 'none';
+            
+            if (!data || !data.nodes || data.nodes.length === 0) {
+                console.error('No data to visualize');
+                return;
+            }
+            
+            const graph = sankey(data);
+            
+            // Enhanced color function with better visual hierarchy
+            const getColor = (d) => {
+                switch(d.type) {
+                    case 'partido': return '#2E86AB';      // Deep blue for parties
+                    case 'categoria': return '#A23B72';    // Purple for categories  
+                    case 'fornecedor': return '#F18F01';   // Orange for suppliers
+                    default: return '#999';
+                }
+            };
+            
+            // Color function for links based on source
+            const getLinkColor = (d) => {
+                switch(d.source.type) {
+                    case 'partido': return '#2E86AB';
+                    case 'categoria': return '#A23B72';
+                    default: return '#999';
+                }
+            };
+            
+            // Clear previous content
+            svg.selectAll("*").remove();
+            
+            // Add links with improved styling
+            const link = svg.append("g")
+                .selectAll("path")
+                .data(graph.links)
+                .join("path")
+                .attr("d", d3.sankeyLinkHorizontal())
+                .attr("stroke", getLinkColor)
+                .attr("stroke-width", d => Math.max(2, d.width))
+                .attr("fill", "none")
+                .attr("stroke-opacity", 0.6)
+                .on("mouseover", function(event, d) {
+                    d3.select(this)
+                        .attr("stroke-opacity", 0.9)
+                        .attr("stroke-width", d => Math.max(3, d.width + 1));
+                })
+                .on("mouseout", function(event, d) {
+                    d3.select(this)
+                        .attr("stroke-opacity", 0.6)
+                        .attr("stroke-width", d => Math.max(2, d.width));
+                });
+            
+            // Enhanced link titles with percentage
+            link.append("title")
+                .text(d => {
+                    const totalValue = data.links.reduce((sum, link) => sum + link.value, 0);
+                    const percentage = ((d.value / totalValue) * 100).toFixed(1);
+                    return `${d.source.name} → ${d.target.name}\nR$ ${d.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n${percentage}% do total`;
+                });
+            
+            // Add nodes
+            const node = svg.append("g")
+                .selectAll("g")
+                .data(graph.nodes)
+                .join("g");
+            
+            // Node rectangles with enhanced styling
+            node.append("rect")
+                .attr("x", d => d.x0)
+                .attr("y", d => d.y0)
+                .attr("height", d => Math.max(8, d.y1 - d.y0)) // Minimum height for visibility
+                .attr("width", d => d.x1 - d.x0)
+                .attr("fill", getColor)
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 2)
+                .attr("rx", 3) // Rounded corners
+                .attr("ry", 3);
+            
+            // Enhanced node titles with more context
+            node.append("title")
+                .text(d => {
+                    const totalValue = data.nodes.filter(n => n.type === d.type).reduce((sum, n) => sum + n.value, 0);
+                    const percentage = ((d.value / totalValue) * 100).toFixed(1);
+                    const typeLabel = d.type === 'partido' ? 'Partido' : d.type === 'categoria' ? 'Categoria' : 'Fornecedor';
+                    return `${typeLabel}: ${d.fullName || d.name}\nR$ ${d.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n${percentage}% do ${typeLabel.toLowerCase()}`;
+                });
+            
+            // Enhanced node labels
+            node.append("text")
+                .attr("x", d => d.x0 < width / 2 ? d.x1 + 8 : d.x0 - 8)
+                .attr("y", d => (d.y1 + d.y0) / 2)
+                .attr("dy", "0.35em")
+                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                .attr("font-size", d => {
+                    // Larger font for bigger nodes
+                    const nodeHeight = d.y1 - d.y0;
+                    if (nodeHeight > 50) return "14px";
+                    if (nodeHeight > 30) return "12px";
+                    return "10px";
+                })
+                .attr("font-weight", d => d.type === 'partido' ? "bold" : "normal")
+                .attr("fill", "white")
+                .attr("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
+                .text(d => {
+                    // Truncate long names based on node size
+                    const nodeHeight = d.y1 - d.y0;
+                    let maxLength = nodeHeight > 40 ? 25 : nodeHeight > 20 ? 20 : 15;
+                    
+                    if (d.type === 'categoria') maxLength = Math.min(maxLength, 30);
+                    if (d.type === 'fornecedor') maxLength = Math.min(maxLength, 25);
+                    
+                    return d.name.length > maxLength ? d.name.substring(0, maxLength - 3) + "..." : d.name;
+                });
+            
+            console.log('✅ Sankey diagram created successfully!');
+        }
+
+        // Wait for DuckDB API and load data
+        document.addEventListener('DOMContentLoaded', async () => {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            if (typeof window.duckdbAPI === 'undefined') {
+                document.getElementById('loading').innerHTML = 'Erro: DuckDB API não carregou';
+                return;
+            }
+            
+            try {
+                const data = await loadData();
+                if (data) {
+                    createSankey(data);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
