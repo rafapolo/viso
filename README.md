@@ -2,9 +2,9 @@
 
 Visualize os gastos dos deputados federais brasileiros através de visualizações interativas e consultas SQL diretas nos dados das Despesas da Camara dos Deputados.
 
-![viso ui graph](.doc/viso_ui_graph.png)
+![viso ui graph](./docs/viso_ui_graph.png)
 
-![viso ui db](./doc/viso_ui_db.png)
+![viso ui db](./docs/viso_ui_db.png)
 
 
 ### O que você pode descobrir:
