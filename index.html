@@ -1664,10 +1664,7 @@
                 .enter().append("circle")
                 .attr("r", getNodeRadius)
                 .attr("fill", d => {
-                    // Highlight matching search results
-                    if (searchFilter && d.label.toLowerCase().includes(searchFilter)) {
-                        return d.type === 'deputado' ? '#fbbf24' : '#6ee7b7'; // Gold and mint highlights
-                    }
+                    // Use same colors for search results and regular nodes
                     return d.type === 'deputado' ? '#3b82f6' : 'rgb(196, 82, 17)';
                 })
                 .attr("stroke", d => {
