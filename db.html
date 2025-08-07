@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viso / Despesas / DB</title>
-    <link href="https://fonts.googleapis.com/css2?family=Monda:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Monda:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
     <link rel="shortcut icon" type="image/x-icon" href="https://extrapolo.com/favicon.ico">
@@ -142,20 +142,151 @@
             background-color: #FFC000;
         }
 
-        /* Query button types */
-        .query-basic {
-            background: linear-gradient(to right, #f3f4f6, #e5e7eb);
-        }
-        .dark .query-basic {
-            background: linear-gradient(to right, #374151, #4b5563);
+        /* Modern card-based query button types */
+        .sample-query {
+            position: relative;
+            background: linear-gradient(145deg, #ffffff, #f8fafc);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 
+                        0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            overflow: hidden;
         }
         
-        .query-basic.selected {
-            background: linear-gradient(to right, #dbeafe, #bfdbfe);
-            border-left: 3px solid #3b82f6;
+        .sample-query:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15),
+                        0 4px 10px rgba(0, 0, 0, 0.1);
         }
-        .dark .query-basic.selected {
-            background: linear-gradient(to right, #1e3a8a, #1d4ed8);
+        
+        .sample-query:active {
+            transform: translateY(-1px);
+            transition-duration: 0.1s;
+        }
+        
+        .dark .sample-query {
+            background: linear-gradient(145deg, #1f2937, #111827);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3),
+                        0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+        
+        .dark .sample-query:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4),
+                        0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Category-specific styling for query cards */
+        
+        /* Default - Green (Exemplos, Análise de Categorias) */
+        .sample-query,
+        .category-exemplos .sample-query,
+        .category-category .sample-query {
+            background: linear-gradient(145deg, #ffffff, #f8fafc) !important;
+            border-left: 4px solid #10b981 !important;
+        }
+        .sample-query:hover,
+        .category-exemplos .sample-query:hover,
+        .category-category .sample-query:hover {
+            border-left-color: #059669 !important;
+            background: linear-gradient(145deg, #f0fdf4, #f7fee7) !important;
+        }
+        .dark .sample-query,
+        .dark .category-exemplos .sample-query,
+        .dark .category-category .sample-query {
+            background: linear-gradient(145deg, #1f2937, #111827) !important;
+            border-left: 4px solid #10b981 !important;
+        }
+        .dark .sample-query:hover,
+        .dark .category-exemplos .sample-query:hover,
+        .dark .category-category .sample-query:hover {
+            background: linear-gradient(145deg, #064e3b, #022c22) !important;
+        }
+
+        /* Análise Temporal - Blue */
+        .category-temporal .sample-query {
+            background: linear-gradient(145deg, #ffffff, #f8fafc) !important;
+            border-left-color: #3b82f6 !important;
+        }
+        .category-temporal .sample-query:hover {
+            border-left-color: #2563eb !important;
+            background: linear-gradient(145deg, #eff6ff, #dbeafe) !important;
+        }
+        .dark .category-temporal .sample-query {
+            background: linear-gradient(145deg, #1f2937, #111827) !important;
+            border-left-color: #3b82f6 !important;
+        }
+        .dark .category-temporal .sample-query:hover {
+            background: linear-gradient(145deg, #1e3a8a, #1e40af) !important;
+        }
+
+        /* Análise de Viagens - Purple */
+        .category-travel .sample-query {
+            background: linear-gradient(145deg, #ffffff, #f8fafc) !important;
+            border-left-color: #8b5cf6 !important;
+        }
+        .category-travel .sample-query:hover {
+            border-left-color: #7c3aed !important;
+            background: linear-gradient(145deg, #faf5ff, #f3e8ff) !important;
+        }
+        .dark .category-travel .sample-query {
+            background: linear-gradient(145deg, #1f2937, #111827) !important;
+            border-left-color: #8b5cf6 !important;
+        }
+        .dark .category-travel .sample-query:hover {
+            background: linear-gradient(145deg, #581c87, #6b21a8) !important;
+        }
+
+        /* Inteligência de Fornecedores - Orange */
+        .category-vendor .sample-query {
+            background: linear-gradient(145deg, #ffffff, #f8fafc) !important;
+            border-left-color: #f97316 !important;
+        }
+        .category-vendor .sample-query:hover {
+            border-left-color: #ea580c !important;
+            background: linear-gradient(145deg, #fff7ed, #ffedd5) !important;
+        }
+        .dark .category-vendor .sample-query {
+            background: linear-gradient(145deg, #1f2937, #111827) !important;
+            border-left-color: #f97316 !important;
+        }
+        .dark .category-vendor .sample-query:hover {
+            background: linear-gradient(145deg, #9a3412, #c2410c) !important;
+        }
+
+        /* Insights Parlamentares - Indigo */
+        .category-parliamentary .sample-query {
+            background: linear-gradient(145deg, #ffffff, #f8fafc) !important;
+            border-left-color: #6366f1 !important;
+        }
+        .category-parliamentary .sample-query:hover {
+            border-left-color: #4f46e5 !important;
+            background: linear-gradient(145deg, #eef2ff, #e0e7ff) !important;
+        }
+        .dark .category-parliamentary .sample-query {
+            background: linear-gradient(145deg, #1f2937, #111827) !important;
+            border-left-color: #6366f1 !important;
+        }
+        .dark .category-parliamentary .sample-query:hover {
+            background: linear-gradient(145deg, #312e81, #3730a3) !important;
+        }
+
+        /* Qualidade & Auditoria - Red */
+        .category-audit .sample-query {
+            background: linear-gradient(145deg, #ffffff, #f8fafc) !important;
+            border-left-color: #ef4444 !important;
+        }
+        .category-audit .sample-query:hover {
+            border-left-color: #dc2626 !important;
+            background: linear-gradient(145deg, #fef2f2, #fecaca) !important;
+        }
+        .dark .category-audit .sample-query {
+            background: linear-gradient(145deg, #1f2937, #111827) !important;
+            border-left-color: #ef4444 !important;
+        }
+        .dark .category-audit .sample-query:hover {
+            background: linear-gradient(145deg, #7f1d1d, #991b1b) !important;
         }
         
         
@@ -203,6 +334,211 @@
             opacity: 1;
         }
 
+        /* Enhanced Typography and Visual Hierarchy */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            letter-spacing: -0.01em;
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Monda', 'Inter', sans-serif;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        .sample-query {
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            font-size: 14px;
+            line-height: 1.5;
+            letter-spacing: -0.005em;
+            padding: 16px 20px;
+        }
+
+        .sample-query::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                rgba(255, 255, 255, 0) 0%, 
+                rgba(255, 255, 255, 0.2) 50%, 
+                rgba(255, 255, 255, 0) 100%);
+        }
+
+        .dark .sample-query::before {
+            background: linear-gradient(90deg, 
+                rgba(255, 255, 255, 0) 0%, 
+                rgba(255, 255, 255, 0.1) 50%, 
+                rgba(255, 255, 255, 0) 100%);
+        }
+
+        /* Section headers enhanced */
+        .section-header {
+            font-family: 'Monda', sans-serif;
+            font-weight: 600;
+            font-size: 18px;
+            color: #1f2937;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
+            position: relative;
+        }
+
+        .dark .section-header {
+            color: #f9fafb;
+            border-bottom-color: #374151;
+        }
+
+        .section-header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 40px;
+            height: 2px;
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+            border-radius: 1px;
+        }
+
+        /* Enhanced micro-animations */
+        .sample-query:hover .query-icon {
+            animation: pulse 0.6s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .sample-query .query-text {
+            transition: all 0.2s ease;
+        }
+
+        .sample-query:hover .query-text {
+            color: #1f2937;
+            transform: translateX(2px);
+        }
+
+        .dark .sample-query:hover .query-text {
+            color: #f9fafb;
+        }
+
+        /* Enhanced button states */
+        .sample-query.selected {
+            background: linear-gradient(145deg, #dbeafe, #bfdbfe);
+            border-left-color: #1d4ed8 !important;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.15),
+                        0 2px 6px rgba(59, 130, 246, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .dark .sample-query.selected {
+            background: linear-gradient(145deg, #1e3a8a, #1e40af);
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25),
+                        0 2px 6px rgba(59, 130, 246, 0.15),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        /* Subtle hover feedback for all interactive elements */
+        .sample-query, button, .tab-button {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        .sample-query:focus-visible {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+
+        /* Enhanced Tab System Styling */
+        #tabs-container > div {
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            font-size: 13px;
+            background: linear-gradient(145deg, #f8fafc, #f1f5f9);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        #tabs-container > div:hover {
+            background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        #tabs-container > div.tab-active {
+            background: linear-gradient(145deg, #ffffff, #f8fafc);
+            border-bottom-color: transparent;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1),
+                        0 -1px 0 rgba(255, 255, 255, 1);
+        }
+
+        .dark #tabs-container > div {
+            background: linear-gradient(145deg, #374151, #1f2937);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #f9fafb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .dark #tabs-container > div:hover {
+            background: linear-gradient(145deg, #4b5563, #374151);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        }
+
+        .dark #tabs-container > div.tab-active {
+            background: linear-gradient(145deg, #1f2937, #111827);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3),
+                        0 -1px 0 rgba(31, 41, 55, 1);
+        }
+
+        /* Enhanced New Tab Button */
+        #new-tab-btn {
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            background: linear-gradient(145deg, #3b82f6, #2563eb);
+            border: none;
+            color: white;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+
+        #new-tab-btn:hover {
+            background: linear-gradient(145deg, #2563eb, #1d4ed8);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Enhanced general button styling */
+        button:not(.sample-query):not(#new-tab-btn) {
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        button:not(.sample-query):not(#new-tab-btn):hover {
+            transform: translateY(-1px);
+        }
+
+        /* Enhanced results table styling */
+        table {
+            font-family: 'Inter', sans-serif;
+        }
+
+        table th {
+            font-weight: 600;
+            letter-spacing: -0.005em;
+        }
+
+        table td {
+            font-weight: 400;
+        }
     </style>
 </head>
 <body class="font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen">
@@ -243,7 +579,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
-                        <div class="category-content space-y-1" style="display: block;">
+                        <div class="category-content category-exemplos space-y-1" style="display: block;">
                     <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT * FROM despesas LIMIT 10" data-tooltip="Visualização rápida dos dados - Execução: ~0.1s" data-id="ver-primeiros-10-registros">
                         📄 Ver primeiros 10 registros
                     </div>
@@ -270,7 +606,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
-                        <div class="category-content space-y-1" style="display: none;">
+                        <div class="category-content category-temporal space-y-1" style="display: none;">
                     <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT EXTRACT(YEAR FROM data_emissao) as ano, EXTRACT(MONTH FROM data_emissao) as mes, SUM(valor_liquido) as total, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano, mes ORDER BY ano DESC, mes DESC LIMIT 24" data-id="tendencias-mensais-2-anos">
                         📅 Tendências mensais (2 anos)
                     </div>
@@ -291,7 +627,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
-                        <div class="category-content space-y-1" style="display: none;">
+                        <div class="category-content category-category space-y-1" style="display: none;">
                     <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas ORDER BY valor_liquido DESC LIMIT 20" data-id="top-transacoes-mais-caras">
                         💰 Top transações mais caras
                     </div>
@@ -312,7 +648,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
-                        <div class="category-content space-y-1" style="display: none;">
+                        <div class="category-content category-travel space-y-1" style="display: none;">
                     <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT categoria_despesa, COUNT(*) as total, SUM(valor_liquido) as valor FROM despesas WHERE categoria_despesa ILIKE '%PASSAGEM%' OR categoria_despesa ILIKE '%VEÍCULOS%' OR categoria_despesa ILIKE '%COMBUSTÍVEIS%' OR categoria_despesa ILIKE '%HOSPEDAGEM%' OR categoria_despesa ILIKE '%LOCAÇÃO%' OR categoria_despesa ILIKE '%TÁXI%' GROUP BY categoria_despesa ORDER BY valor DESC" data-id="gastos-relacionados-a-viagens">
                         ✈️ Gastos relacionados a viagens
                     </div>
@@ -333,7 +669,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
-                        <div class="category-content space-y-1" style="display: none;">
+                        <div class="category-content category-vendor space-y-1" style="display: none;">
                     <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT fornecedor, SUM(valor_liquido) as receita_total, COUNT(*) as total_transacoes, COUNT(DISTINCT nome_parlamentar) as deputados_atendidos, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY fornecedor ORDER BY receita_total DESC LIMIT 20" data-id="top-fornecedores-por-receita">
                         💼 Top fornecedores por receita
                     </div>
@@ -357,7 +693,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
-                        <div class="category-content space-y-1" style="display: none;">
+                        <div class="category-content category-parliamentary space-y-1" style="display: none;">
                             <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gasto, COUNT(*) as num_transacoes, AVG(valor_liquido) as gasto_medio FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total_gasto DESC LIMIT 20" data-id="ranking-de-gastos-por-deputado">
                                 📊 Ranking de gastos por deputado
                             </div>
@@ -375,20 +711,20 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
-                        <div class="category-content space-y-1" style="display: none;">
-                            <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao, COUNT(*) as duplicatas FROM despesas GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao HAVING COUNT(*) > 1 ORDER BY duplicatas DESC, valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta possíveis duplicatas - Execução: ~2.1s" data-id="possiveis-despesas-duplicadas">
+                        <div class="category-content category-audit space-y-1" style="display: none;">
+                            <div class="sample-query tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao, COUNT(*) as duplicatas FROM despesas GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao HAVING COUNT(*) > 1 ORDER BY duplicatas DESC, valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta possíveis duplicatas - Execução: ~2.1s" data-id="possiveis-despesas-duplicadas">
                                 🔄 Possíveis despesas duplicadas
                             </div>
-                            <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT valor_liquido, COUNT(*) as frequencia FROM despesas WHERE valor_liquido % 100 = 0 AND valor_liquido >= 1000 GROUP BY valor_liquido ORDER BY frequencia DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Identifica valores redondos suspeitos - Execução: ~0.8s" data-id="valores-redondos-suspeitos">
+                            <div class="sample-query tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT valor_liquido, COUNT(*) as frequencia FROM despesas WHERE valor_liquido % 100 = 0 AND valor_liquido >= 1000 GROUP BY valor_liquido ORDER BY frequencia DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Identifica valores redondos suspeitos - Execução: ~0.8s" data-id="valores-redondos-suspeitos">
                                 🎯 Valores redondos suspeitos
                             </div>
-                            <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas WHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) AND valor_liquido > 5000 ORDER BY valor_liquido DESC LIMIT 25" data-tooltip="⚠️ Auditoria - Gastos suspeitos em fins de semana - Execução: ~1.3s" data-id="gastos-altos-em-fins-de-semana">
+                            <div class="sample-query tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas WHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) AND valor_liquido > 5000 ORDER BY valor_liquido DESC LIMIT 25" data-tooltip="⚠️ Auditoria - Gastos suspeitos em fins de semana - Execução: ~1.3s" data-id="gastos-altos-em-fins-de-semana">
                                 🏖️ Gastos altos em fins de semana
                             </div>
-                            <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH outliers AS (SELECT *, (valor_liquido - AVG(valor_liquido) OVER (PARTITION BY categoria_despesa)) / STDDEV(valor_liquido) OVER (PARTITION BY categoria_despesa) as z_score FROM despesas WHERE valor_liquido IS NOT NULL) SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, ROUND(z_score, 2) as desvio_padrao FROM outliers WHERE ABS(z_score) > 3 ORDER BY ABS(z_score) DESC LIMIT 30" data-tooltip="🧮 Análise estatística avançada - Window functions - Execução: ~3.2s" data-id="outliers-estatisticos">
+                            <div class="sample-query tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH outliers AS (SELECT *, (valor_liquido - AVG(valor_liquido) OVER (PARTITION BY categoria_despesa)) / STDDEV(valor_liquido) OVER (PARTITION BY categoria_despesa) as z_score FROM despesas WHERE valor_liquido IS NOT NULL) SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, ROUND(z_score, 2) as desvio_padrao FROM outliers WHERE ABS(z_score) > 3 ORDER BY ABS(z_score) DESC LIMIT 30" data-tooltip="🧮 Análise estatística avançada - Window functions - Execução: ~3.2s" data-id="outliers-estatisticos">
                                 📊 Outliers estatísticos (Z > 3)
                             </div>
-                            <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, COUNT(*) as frequencia FROM despesas WHERE valor_liquido > 50000 GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor HAVING COUNT(*) > 1 ORDER BY valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta valores altos repetidos entre mesmas partes - Execução: ~0.9s" data-id="valores-altos-duplicados">
+                            <div class="sample-query tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, COUNT(*) as frequencia FROM despesas WHERE valor_liquido > 50000 GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor HAVING COUNT(*) > 1 ORDER BY valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta valores altos repetidos entre mesmas partes - Execução: ~0.9s" data-id="valores-altos-duplicados">
                                 ⚖️ Valores altos duplicados
                             </div>
                         </div>
