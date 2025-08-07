@@ -150,21 +150,16 @@
             background: linear-gradient(to right, #374151, #4b5563);
         }
         
-        .query-complex {
+        .query-basic.selected {
             background: linear-gradient(to right, #dbeafe, #bfdbfe);
             border-left: 3px solid #3b82f6;
         }
-        .dark .query-complex {
+        .dark .query-basic.selected {
             background: linear-gradient(to right, #1e3a8a, #1d4ed8);
         }
         
-        .query-audit {
-            background: linear-gradient(to right, #fee2e2, #fecaca);
-            border-left: 3px solid #ef4444;
-        }
-        .dark .query-audit {
-            background: linear-gradient(to right, #7f1d1d, #991b1b);
-        }
+        
+        
 
         /* Tooltip styles */
         .tooltip {
@@ -240,20 +235,31 @@
                 
                 
                 <div id="sample-queries-list" class="space-y-1">
-                    <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT * FROM despesas LIMIT 10" data-tooltip="Visualização rápida dos dados - Execução: ~0.1s">
+                    <!-- Exemplos -->
+                    <div class="category-section" data-category="exemplos">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mb-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors" onclick="toggleCategory('exemplos')">
+                            <span class="text-xs font-medium text-green-700 dark:text-green-300 uppercase tracking-wide">📚 Exemplos</span>
+                            <svg class="category-chevron w-4 h-4 text-green-500 transition-transform" style="transform: rotate(0deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div class="category-content space-y-1" style="display: block;">
+                    <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT * FROM despesas LIMIT 10" data-tooltip="Visualização rápida dos dados - Execução: ~0.1s" data-id="ver-primeiros-10-registros">
                         📄 Ver primeiros 10 registros
                     </div>
-                    <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT fornecedor, COUNT(*) as total, SUM(valor_liquido) as value FROM despesas GROUP BY fornecedor ORDER BY value DESC LIMIT 15" data-tooltip="Ranking de fornecedores por receita total - Execução: ~0.5s">
+                    <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT fornecedor, COUNT(*) as total, SUM(valor_liquido) as value FROM despesas GROUP BY fornecedor ORDER BY value DESC LIMIT 15" data-tooltip="Ranking de fornecedores por receita total - Execução: ~0.5s" data-id="top-fornecedores-por-valor">
                         📊 Top fornecedores por valor
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT categoria_despesa, COUNT(*) as count, AVG(valor_liquido) as avg FROM despesas GROUP BY categoria_despesa ORDER BY count DESC LIMIT 10">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT categoria_despesa, COUNT(*) as count, AVG(valor_liquido) as avg FROM despesas GROUP BY categoria_despesa ORDER BY count DESC LIMIT 10" data-id="top-categorias">
                         📈 Top categorias
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT nome_parlamentar, SUM(valor_liquido) as total FROM despesas GROUP BY nome_parlamentar ORDER BY total DESC LIMIT 20">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total DESC LIMIT 20" data-id="top-deputados">
                         👥 Top deputados
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT fornecedor, COUNT(DISTINCT nome_parlamentar) as deputies, SUM(valor_liquido) as total FROM despesas GROUP BY fornecedor HAVING deputies > 5 ORDER BY total DESC LIMIT 15">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT fornecedor, COUNT(DISTINCT nome_parlamentar) as deputies, SUM(valor_liquido) as total FROM despesas GROUP BY fornecedor HAVING deputies > 5 ORDER BY total DESC LIMIT 15" data-id="fornecedores-multi-deputados">
                         🏢 Fornecedores multi-deputados
+                    </div>
+                        </div>
                     </div>
                     
                     <!-- Temporal Analysis -->
@@ -265,13 +271,13 @@
                             </svg>
                         </div>
                         <div class="category-content space-y-1" style="display: none;">
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT EXTRACT(YEAR FROM data_emissao) as ano, EXTRACT(MONTH FROM data_emissao) as mes, SUM(valor_liquido) as total, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano, mes ORDER BY ano DESC, mes DESC LIMIT 24">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT EXTRACT(YEAR FROM data_emissao) as ano, EXTRACT(MONTH FROM data_emissao) as mes, SUM(valor_liquido) as total, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano, mes ORDER BY ano DESC, mes DESC LIMIT 24" data-id="tendencias-mensais-2-anos">
                         📅 Tendências mensais (2 anos)
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT CASE EXTRACT(DOW FROM data_emissao) WHEN 0 THEN 'Domingo' WHEN 1 THEN 'Segunda' WHEN 2 THEN 'Terça' WHEN 3 THEN 'Quarta' WHEN 4 THEN 'Quinta' WHEN 5 THEN 'Sexta' WHEN 6 THEN 'Sábado' END as dia_semana, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE data_emissao IS NOT NULL GROUP BY EXTRACT(DOW FROM data_emissao) ORDER BY EXTRACT(DOW FROM data_emissao)">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT CASE EXTRACT(DOW FROM data_emissao) WHEN 0 THEN 'Domingo' WHEN 1 THEN 'Segunda' WHEN 2 THEN 'Terça' WHEN 3 THEN 'Quarta' WHEN 4 THEN 'Quinta' WHEN 5 THEN 'Sexta' WHEN 6 THEN 'Sábado' END as dia_semana, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE data_emissao IS NOT NULL GROUP BY EXTRACT(DOW FROM data_emissao) ORDER BY EXTRACT(DOW FROM data_emissao)" data-id="padrao-por-dia-da-semana">
                         📊 Padrão por dia da semana
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT EXTRACT(YEAR FROM data_emissao) as ano, SUM(valor_liquido) as total_ano, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano ORDER BY ano DESC">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT EXTRACT(YEAR FROM data_emissao) as ano, SUM(valor_liquido) as total_ano, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano ORDER BY ano DESC" data-id="comparacao-ano-a-ano">
                         📈 Comparação ano a ano
                     </div>
                         </div>
@@ -286,13 +292,13 @@
                             </svg>
                         </div>
                         <div class="category-content space-y-1" style="display: none;">
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT nome_parlamentar, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas ORDER BY valor_liquido DESC LIMIT 20">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas ORDER BY valor_liquido DESC LIMIT 20" data-id="top-transacoes-mais-caras">
                         💰 Top transações mais caras
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT categoria_despesa, subcategoria_despesa, COUNT(*) as total_transacoes, SUM(valor_liquido) as total_valor, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY categoria_despesa, subcategoria_despesa ORDER BY total_valor DESC LIMIT 30">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT categoria_despesa, subcategoria_despesa, COUNT(*) as total_transacoes, SUM(valor_liquido) as total_valor, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY categoria_despesa, subcategoria_despesa ORDER BY total_valor DESC LIMIT 30" data-id="categorias-e-subcategorias">
                         🏛️ Categorias e subcategorias
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT categoria_despesa, MAX(valor_liquido) as maior_valor, AVG(valor_liquido) as valor_medio, MIN(valor_liquido) as menor_valor, COUNT(*) as total FROM despesas GROUP BY categoria_despesa ORDER BY maior_valor DESC">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT categoria_despesa, MAX(valor_liquido) as maior_valor, AVG(valor_liquido) as valor_medio, MIN(valor_liquido) as menor_valor, COUNT(*) as total FROM despesas GROUP BY categoria_despesa ORDER BY maior_valor DESC" data-id="estatisticas-por-categoria">
                         📊 Estatísticas por categoria
                     </div>
                         </div>
@@ -307,13 +313,13 @@
                             </svg>
                         </div>
                         <div class="category-content space-y-1" style="display: none;">
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT subcategoria_despesa, COUNT(*) as total, SUM(valor_liquido) as valor FROM despesas WHERE subcategoria_despesa ILIKE '%passag%' OR subcategoria_despesa ILIKE '%viag%' OR subcategoria_despesa ILIKE '%hosp%' OR subcategoria_despesa ILIKE '%combust%' GROUP BY subcategoria_despesa ORDER BY valor DESC">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT categoria_despesa, COUNT(*) as total, SUM(valor_liquido) as valor FROM despesas WHERE categoria_despesa ILIKE '%PASSAGEM%' OR categoria_despesa ILIKE '%VEÍCULOS%' OR categoria_despesa ILIKE '%COMBUSTÍVEIS%' OR categoria_despesa ILIKE '%HOSPEDAGEM%' OR categoria_despesa ILIKE '%LOCAÇÃO%' OR categoria_despesa ILIKE '%TÁXI%' GROUP BY categoria_despesa ORDER BY valor DESC" data-id="gastos-relacionados-a-viagens">
                         ✈️ Gastos relacionados a viagens
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT ano_competencia, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE ano_competencia IS NOT NULL GROUP BY ano_competencia ORDER BY ano_competencia DESC">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT ano_competencia, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE ano_competencia IS NOT NULL GROUP BY ano_competencia ORDER BY ano_competencia DESC" data-id="despesas-por-ano-de-competencia">
                         📅 Despesas por ano de competência
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT nome_parlamentar, SUM(valor_liquido) as total_gastos, COUNT(*) as num_despesas FROM despesas GROUP BY nome_parlamentar ORDER BY total_gastos DESC LIMIT 25">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gastos, COUNT(*) as num_despesas FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total_gastos DESC LIMIT 25" data-id="top-gastos-por-deputado">
                         📍 Top gastos por deputado
                     </div>
                         </div>
@@ -328,16 +334,16 @@
                             </svg>
                         </div>
                         <div class="category-content space-y-1" style="display: none;">
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT fornecedor, SUM(valor_liquido) as receita_total, COUNT(*) as total_transacoes, COUNT(DISTINCT nome_parlamentar) as deputados_atendidos, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY fornecedor ORDER BY receita_total DESC LIMIT 20">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT fornecedor, SUM(valor_liquido) as receita_total, COUNT(*) as total_transacoes, COUNT(DISTINCT nome_parlamentar) as deputados_atendidos, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY fornecedor ORDER BY receita_total DESC LIMIT 20" data-id="top-fornecedores-por-receita">
                         💼 Top fornecedores por receita
                     </div>
-                    <div class="sample-query query-complex tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH market_share AS (SELECT fornecedor, SUM(valor_liquido) as receita, (SUM(valor_liquido) * 100.0 / (SELECT SUM(valor_liquido) FROM despesas)) as participacao FROM despesas GROUP BY fornecedor ORDER BY receita DESC) SELECT fornecedor, receita, ROUND(participacao, 2) as participacao_pct FROM market_share LIMIT 15" data-tooltip="Análise avançada com CTE - Market share dos fornecedores - Execução: ~1.2s">
+                    <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH market_share AS (SELECT fornecedor, SUM(valor_liquido) as receita, (SUM(valor_liquido) * 100.0 / (SELECT SUM(valor_liquido) FROM despesas)) as participacao FROM despesas GROUP BY fornecedor ORDER BY receita DESC) SELECT fornecedor, receita, ROUND(participacao, 2) as participacao_pct FROM market_share LIMIT 15" data-tooltip="Análise avançada com CTE - Market share dos fornecedores - Execução: ~1.2s" data-id="concentracao-do-mercado">
                         📈 Concentração do mercado (%)
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT fornecedor, nome_parlamentar, SUM(valor_liquido) as total_gasto, COUNT(*) as transacoes FROM despesas GROUP BY fornecedor, nome_parlamentar HAVING SUM(valor_liquido) > 50000 ORDER BY total_gasto DESC LIMIT 30">
+                    <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT fornecedor, nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gasto, COUNT(*) as transacoes FROM despesas GROUP BY fornecedor, nome_parlamentar, sigla_partido HAVING SUM(valor_liquido) > 50000 ORDER BY total_gasto DESC LIMIT 30" data-id="relacionamentos-de-alto-valor">
                         🤝 Relacionamentos de alto valor
                     </div>
-                    <div class="sample-query query-complex tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH fornecedor_categoria AS (SELECT categoria_despesa, fornecedor, COUNT(*) as num_transacoes, SUM(valor_liquido) as gasto_total, ROW_NUMBER() OVER (PARTITION BY categoria_despesa ORDER BY COUNT(*) DESC, SUM(valor_liquido) DESC) as rank_transacoes FROM despesas GROUP BY categoria_despesa, fornecedor) SELECT categoria_despesa, fornecedor as principal_fornecedor, num_transacoes, gasto_total FROM fornecedor_categoria WHERE rank_transacoes = 1 ORDER BY num_transacoes DESC" data-tooltip="🏆 Análise avançada - Principal fornecedor por categoria - Window functions - Execução: ~2.8s">
+                    <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH fornecedor_categoria AS (SELECT categoria_despesa, fornecedor, COUNT(*) as num_transacoes, SUM(valor_liquido) as gasto_total, ROW_NUMBER() OVER (PARTITION BY categoria_despesa ORDER BY COUNT(*) DESC, SUM(valor_liquido) DESC) as rank_transacoes FROM despesas GROUP BY categoria_despesa, fornecedor) SELECT categoria_despesa, fornecedor as principal_fornecedor, num_transacoes, gasto_total FROM fornecedor_categoria WHERE rank_transacoes = 1 ORDER BY num_transacoes DESC" data-tooltip="🏆 Análise avançada - Principal fornecedor por categoria - Window functions - Execução: ~2.8s" data-id="principal-fornecedor-por-categoria">
                         👑 Principal fornecedor por categoria
                     </div>
                         </div>
@@ -352,12 +358,12 @@
                             </svg>
                         </div>
                         <div class="category-content space-y-1" style="display: none;">
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT nome_parlamentar, SUM(valor_liquido) as total_gasto, COUNT(*) as num_transacoes, AVG(valor_liquido) as gasto_medio FROM despesas GROUP BY nome_parlamentar ORDER BY total_gasto DESC LIMIT 20">
-                        📊 Ranking de gastos por deputado
-                    </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="WITH activity_stats AS (SELECT nome_parlamentar, COUNT(*) as num_transacoes, SUM(valor_liquido) as total_gasto FROM despesas GROUP BY nome_parlamentar), top_active AS (SELECT 'Mais ativos' as tipo, nome_parlamentar, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes DESC LIMIT 10), least_active AS (SELECT 'Menos ativos' as tipo, nome_parlamentar, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes ASC LIMIT 10) SELECT * FROM (SELECT * FROM top_active UNION ALL SELECT * FROM least_active) ORDER BY CASE WHEN tipo = 'Mais ativos' THEN 1 ELSE 2 END, num_transacoes DESC">
-                        🎯 Deputados mais/menos ativos
-                    </div>
+                            <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gasto, COUNT(*) as num_transacoes, AVG(valor_liquido) as gasto_medio FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total_gasto DESC LIMIT 20" data-id="ranking-de-gastos-por-deputado">
+                                📊 Ranking de gastos por deputado
+                            </div>
+                            <div class="sample-query query-basic px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH activity_stats AS (SELECT nome_parlamentar, sigla_partido, COUNT(*) as num_transacoes, SUM(valor_liquido) as total_gasto FROM despesas GROUP BY nome_parlamentar, sigla_partido), top_active AS (SELECT 'Mais ativos' as tipo, nome_parlamentar, sigla_partido, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes DESC LIMIT 10), least_active AS (SELECT 'Menos ativos' as tipo, nome_parlamentar, sigla_partido, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes ASC LIMIT 10) SELECT * FROM (SELECT * FROM top_active UNION ALL SELECT * FROM least_active) ORDER BY CASE WHEN tipo = 'Mais ativos' THEN 1 ELSE 2 END, num_transacoes DESC" data-id="deputados-mais-menos-ativos">
+                                🎯 Deputados mais/menos ativos
+                            </div>
                         </div>
                     </div>
                     
@@ -370,21 +376,21 @@
                             </svg>
                         </div>
                         <div class="category-content space-y-1" style="display: none;">
-                    <div class="sample-query query-audit tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, categoria_despesa, fornecedor, valor_liquido, data_emissao, COUNT(*) as duplicatas FROM despesas GROUP BY nome_parlamentar, categoria_despesa, fornecedor, valor_liquido, data_emissao HAVING COUNT(*) > 1 ORDER BY duplicatas DESC, valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta possíveis duplicatas - Execução: ~2.1s">
-                        🔄 Possíveis despesas duplicadas
-                    </div>
-                    <div class="sample-query query-audit tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT valor_liquido, COUNT(*) as frequencia FROM despesas WHERE valor_liquido % 100 = 0 AND valor_liquido >= 1000 GROUP BY valor_liquido ORDER BY frequencia DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Identifica valores redondos suspeitos - Execução: ~0.8s">
-                        🎯 Valores redondos suspeitos
-                    </div>
-                    <div class="sample-query query-audit tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas WHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) AND valor_liquido > 5000 ORDER BY valor_liquido DESC LIMIT 25" data-tooltip="⚠️ Auditoria - Gastos suspeitos em fins de semana - Execução: ~1.3s">
-                        🏖️ Gastos altos em fins de semana
-                    </div>
-                    <div class="sample-query query-complex tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH outliers AS (SELECT *, (valor_liquido - AVG(valor_liquido) OVER (PARTITION BY categoria_despesa)) / STDDEV(valor_liquido) OVER (PARTITION BY categoria_despesa) as z_score FROM despesas WHERE valor_liquido IS NOT NULL) SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, ROUND(z_score, 2) as desvio_padrao FROM outliers WHERE ABS(z_score) > 3 ORDER BY ABS(z_score) DESC LIMIT 30" data-tooltip="🧮 Análise estatística avançada - Window functions - Execução: ~3.2s">
-                        📊 Outliers estatísticos (Z > 3)
-                    </div>
-                    <div class="sample-query query-audit tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, categoria_despesa, valor_liquido, fornecedor, COUNT(*) as frequencia FROM despesas WHERE valor_liquido > 50000 GROUP BY nome_parlamentar, categoria_despesa, valor_liquido, fornecedor HAVING COUNT(*) > 1 ORDER BY valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta valores altos repetidos entre mesmas partes - Execução: ~0.9s">
-                        ⚖️ Valores altos duplicados
-                    </div>
+                            <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao, COUNT(*) as duplicatas FROM despesas GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao HAVING COUNT(*) > 1 ORDER BY duplicatas DESC, valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta possíveis duplicatas - Execução: ~2.1s" data-id="possiveis-despesas-duplicadas">
+                                🔄 Possíveis despesas duplicadas
+                            </div>
+                            <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT valor_liquido, COUNT(*) as frequencia FROM despesas WHERE valor_liquido % 100 = 0 AND valor_liquido >= 1000 GROUP BY valor_liquido ORDER BY frequencia DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Identifica valores redondos suspeitos - Execução: ~0.8s" data-id="valores-redondos-suspeitos">
+                                🎯 Valores redondos suspeitos
+                            </div>
+                            <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas WHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) AND valor_liquido > 5000 ORDER BY valor_liquido DESC LIMIT 25" data-tooltip="⚠️ Auditoria - Gastos suspeitos em fins de semana - Execução: ~1.3s" data-id="gastos-altos-em-fins-de-semana">
+                                🏖️ Gastos altos em fins de semana
+                            </div>
+                            <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH outliers AS (SELECT *, (valor_liquido - AVG(valor_liquido) OVER (PARTITION BY categoria_despesa)) / STDDEV(valor_liquido) OVER (PARTITION BY categoria_despesa) as z_score FROM despesas WHERE valor_liquido IS NOT NULL) SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, ROUND(z_score, 2) as desvio_padrao FROM outliers WHERE ABS(z_score) > 3 ORDER BY ABS(z_score) DESC LIMIT 30" data-tooltip="🧮 Análise estatística avançada - Window functions - Execução: ~3.2s" data-id="outliers-estatisticos">
+                                📊 Outliers estatísticos (Z > 3)
+                            </div>
+                            <div class="sample-query query-basic tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, COUNT(*) as frequencia FROM despesas WHERE valor_liquido > 50000 GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor HAVING COUNT(*) > 1 ORDER BY valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta valores altos repetidos entre mesmas partes - Execução: ~0.9s" data-id="valores-altos-duplicados">
+                                ⚖️ Valores altos duplicados
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -793,7 +799,7 @@
                             </div>
                         </div>
                         ${schema.map(col => 
-                            `<div class="py-1 cursor-pointer flex items-center gap-1.5 text-xs hover:text-duckdb-500">
+                            `<div class="py-1 flex items-center gap-1.5 text-xs">
                                 <span class="w-3 h-3 opacity-60">${getDataTypeIcon(col.column_type)}</span>
                                 <span>${col.column_name}</span>
                                 <span class="text-gray-500 dark:text-gray-400 text-xs ml-auto">${col.column_type}</span>
@@ -873,11 +879,20 @@
             document.querySelectorAll('.sample-query').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const query = e.target.dataset.query;
+                    const analysisId = e.target.dataset.id;
                     if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor && query) {
+                        // Remove selected class from all query buttons
+                        document.querySelectorAll('.sample-query').forEach(button => {
+                            button.classList.remove('selected');
+                        });
+                        
+                        // Add selected class to clicked button
+                        e.target.classList.add('selected');
+                        
                         tabs[activeTabId].editor.setValue(query);
                         
-                        // Update URL with query for sharing
-                        updateURLWithQuery(query, e.target.textContent.trim());
+                        // Update URL with query for sharing (use slug ID if available)
+                        updateURLWithQuery(query, e.target.textContent.trim(), analysisId);
                         
                         executeQuery();
                     }
@@ -1377,42 +1392,180 @@
             element.innerHTML = text;
         }
         
+        // Slug generation function
+        function createSlug(text) {
+            return text
+                .toLowerCase()
+                .replace(/[^\w\s-]/g, '') // Remove special chars except spaces and hyphens
+                .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
+                .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+                .substring(0, 50); // Limit length
+        }
+        
+        // Query mapping system - maps slugged IDs to analysis queries and names
+        const analysisMap = {
+            'ver-primeiros-10-registros': {
+                name: '📄 Ver primeiros 10 registros',
+                query: 'SELECT * FROM despesas LIMIT 10'
+            },
+            'top-fornecedores-por-valor': {
+                name: '📊 Top fornecedores por valor',
+                query: 'SELECT fornecedor, COUNT(*) as total, SUM(valor_liquido) as value FROM despesas GROUP BY fornecedor ORDER BY value DESC LIMIT 15'
+            },
+            'top-categorias': {
+                name: '📈 Top categorias',
+                query: 'SELECT categoria_despesa, COUNT(*) as count, AVG(valor_liquido) as avg FROM despesas GROUP BY categoria_despesa ORDER BY count DESC LIMIT 10'
+            },
+            'top-deputados': {
+                name: '👥 Top deputados',
+                query: 'SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total DESC LIMIT 20'
+            },
+            'fornecedores-multi-deputados': {
+                name: '🏢 Fornecedores multi-deputados',
+                query: 'SELECT fornecedor, COUNT(DISTINCT nome_parlamentar) as deputies, SUM(valor_liquido) as total FROM despesas GROUP BY fornecedor HAVING deputies > 5 ORDER BY total DESC LIMIT 15'
+            },
+            'tendencias-mensais-2-anos': {
+                name: '📅 Tendências mensais (2 anos)',
+                query: 'SELECT EXTRACT(YEAR FROM data_emissao) as ano, EXTRACT(MONTH FROM data_emissao) as mes, SUM(valor_liquido) as total, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano, mes ORDER BY ano DESC, mes DESC LIMIT 24'
+            },
+            'padrao-por-dia-da-semana': {
+                name: '📊 Padrão por dia da semana',
+                query: 'SELECT CASE EXTRACT(DOW FROM data_emissao) WHEN 0 THEN \'Domingo\' WHEN 1 THEN \'Segunda\' WHEN 2 THEN \'Terça\' WHEN 3 THEN \'Quarta\' WHEN 4 THEN \'Quinta\' WHEN 5 THEN \'Sexta\' WHEN 6 THEN \'Sábado\' END as dia_semana, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE data_emissao IS NOT NULL GROUP BY EXTRACT(DOW FROM data_emissao) ORDER BY EXTRACT(DOW FROM data_emissao)'
+            },
+            'comparacao-ano-a-ano': {
+                name: '📈 Comparação ano a ano',
+                query: 'SELECT EXTRACT(YEAR FROM data_emissao) as ano, SUM(valor_liquido) as total_ano, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano ORDER BY ano DESC'
+            },
+            'top-transacoes-mais-caras': {
+                name: '💰 Top transações mais caras',
+                query: 'SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas ORDER BY valor_liquido DESC LIMIT 20'
+            },
+            'categorias-e-subcategorias': {
+                name: '🏛️ Categorias e subcategorias',
+                query: 'SELECT categoria_despesa, subcategoria_despesa, COUNT(*) as total_transacoes, SUM(valor_liquido) as total_valor, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY categoria_despesa, subcategoria_despesa ORDER BY total_valor DESC LIMIT 30'
+            },
+            'estatisticas-por-categoria': {
+                name: '📊 Estatísticas por categoria',
+                query: 'SELECT categoria_despesa, MAX(valor_liquido) as maior_valor, AVG(valor_liquido) as valor_medio, MIN(valor_liquido) as menor_valor, COUNT(*) as total FROM despesas GROUP BY categoria_despesa ORDER BY maior_valor DESC'
+            },
+            'gastos-relacionados-a-viagens': {
+                name: '✈️ Gastos relacionados a viagens',
+                query: 'SELECT categoria_despesa, COUNT(*) as total, SUM(valor_liquido) as valor FROM despesas WHERE categoria_despesa ILIKE \'%PASSAGEM%\' OR categoria_despesa ILIKE \'%VEÍCULOS%\' OR categoria_despesa ILIKE \'%COMBUSTÍVEIS%\' OR categoria_despesa ILIKE \'%HOSPEDAGEM%\' OR categoria_despesa ILIKE \'%LOCAÇÃO%\' OR categoria_despesa ILIKE \'%TÁXI%\' GROUP BY categoria_despesa ORDER BY valor DESC'
+            },
+            'despesas-por-ano-de-competencia': {
+                name: '📅 Despesas por ano de competência',
+                query: 'SELECT ano_competencia, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE ano_competencia IS NOT NULL GROUP BY ano_competencia ORDER BY ano_competencia DESC'
+            },
+            'top-gastos-por-deputado': {
+                name: '📍 Top gastos por deputado',
+                query: 'SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gastos, COUNT(*) as num_despesas FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total_gastos DESC LIMIT 25'
+            },
+            'top-fornecedores-por-receita': {
+                name: '💼 Top fornecedores por receita',
+                query: 'SELECT fornecedor, SUM(valor_liquido) as receita_total, COUNT(*) as total_transacoes, COUNT(DISTINCT nome_parlamentar) as deputados_atendidos, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY fornecedor ORDER BY receita_total DESC LIMIT 20'
+            },
+            'concentracao-do-mercado': {
+                name: '📈 Concentração do mercado (%)',
+                query: 'WITH market_share AS (SELECT fornecedor, SUM(valor_liquido) as receita, (SUM(valor_liquido) * 100.0 / (SELECT SUM(valor_liquido) FROM despesas)) as participacao FROM despesas GROUP BY fornecedor ORDER BY receita DESC) SELECT fornecedor, receita, ROUND(participacao, 2) as participacao_pct FROM market_share LIMIT 15'
+            },
+            'relacionamentos-de-alto-valor': {
+                name: '🤝 Relacionamentos de alto valor',
+                query: 'SELECT fornecedor, nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gasto, COUNT(*) as transacoes FROM despesas GROUP BY fornecedor, nome_parlamentar, sigla_partido HAVING SUM(valor_liquido) > 50000 ORDER BY total_gasto DESC LIMIT 30'
+            },
+            'principal-fornecedor-por-categoria': {
+                name: '👑 Principal fornecedor por categoria',
+                query: 'WITH fornecedor_categoria AS (SELECT categoria_despesa, fornecedor, COUNT(*) as num_transacoes, SUM(valor_liquido) as gasto_total, ROW_NUMBER() OVER (PARTITION BY categoria_despesa ORDER BY COUNT(*) DESC, SUM(valor_liquido) DESC) as rank_transacoes FROM despesas GROUP BY categoria_despesa, fornecedor) SELECT categoria_despesa, fornecedor as principal_fornecedor, num_transacoes, gasto_total FROM fornecedor_categoria WHERE rank_transacoes = 1 ORDER BY num_transacoes DESC'
+            },
+            'ranking-de-gastos-por-deputado': {
+                name: '📊 Ranking de gastos por deputado',
+                query: 'SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gasto, COUNT(*) as num_transacoes, AVG(valor_liquido) as gasto_medio FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total_gasto DESC LIMIT 20'
+            },
+            'deputados-mais-menos-ativos': {
+                name: '🎯 Deputados mais/menos ativos',
+                query: 'WITH activity_stats AS (SELECT nome_parlamentar, sigla_partido, COUNT(*) as num_transacoes, SUM(valor_liquido) as total_gasto FROM despesas GROUP BY nome_parlamentar, sigla_partido), top_active AS (SELECT \'Mais ativos\' as tipo, nome_parlamentar, sigla_partido, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes DESC LIMIT 10), least_active AS (SELECT \'Menos ativos\' as tipo, nome_parlamentar, sigla_partido, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes ASC LIMIT 10) SELECT * FROM (SELECT * FROM top_active UNION ALL SELECT * FROM least_active) ORDER BY CASE WHEN tipo = \'Mais ativos\' THEN 1 ELSE 2 END, num_transacoes DESC'
+            },
+            'possiveis-despesas-duplicadas': {
+                name: '🔄 Possíveis despesas duplicadas',
+                query: 'SELECT nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao, COUNT(*) as duplicatas FROM despesas GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao HAVING COUNT(*) > 1 ORDER BY duplicatas DESC, valor_liquido DESC LIMIT 20'
+            },
+            'valores-redondos-suspeitos': {
+                name: '🎯 Valores redondos suspeitos',
+                query: 'SELECT valor_liquido, COUNT(*) as frequencia FROM despesas WHERE valor_liquido % 100 = 0 AND valor_liquido >= 1000 GROUP BY valor_liquido ORDER BY frequencia DESC LIMIT 20'
+            },
+            'gastos-altos-em-fins-de-semana': {
+                name: '🏖️ Gastos altos em fins de semana',
+                query: 'SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas WHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) AND valor_liquido > 5000 ORDER BY valor_liquido DESC LIMIT 25'
+            },
+            'outliers-estatisticos': {
+                name: '📊 Outliers estatísticos (Z > 3)',
+                query: 'WITH outliers AS (SELECT *, (valor_liquido - AVG(valor_liquido) OVER (PARTITION BY categoria_despesa)) / STDDEV(valor_liquido) OVER (PARTITION BY categoria_despesa) as z_score FROM despesas WHERE valor_liquido IS NOT NULL) SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, ROUND(z_score, 2) as desvio_padrao FROM outliers WHERE ABS(z_score) > 3 ORDER BY ABS(z_score) DESC LIMIT 30'
+            },
+            'valores-altos-duplicados': {
+                name: '⚖️ Valores altos duplicados',
+                query: 'SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, COUNT(*) as frequencia FROM despesas WHERE valor_liquido > 50000 GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor HAVING COUNT(*) > 1 ORDER BY valor_liquido DESC LIMIT 20'
+            }
+        };
+        
         // URL sharing functionality
-        function updateURLWithQuery(query, analysisName) {
+        function updateURLWithQuery(query, analysisName, analysisId = null) {
             const url = new URL(window.location);
-            url.searchParams.set('query', btoa(encodeURIComponent(query))); // Base64 encode for URL safety
-            url.searchParams.set('name', encodeURIComponent(analysisName));
+            
+            // Clear old parameters
+            url.searchParams.delete('query');
+            url.searchParams.delete('name');
+            url.searchParams.delete('analise');
+            
+            if (analysisId && analysisMap[analysisId]) {
+                // Use slugged ID for predefined analyses
+                url.searchParams.set('analise', analysisId);
+            } else {
+                // Fall back to encoded query for custom queries
+                url.searchParams.set('query', btoa(encodeURIComponent(query)));
+                url.searchParams.set('name', encodeURIComponent(analysisName));
+            }
             
             // Update URL without page reload
-            window.history.pushState({query, analysisName}, analysisName, url);
+            window.history.pushState({query, analysisName, analysisId}, analysisName, url);
         }
         
         function loadQueryFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
+            const analysisId = urlParams.get('analise');
             const encodedQuery = urlParams.get('query');
             const analysisName = urlParams.get('name');
             
-            if (encodedQuery) {
+            let query = null;
+            let name = null;
+            
+            // Try slugged ID first (new format)
+            if (analysisId && analysisMap[analysisId]) {
+                query = analysisMap[analysisId].query;
+                name = analysisMap[analysisId].name;
+            }
+            // Fall back to encoded query (old format for backward compatibility)
+            else if (encodedQuery) {
                 try {
-                    // Decode the query
-                    const query = decodeURIComponent(atob(encodedQuery));
-                    const name = analysisName ? decodeURIComponent(analysisName) : 'Consulta Compartilhada';
-                    
-                    // Wait for editor to be ready, then load the query
-                    if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor) {
-                        tabs[activeTabId].editor.setValue(query);
-                        
-                        // Update tab name to reflect the shared query
-                        const tabButton = document.querySelector(`[data-tab-id="${activeTabId}"] .tab-name`);
-                        if (tabButton) {
-                            tabButton.textContent = name;
-                        }
-                        
-                        // Auto-execute the shared query
-                        setTimeout(() => executeQuery(), 500);
-                    }
+                    query = decodeURIComponent(atob(encodedQuery));
+                    name = analysisName ? decodeURIComponent(analysisName) : 'Consulta Compartilhada';
                 } catch (error) {
-                    console.error('Error loading query from URL:', error);
+                    console.error('Error decoding query from URL:', error);
+                    return;
+                }
+            }
+            
+            if (query && name) {
+                // Wait for editor to be ready, then load the query
+                if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor) {
+                    tabs[activeTabId].editor.setValue(query);
+                    
+                    // Update tab name to reflect the shared query
+                    const tabButton = document.querySelector(`[data-tab-id="${activeTabId}"] .tab-name`);
+                    if (tabButton) {
+                        tabButton.textContent = name;
+                    }
+                    
+                    // Auto-execute the shared query
+                    setTimeout(() => executeQuery(), 500);
                 }
             }
         }
@@ -1442,8 +1595,17 @@
             
             const tabName = document.querySelector(`[data-tab-id="${activeTabId}"] .tab-name`)?.textContent || 'Consulta Personalizada';
             
+            // Try to find matching analysis ID for this query
+            let matchingAnalysisId = null;
+            for (const [id, analysis] of Object.entries(analysisMap)) {
+                if (analysis.query.trim() === query) {
+                    matchingAnalysisId = id;
+                    break;
+                }
+            }
+            
             // Update URL and copy to clipboard
-            updateURLWithQuery(query, tabName);
+            updateURLWithQuery(query, tabName, matchingAnalysisId);
             
             // Copy URL to clipboard
             navigator.clipboard.writeText(window.location.href).then(() => {
