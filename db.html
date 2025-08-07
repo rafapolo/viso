@@ -355,7 +355,7 @@
                     <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="SELECT nome_parlamentar, SUM(valor_liquido) as total_gasto, COUNT(*) as num_transacoes, AVG(valor_liquido) as gasto_medio FROM despesas GROUP BY nome_parlamentar ORDER BY total_gasto DESC LIMIT 20">
                         📊 Ranking de gastos por deputado
                     </div>
-                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="WITH activity_stats AS (SELECT nome_parlamentar, COUNT(*) as num_transacoes, SUM(valor_liquido) as total_gasto FROM despesas GROUP BY nome_parlamentar) SELECT 'Mais ativos' as tipo, nome_parlamentar, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes DESC LIMIT 10 UNION ALL SELECT 'Menos ativos' as tipo, nome_parlamentar, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes ASC LIMIT 10">
+                    <div class="sample-query px-3 py-2 bg-gray-200 dark:bg-gray-800 rounded cursor-pointer text-xs transition-colors hover:bg-gray-300 dark:hover:bg-gray-700" data-query="WITH activity_stats AS (SELECT nome_parlamentar, COUNT(*) as num_transacoes, SUM(valor_liquido) as total_gasto FROM despesas GROUP BY nome_parlamentar), top_active AS (SELECT 'Mais ativos' as tipo, nome_parlamentar, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes DESC LIMIT 10), least_active AS (SELECT 'Menos ativos' as tipo, nome_parlamentar, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes ASC LIMIT 10) SELECT * FROM (SELECT * FROM top_active UNION ALL SELECT * FROM least_active) ORDER BY CASE WHEN tipo = 'Mais ativos' THEN 1 ELSE 2 END, num_transacoes DESC">
                         🎯 Deputados mais/menos ativos
                     </div>
                         </div>
@@ -382,8 +382,8 @@
                     <div class="sample-query query-complex tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH outliers AS (SELECT *, (valor_liquido - AVG(valor_liquido) OVER (PARTITION BY categoria_despesa)) / STDDEV(valor_liquido) OVER (PARTITION BY categoria_despesa) as z_score FROM despesas WHERE valor_liquido IS NOT NULL) SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, ROUND(z_score, 2) as desvio_padrao FROM outliers WHERE ABS(z_score) > 3 ORDER BY ABS(z_score) DESC LIMIT 30" data-tooltip="🧮 Análise estatística avançada - Window functions - Execução: ~3.2s">
                         📊 Outliers estatísticos (Z > 3)
                     </div>
-                    <div class="sample-query query-audit tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT valor_liquido, valor_documento, (valor_liquido - valor_documento) as diferenca FROM despesas WHERE valor_documento IS NOT NULL AND ABS(valor_liquido - valor_documento) > 100 ORDER BY ABS(diferenca) DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Verifica inconsistências entre valores - Execução: ~0.9s">
-                        ⚖️ Diferenças valor líquido vs documento
+                    <div class="sample-query query-audit tooltip px-3 py-2 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, categoria_despesa, valor_liquido, fornecedor, COUNT(*) as frequencia FROM despesas WHERE valor_liquido > 50000 GROUP BY nome_parlamentar, categoria_despesa, valor_liquido, fornecedor HAVING COUNT(*) > 1 ORDER BY valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta valores altos repetidos entre mesmas partes - Execução: ~0.9s">
+                        ⚖️ Valores altos duplicados
                     </div>
                         </div>
                     </div>
@@ -415,24 +415,6 @@
             </div>
             
             <div class="flex-1 flex flex-col min-h-0 min-w-0">
-                <div class="editor-container h-96 border-b border-gray-300 dark:border-gray-700 min-w-0">
-                    <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 gap-2">
-                        <button id="run-query-btn" class="px-3 py-1.5 bg-duckdb-500 text-black rounded text-xs hover:bg-duckdb-600 transition-colors disabled:opacity-50 flex items-center gap-1.5" disabled>
-                            ▶️ Executar
-                        </button>
-                        <button id="clear-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5">
-                            🗑️ Limpar
-                        </button>
-                        <div class="flex-1"></div>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">Ctrl+Enter para executar</span>
-                    </div>
-                    <div id="editors-container" class="h-[calc(100%-2.5rem)] relative">
-                        <!-- Editor containers will be dynamically generated here -->
-                    </div>
-                </div>
-                
-                <div class="resize-handle h-1 bg-gray-300 dark:bg-gray-700 hover:bg-duckdb-500 transition-colors" id="resize-handle"></div>
-
                 <div class="flex-1 flex flex-col min-h-0 min-w-0">
                     <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 justify-between">
                         <span class="font-medium text-sm">Resultados</span>
@@ -477,6 +459,24 @@
                         </div>
                     </div>
                 </div>
+                
+                <div class="resize-handle h-1 bg-gray-300 dark:bg-gray-700 hover:bg-duckdb-500 transition-colors" id="resize-handle"></div>
+
+                <div class="editor-container h-80 border-b border-gray-300 dark:border-gray-700 min-w-0">
+                    <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 gap-2">
+                        <button id="run-query-btn" class="px-3 py-1.5 bg-duckdb-500 text-black rounded text-xs hover:bg-duckdb-600 transition-colors disabled:opacity-50 flex items-center gap-1.5" disabled>
+                            ▶️ Executar
+                        </button>
+                        <button id="clear-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5">
+                            🗑️ Limpar
+                        </button>
+                        <div class="flex-1"></div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Ctrl+Enter para executar</span>
+                    </div>
+                    <div id="editors-container" class="h-[calc(100%-2.5rem)] relative">
+                        <!-- Editor containers will be dynamically generated here -->
+                    </div>
+                </div>
             </div>
             
             <div class="h-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-300 dark:border-gray-700 flex items-center px-3 text-xs text-gray-500 dark:text-gray-400 justify-between">
@@ -486,25 +486,25 @@
         </div>
         
         <!-- Right Sidebar - Schema Panel -->
-        <div class="w-80 bg-gray-100 dark:bg-gray-900 border-l border-gray-300 dark:border-gray-700 flex flex-col">
+        <div id="right-panel" class="w-80 bg-gray-100 dark:bg-gray-900 border-l border-gray-300 dark:border-gray-700 flex flex-col transition-all duration-300">
             <div class="p-4 border-b border-gray-300 dark:border-gray-700">
-                <div class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <span>🗄️</span>
-                    Database
+                <div class="text-sm font-semibold text-gray-900 dark:text-white flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span>🗄️</span>
+                        <span id="panel-title">Database</span>
+                    </div>
+                    <button id="panel-toggle" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" title="Recolher painel">
+                        <svg class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
             
-            <div class="p-4 border-b border-gray-300 dark:border-gray-700">
-                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Conexão</div>
-                <div id="connection-status" class="text-xs text-gray-500 dark:text-gray-400">
-                    <span class="loading-spinner"></span> Inicializando...
-                </div>
-            </div>
-            
-            <div class="p-4 flex-1 overflow-y-auto">
-                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 pr-4">Esquema: despesas</div>
-                <div class="text-xs" id="schema-tree">
-                    <div class="text-gray-500 dark:text-gray-400 text-xs">Carregando...</div>
+            <div id="panel-content" class="px-4 pt-4 pb-2 flex-1 overflow-y-auto">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Esquema: despesas</div>
+                <div id="schema-tree">
+                    <div class="text-gray-500 dark:text-gray-400 text-xs py-8 text-center">Carregando...</div>
                 </div>
             </div>
         </div>
@@ -557,10 +557,20 @@
         
         function updateStatus(message, isError = false) {
             const statusEl = document.getElementById('connection-status');
-            statusEl.innerHTML = isError ? 
-                `❌ ${message}` : 
-                `✅ ${message}`;
-            statusEl.className = isError ? 'text-xs text-red-500 dark:text-red-400' : 'text-xs text-duckdb-500';
+            if (statusEl) {
+                statusEl.innerHTML = isError ? 
+                    `❌ ${message}` : 
+                    `✅ ${message}`;
+                statusEl.className = isError ? 'text-xs text-red-500 dark:text-red-400' : 'text-xs text-duckdb-500';
+            }
+        }
+        
+        function setDisconnectedStatus() {
+            const statusEl = document.getElementById('connection-status');
+            if (statusEl) {
+                statusEl.innerHTML = '❌ Desconectado';
+                statusEl.className = 'text-xs text-red-500 dark:text-red-400';
+            }
         }
         
         function getDataTypeIcon(columnType) {
@@ -777,12 +787,13 @@
                 
                 if (schema.length > 0) {
                     const schemaHTML = `
-                        <div class="py-1 cursor-pointer flex items-center gap-1.5 font-medium mb-1">
-                            <span class="w-3 h-3 opacity-60">📋</span>
-                            despesas (${schema.length} columns)
+                        <div class="p-4 border-b border-gray-300 dark:border-gray-700">
+                            <div id="connection-status" class="text-xs text-red-500 dark:text-red-400">
+                                ❌ Desconectado
+                            </div>
                         </div>
                         ${schema.map(col => 
-                            `<div class="py-1 cursor-pointer flex items-center gap-1.5 ml-4 text-xs hover:text-duckdb-500">
+                            `<div class="py-1 cursor-pointer flex items-center gap-1.5 text-xs hover:text-duckdb-500">
                                 <span class="w-3 h-3 opacity-60">${getDataTypeIcon(col.column_type)}</span>
                                 <span>${col.column_name}</span>
                                 <span class="text-gray-500 dark:text-gray-400 text-xs ml-auto">${col.column_type}</span>
@@ -1452,6 +1463,39 @@
                 alert('Link copiado para a área de transferência:\n\n' + window.location.href);
             });
         }
+        
+        // Panel collapse/expand functionality
+        function setupPanelToggle() {
+            const panelToggle = document.getElementById('panel-toggle');
+            const rightPanel = document.getElementById('right-panel');
+            const panelContent = document.getElementById('panel-content');
+            const panelTitle = document.getElementById('panel-title');
+            let isCollapsed = false;
+            
+            if (panelToggle) {
+                panelToggle.addEventListener('click', () => {
+                    isCollapsed = !isCollapsed;
+                    
+                    if (isCollapsed) {
+                        // Collapse panel
+                        rightPanel.classList.remove('w-80');
+                        rightPanel.classList.add('w-12');
+                        panelContent.classList.add('hidden');
+                        panelTitle.classList.add('hidden');
+                        panelToggle.title = 'Expandir painel';
+                        panelToggle.querySelector('svg').style.transform = 'rotate(180deg)';
+                    } else {
+                        // Expand panel
+                        rightPanel.classList.remove('w-12');
+                        rightPanel.classList.add('w-80');
+                        panelContent.classList.remove('hidden');
+                        panelTitle.classList.remove('hidden');
+                        panelToggle.title = 'Recolher painel';
+                        panelToggle.querySelector('svg').style.transform = 'rotate(0deg)';
+                    }
+                });
+            }
+        }
 
         // Initialize when page loads
         window.addEventListener('load', () => {
@@ -1463,6 +1507,7 @@
             setupNavigation();
             setupThemeToggle();
             setupSearchAndFilters();
+            setupPanelToggle();
         });
     </script>
 </body>
