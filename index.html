@@ -573,15 +573,20 @@
                         <span class="text-gray-600 dark:text-gray-300 text-xs">Empresas</span>
                     </div>
                 </div>
-                <div class="legend-items mt-2 pt-2 border-t border-gray-300 dark:border-gray-600" id="searchLegend" style="display: none;">
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full" style="background-color: #ffdd59;"></div>
-                        <span class="text-gray-600 dark:text-gray-300 text-xs">Deputado (busca)</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full" style="background-color: #59ffdd;"></div>
-                        <span class="text-gray-600 dark:text-gray-300 text-xs">Empresa (busca)</span>
-                    </div>
+            </div>
+            
+            <div class="p-4 border-b border-gray-300 dark:border-gray-700">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Busca</div>
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="searchBox" 
+                        placeholder="Buscar deputado ou empresa..." 
+                        class="w-full px-3 py-2 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:border-duckdb-500 focus:ring-1 focus:ring-duckdb-500"
+                    >
+                    <button id="clearSearch" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-700 dark:hover:text-white text-sm hidden">
+                        ✕
+                    </button>
                 </div>
             </div>
             
@@ -613,6 +618,53 @@
                 </div>
             </div>
             
+            <!-- Network Analysis Controls -->
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Análise de Rede</div>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between py-1">
+                        <label for="showCompanyNames" class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                            <span>🏢</span>
+                            <span>Exibir nome das Empresas</span>
+                        </label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="showCompanyNames" class="sr-only peer">
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between py-1">
+                        <label for="showEdgeAmounts" class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                            <span>💳</span>
+                            <span>Mostrar gasto</span>
+                        </label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="showEdgeAmounts" class="sr-only peer">
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>                        
+                    <div class="flex items-center justify-between py-1">
+                        <label for="networkDensityToggle" class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                            <span>🔗</span>
+                            <span>Rede mais Densa</span>
+                        </label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="networkDensityToggle" class="sr-only peer" data-active="false">
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between py-1">
+                        <label for="topExpensesToggle" class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                            <span>💰</span>
+                            <span>Top 15 Gastos</span>
+                        </label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="topExpensesToggle" class="sr-only peer" data-active="false">
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <div class="p-4 border-b border-gray-300 dark:border-gray-700">
                 <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Estatísticas</div>
                 <div class="stats-grid text-sm" id="stats">
@@ -633,55 +685,15 @@
                         <div class="text-gray-500 dark:text-gray-400 text-2xs">Transações</div>
                     </div>
                 </div>
-            </div>
+            </div>        
             
             <div class="p-4 flex-1 overflow-y-auto space-y-4">
-                <!-- Network Analysis Controls -->
-                <div>
-                    <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Análise de Rede</div>
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between py-1">
-                            <label for="showCompanyNames" class="text-xs text-gray-600 dark:text-gray-300">Exibir nome das Empresas</label>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="showCompanyNames" class="sr-only peer">
-                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                            </label>
-                        </div>
-                        <div class="flex items-center justify-between py-1">
-                            <label for="showEdgeAmounts" class="text-xs text-gray-600 dark:text-gray-300">Mostrar gasto</label>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="showEdgeAmounts" class="sr-only peer">
-                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                            </label>
-                        </div>                        
-                        <div class="flex items-center justify-between py-1">
-                            <label for="networkDensityToggle" class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
-                                <span>🔗</span>
-                                <span>Rede mais Densa</span>
-                            </label>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="networkDensityToggle" class="sr-only peer" data-active="false">
-                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                            </label>
-                        </div>
-                        <div class="flex items-center justify-between py-1">
-                            <label for="topExpensesToggle" class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
-                                <span>💰</span>
-                                <span>Top 15 Gastos</span>
-                            </label>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="topExpensesToggle" class="sr-only peer" data-active="false">
-                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Category Pie Chart -->
                 <div class="flex-1 flex flex-col min-h-0">
                     <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Categorias</div>
                     <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 flex-1 flex flex-col min-h-0">
-                        <div class="flex-shrink-0">
+                        <div class="flex-shrink-0 flex justify-center items-center">
                             <canvas id="categoryPieChart" width="200" height="200" style="max-width: 100%; height: auto;"></canvas>
                         </div>
                         <div id="categoryLegend" class="mt-3 space-y-1 flex-1 overflow-y-auto text-xs enhanced-scroll"></div>
@@ -699,20 +711,6 @@
                     <div class="loading-spinner mb-3"></div>
                     <div>Inicializando Viso UI...</div>
                     <div id="loadingProgress" class="text-sm text-gray-400 mt-2"></div>
-                </div>
-                <!-- Search box -->
-                <div class="absolute top-4 left-1/2 transform -translate-x-1/2 flex flex-col gap-2">
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            id="searchBox" 
-                            placeholder="Buscar deputado ou empresa..." 
-                            class="w-64 px-3 py-2 text-sm bg-gray-800 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-duckdb-500 focus:ring-1 focus:ring-duckdb-500"
-                        >
-                        <button id="clearSearch" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white text-sm hidden">
-                            ✕
-                        </button>
-                    </div>
                 </div>
                 
                 <!-- Zoom controls -->
@@ -1228,9 +1226,16 @@
             }).join('');
         }
         
+        // Global variables for chart interactivity
+        let chartData = null;
+        let chartTooltip = null;
+        
         function createTimeSeriesChart(detailsData) {
             const canvas = document.getElementById('timeSeriesChart');
-            if (!canvas || !detailsData || detailsData.length === 0) return;
+            if (!canvas || !detailsData || detailsData.length === 0) {
+                showChartEmptyState(canvas);
+                return;
+            }
             
             const ctx = canvas.getContext('2d');
             const width = canvas.width;
@@ -1246,10 +1251,7 @@
                 .sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
             
             if (sortedData.length === 0) {
-                ctx.fillStyle = '#9CA3AF';
-                ctx.font = '12px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('Sem dados temporais', width / 2, height / 2);
+                showChartEmptyState(canvas);
                 return;
             }
             
@@ -1262,6 +1264,23 @@
             const maxValue = Math.max(...values);
             const minValue = Math.min(...values);
             const valueRange = maxValue - minValue || 1;
+            
+            // Draw grid lines
+            ctx.strokeStyle = '#374151';
+            ctx.lineWidth = 0.5;
+            ctx.setLineDash([2, 2]);
+            
+            // Horizontal grid lines
+            const gridSteps = 4;
+            for (let i = 1; i <= gridSteps; i++) {
+                const y = padding + (i / gridSteps) * (height - 2 * padding);
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+            }
+            
+            ctx.setLineDash([]);
             
             // Draw axes
             ctx.strokeStyle = '#6B7280';
@@ -1278,8 +1297,11 @@
             const availableWidth = width - 2 * padding;
             const barWidth = Math.max(1, Math.min(4, availableWidth / sortedData.length));
             
-            // Draw all transaction bars
-            sortedData.forEach(item => {
+            // Store bar positions for tooltip interaction
+            const barPositions = [];
+            
+            // Draw transaction bars with gradient and improved visuals
+            sortedData.forEach((item, index) => {
                 const date = new Date(item.data_emissao);
                 const value = Number(item.valor_liquido);
                 
@@ -1288,10 +1310,41 @@
                 const barHeight = ((value - minValue) / valueRange) * (height - 2 * padding);
                 const y = height - padding - barHeight;
                 
-                // Draw bar in red color
-                ctx.fillStyle = '#EF4444'; // Red color
+                // Store position for tooltip
+                barPositions.push({
+                    x: x - barWidth/2,
+                    y: y,
+                    width: barWidth,
+                    height: barHeight,
+                    data: {
+                        date: item.data_emissao,
+                        totalValue: value,
+                        count: 1,
+                        transactions: [item]
+                    }
+                });
+                
+                // Create gradient for bars based on expense category
+                const categoryColor = getCategoryColor(item.categoria_despesa);
+                const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
+                gradient.addColorStop(0, categoryColor);
+                gradient.addColorStop(1, adjustColorBrightness(categoryColor, -20));
+                
+                ctx.fillStyle = gradient;
                 ctx.fillRect(x - barWidth/2, y, barWidth, barHeight);
+                
+                // Add subtle shadow for depth
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetY = 1;
+                ctx.fillRect(x - barWidth/2, y, barWidth, barHeight);
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
             });
+            
+            // Store bar positions globally for interactivity
+            chartData = { sortedData, canvas, ctx, width, height, padding, barPositions };
             
             // Draw labels
             ctx.fillStyle = '#9CA3AF';
@@ -1310,18 +1363,194 @@
                 ctx.fillText(formatDate(lastDate), width - padding, height - 10);
             }
             
-            // Y-axis labels
+            // Enhanced Y-axis labels
             ctx.textAlign = 'right';
-            const formatValue = (value) => {
-                if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-                if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
-                return value.toFixed(0);
+            const formatCurrency = (value) => {
+                if (value >= 1000000) return `R$ ${(value / 1000000).toFixed(1)}M`;
+                if (value >= 1000) return `R$ ${(value / 1000).toFixed(0)}K`;
+                return `R$ ${value.toFixed(0)}`;
             };
             
-            ctx.fillText(formatValue(maxValue), padding - 5, padding + 5);
-            if (valueRange > 0) {
-                ctx.fillText(formatValue(minValue), padding - 5, height - padding + 5);
+            // Multiple Y-axis labels along grid lines
+            const labelSteps = 4;
+            for (let i = 0; i <= labelSteps; i++) {
+                const value = minValue + (maxValue - minValue) * (1 - i / labelSteps);
+                const y = padding + (i / labelSteps) * (height - 2 * padding);
+                ctx.fillText(formatCurrency(value), padding - 8, y + 3);
             }
+            
+            // Display summary statistics
+            displaySummaryStats(sortedData);
+            
+            // Setup interactivity
+            setupChartInteractivity(canvas);
+        }
+        
+        function setupChartInteractivity(canvas) {
+            canvas.onmousemove = handleChartHover;
+            canvas.onmouseout = hideTooltip;
+        }
+        
+        function handleChartHover(event) {
+            if (!chartData || !chartData.barPositions) return;
+            
+            const rect = chartData.canvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) * (chartData.canvas.width / rect.width);
+            const y = (event.clientY - rect.top) * (chartData.canvas.height / rect.height);
+            
+            const hoveredBar = chartData.barPositions.find(bar => 
+                x >= bar.x && x <= bar.x + bar.width && 
+                y >= bar.y && y <= bar.y + bar.height
+            );
+            
+            if (hoveredBar) {
+                chartData.canvas.style.cursor = 'pointer';
+                showTooltip(event, hoveredBar.data);
+            } else {
+                chartData.canvas.style.cursor = 'default';
+                hideTooltip();
+            }
+        }
+        
+        function showTooltip(event, data) {
+            hideTooltip();
+            
+            const tooltip = document.createElement('div');
+            tooltip.style.cssText = `
+                position: fixed;
+                background: rgba(17, 24, 39, 0.95);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 11px;
+                pointer-events: none;
+                z-index: 1000;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                backdrop-filter: blur(8px);
+                border: 1px solid rgba(75, 85, 99, 0.3);
+                max-width: 200px;
+            `;
+            
+            const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value);
+            const formatDate = (dateStr) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(dateStr));
+            
+            const transaction = data.transactions[0];
+            tooltip.innerHTML = `
+                <div class="font-medium text-blue-300 mb-1">${formatDate(data.date)}</div>
+                <div>Valor: <span class="font-bold">${formatCurrency(data.totalValue)}</span></div>
+                ${transaction.categoria_despesa ? `<div class="text-xs text-gray-300 mt-1">📋 ${transaction.categoria_despesa}</div>` : ''}
+                ${transaction.fornecedor ? `<div class="text-xs text-gray-300 mt-1">→ ${transaction.fornecedor}</div>` : ''}
+                ${transaction.nome_parlamentar ? `<div class="text-xs text-gray-300 mt-1">← ${transaction.nome_parlamentar}</div>` : ''}
+            `;
+            
+            document.body.appendChild(tooltip);
+            chartTooltip = tooltip;
+            
+            const rect = tooltip.getBoundingClientRect();
+            tooltip.style.left = Math.min(event.clientX + 10, window.innerWidth - rect.width - 10) + 'px';
+            tooltip.style.top = Math.max(event.clientY - rect.height - 10, 10) + 'px';
+        }
+        
+        function hideTooltip() {
+            if (chartTooltip) {
+                chartTooltip.remove();
+                chartTooltip = null;
+            }
+        }
+        
+        function getCategoryColor(categoria) {
+            if (!categoria) return '#6B7280'; // Default gray
+            
+            // Hash function to generate consistent colors for categories (same as getCategoryBadge)
+            const hashCode = (str) => {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    const char = str.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                return hash;
+            };
+            
+            // Color palette matching the category badges (hex equivalents for dark theme)
+            const colors = [
+                '#3B82F6', // blue
+                '#10B981', // green  
+                '#8B5CF6', // purple
+                '#F59E0B', // yellow
+                '#EC4899', // pink
+                '#6366F1', // indigo
+                '#EF4444', // red
+                '#F97316', // orange
+                '#14B8A6', // teal
+                '#06B6D4'  // cyan
+            ];
+            
+            const colorIndex = Math.abs(hashCode(categoria)) % colors.length;
+            return colors[colorIndex];
+        }
+        
+        function adjustColorBrightness(color, percent) {
+            const num = parseInt(color.replace("#", ""), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = (num >> 16) + amt;
+            const G = (num >> 8 & 0x00FF) + amt;
+            const B = (num & 0x0000FF) + amt;
+            return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+                (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+                (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+        }
+        
+        function showChartEmptyState(canvas) {
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw empty state with icon
+            ctx.fillStyle = '#6B7280';
+            ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('📊', width / 2, height / 2 - 20);
+            
+            ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillStyle = '#9CA3AF';
+            ctx.fillText('Nenhum dado temporal disponível', width / 2, height / 2 + 10);
+            ctx.fillText('Transações sem data válida', width / 2, height / 2 + 25);
+        }
+        
+        function displaySummaryStats(transactionData) {
+            const totalValue = transactionData.reduce((sum, item) => sum + Number(item.valor_liquido), 0);
+            const avgValue = totalValue / transactionData.length;
+            const maxTransaction = Math.max(...transactionData.map(item => Number(item.valor_liquido)));
+            
+            // Find the chart container and add stats
+            const chartContainer = document.querySelector('#timeSeriesChart').parentElement;
+            let statsDiv = chartContainer.querySelector('.chart-stats');
+            
+            if (!statsDiv) {
+                statsDiv = document.createElement('div');
+                statsDiv.className = 'chart-stats text-xs text-gray-400 mb-2 flex justify-between';
+                chartContainer.insertBefore(statsDiv, chartContainer.firstChild);
+            }
+            
+            const formatCurrency = (value) => {
+                return new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(value);
+            };
+            
+            statsDiv.innerHTML = `
+                <div>Total: <span class="text-white font-medium">${formatCurrency(totalValue)}</span></div>
+                <div>Média: <span class="text-white font-medium">${formatCurrency(avgValue)}</span></div>
+                <div>Maior: <span class="text-white font-medium">${formatCurrency(maxTransaction)}</span></div>
+            `;
         }
         
         function initializeVisualization() {
@@ -1480,8 +1709,8 @@
                         return '';
                     }
                 })
-                .attr("font-size", "10px")
-                .attr("fill", "white")
+                .attr("font-size", d => d.type === 'deputado' ? "10px" : "8px")
+                .attr("fill", d => d.type === 'deputado' ? "white" : "rgb(196, 82, 17)")
                 .attr("text-anchor", "middle")
                 .attr("dy", 20)
                 .attr("class", "node-label");
@@ -1499,7 +1728,7 @@
                 .data(links)
                 .enter().append("text")
                 .text(d => formatCurrency(d.value))
-                .attr("font-size", "8px")
+                .attr("font-size", "6px")
                 .attr("fill", "#ffd93d")
                 .attr("text-anchor", "middle")
                 .attr("dy", 3)
@@ -1608,7 +1837,9 @@
                     } else {
                         return showNames ? d.label : '';
                     }
-                });
+                })
+                .attr("font-size", d => d.type === 'deputado' ? "10px" : "8px")
+                .attr("fill", d => d.type === 'deputado' ? "white" : "rgb(196, 82, 17)");
             }
         }
         
@@ -1733,39 +1964,40 @@
                         <div class="pb-3 border-b border-gray-600 mb-3">
                             <h4 class="text-base font-bold text-deputy mb-1">${nodeData.label}</h4>
                             <div class="flex justify-between items-center text-xs text-gray-400 mb-1">
-                                <span>Deputado • ${nodeData.party}</span>
                                 <span>Gastou • ${formatCurrency(totalValue)}</span>
                             </div>
+                            <br/>
                             <div class="text-xs text-gray-400">TRANSAÇÕES (${formatNumber(totalTransactions)})</div>
                         </div>
                         <div class="flex-1 flex flex-col min-h-0">
                             <!-- Time Series Chart -->
                             <div class="mb-3">
-                                <h5 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">FREQUÊNCIA DOS GASTOS</h5>
                                 <div class="bg-gray-800 rounded p-3">
                                     <canvas id="timeSeriesChart" width="280" height="120" class="w-full"></canvas>
                                 </div>
                             </div>
                             
-                            <h5 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide flex-shrink-0">Transações</h5>
                             <div class="node-info-scroll-container space-y-2 enhanced-scroll smooth-scroll">
                                 ${detailsData.map(item => `
-                                    <div class="transaction-card bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-lg p-3 hover:bg-gray-700/70 hover:border-gray-500/50 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md" onclick="highlightNodeInVisualization('${item.fornecedor.replace(/'/g, "\\'")}', 'fornecedor')">
-                                        <!-- Line 1: Fornecedor -->
-                                        <div class="font-semibold text-white text-sm truncate mb-2">
-                                            ${item.fornecedor}
+                                    <div class="transaction-card bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-lg p-3 hover:bg-gray-700/70 hover:border-gray-500/50 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md border-l-4 border-l-supplier" onclick="highlightNodeInVisualization('${item.fornecedor.replace(/'/g, "\\'")}', 'fornecedor')">
+                                        <!-- Line 1: Name -->
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <div class="font-semibold text-supplier text-sm truncate flex-1" title="${item.fornecedor}">→ ${item.fornecedor}</div>
                                         </div>
                                         
                                         <!-- Line 2: Value + Date -->
                                         <div class="flex justify-between items-center mb-2">
-                                            <div class="font-bold text-supplier text-base">${formatCurrency(item.valor_liquido)}</div>
-                                            <div class="text-xs text-gray-400">
+                                            <div class="font-bold text-xs">${formatCurrency(item.valor_liquido)}</div>
+                                            <div class="flex items-center gap-1 text-xs text-gray-400">
+                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
+                                                </svg>
                                                 ${formatDate(item.data_emissao)}
                                             </div>
                                         </div>
                                         
                                         <!-- Line 3: Category Badge -->
-                                        <div class="flex justify-start">
+                                        <div class="flex gap-1 truncate">
                                             ${getCategoryBadge(item.categoria_despesa)}
                                         </div>
                                     </div>
@@ -1781,39 +2013,40 @@
                         <div class="pb-3 border-b border-gray-600 mb-3">
                             <h4 class="text-base font-bold text-supplier mb-1">${nodeData.label}</h4>
                             <div class="flex justify-between items-center text-xs text-gray-400 mb-1">
-                                <span>Empresa</span>
                                 <span>Recebeu • ${formatCurrency(totalValue)}</span>
                             </div>
+                            <br/>
                             <div class="text-xs text-gray-400">TRANSAÇÕES (${formatNumber(totalTransactions)})</div>
                         </div>
                         <div class="flex-1 flex flex-col min-h-0">
                             <!-- Time Series Chart -->
                             <div class="mb-3">
-                                <h5 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">FREQUÊNCIA DOS GASTOS</h5>
                                 <div class="bg-gray-800 rounded p-3">
                                     <canvas id="timeSeriesChart" width="280" height="120" class="w-full"></canvas>
                                 </div>
                             </div>
                             
-                            <h5 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide flex-shrink-0">Transações</h5>
                             <div class="node-info-scroll-container space-y-2 enhanced-scroll smooth-scroll">
                                 ${detailsData.map(item => `
-                                    <div class="transaction-card bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-lg p-3 hover:bg-gray-700/70 hover:border-gray-500/50 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md" onclick="highlightNodeInVisualization('${item.nome_parlamentar.replace(/'/g, "\\'")}', 'deputado')">
-                                        <!-- Line 1: Parlamentar • Partido -->
-                                        <div class="font-semibold text-white text-sm truncate mb-2">
-                                            ${item.nome_parlamentar} • ${item.sigla_partido}
+                                    <div class="transaction-card bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-lg p-3 hover:bg-gray-700/70 hover:border-gray-500/50 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md border-l-4 border-l-deputy" onclick="highlightNodeInVisualization('${item.nome_parlamentar.replace(/'/g, "\\'")}', 'deputado')">
+                                        <!-- Line 1: Name + Party -->
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <div class="font-semibold text-deputy text-sm truncate flex-1">← ${item.nome_parlamentar} • ${item.sigla_partido}</div>
                                         </div>
                                         
                                         <!-- Line 2: Value + Date -->
                                         <div class="flex justify-between items-center mb-2">
-                                            <div class="font-bold text-deputy text-base">${formatCurrency(item.valor_liquido)}</div>
-                                            <div class="text-xs text-gray-400">
+                                            <div class="font-bold text-sm">${formatCurrency(item.valor_liquido)}</div>
+                                            <div class="flex items-center gap-1 text-xs text-gray-400">
+                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
+                                                </svg>
                                                 ${formatDate(item.data_emissao)}
                                             </div>
                                         </div>
                                         
                                         <!-- Line 3: Category Badge -->
-                                        <div class="flex justify-start">
+                                        <div class="flex gap-1 truncate">
                                             ${getCategoryBadge(item.categoria_despesa)}
                                         </div>
                                     </div>
@@ -2044,14 +2277,11 @@
             searchBox.addEventListener('input', (e) => {
                 const value = e.target.value.trim();
                 
-                // Show/hide clear button and search legend
-                const searchLegend = document.getElementById('searchLegend');
+                // Show/hide clear button
                 if (value) {
                     clearSearch.classList.remove('hidden');
-                    searchLegend.style.display = 'flex';
                 } else {
                     clearSearch.classList.add('hidden');
-                    searchLegend.style.display = 'none';
                 }
                 
                 // Update visualization with debounce
@@ -2065,7 +2295,6 @@
             clearSearch.addEventListener('click', () => {
                 searchBox.value = '';
                 clearSearch.classList.add('hidden');
-                document.getElementById('searchLegend').style.display = 'none';
                 updateVisualization();
             });
             
@@ -2074,7 +2303,6 @@
                 if (e.key === 'Escape') {
                     searchBox.value = '';
                     clearSearch.classList.add('hidden');
-                    document.getElementById('searchLegend').style.display = 'none';
                     updateVisualization();
                 }
             });
