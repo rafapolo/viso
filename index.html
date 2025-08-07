@@ -13,26 +13,82 @@
         
         let db;
         let conn;
+        let connectionStatus = 'disconnected'; // 'disconnected', 'connecting', 'connected', 'error'
+        
+        function updateConnectionStatus(status, message = '') {
+            connectionStatus = status;
+            
+            // Just log to console for debugging since UI elements are in db.html
+            console.log(`🔌 Connection Status: ${status}${message ? ` - ${message}` : ''}`);
+        }
         
         async function initDuckDB() {
-            console.log('🚀 Initializing DuckDB...');
-            
-            // Initialize DuckDB
-            const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-            const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
-            const worker = await duckdb.createWorker(bundle.mainWorker);
-            const logger = new duckdb.ConsoleLogger();
-            db = new duckdb.AsyncDuckDB(logger, worker);
-            await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-            
-            conn = await db.connect();
-            console.log('✅ DuckDB initialized');
-            
-            return { db, conn };
+            try {
+                updateConnectionStatus('connecting', 'Inicializando DuckDB...');
+                console.log('🚀 Initializing DuckDB...');
+                
+                // Check if DuckDB is already initialized
+                if (db && conn) {
+                    console.log('🔄 DuckDB already initialized, reusing connection');
+                    updateConnectionStatus('connected', 'Já Conectado');
+                    return { db, conn };
+                }
+                
+                // Initialize DuckDB with timeout and better error handling
+                updateConnectionStatus('connecting', 'Baixando DuckDB...');
+                const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+                const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+                
+                updateConnectionStatus('connecting', 'Criando worker...');
+                const worker = await duckdb.createWorker(bundle.mainWorker);
+                const logger = new duckdb.ConsoleLogger();
+                
+                updateConnectionStatus('connecting', 'Instanciando DuckDB...');
+                db = new duckdb.AsyncDuckDB(logger, worker);
+                await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+                
+                updateConnectionStatus('connecting', 'Estabelecendo conexão...');
+                conn = await db.connect();
+                
+                // Test the connection with a simple query
+                updateConnectionStatus('connecting', 'Testando conexão...');
+                await conn.query('SELECT 1 as test');
+                
+                console.log('✅ DuckDB initialized and tested successfully');
+                updateConnectionStatus('connected', 'Conectado e testado');
+                
+                return { db, conn };
+            } catch (error) {
+                console.error('❌ Error initializing DuckDB:', error);
+                
+                // Cleanup on error
+                if (conn) {
+                    try { await conn.close(); } catch (e) { console.warn('Error closing connection:', e); }
+                    conn = null;
+                }
+                if (db) {
+                    try { await db.terminate(); } catch (e) { console.warn('Error terminating DB:', e); }
+                    db = null;
+                }
+                
+                // Provide more specific error messages
+                let errorMessage = 'Erro na Inicialização';
+                if (error.message.includes('fetch')) {
+                    errorMessage = 'Erro de rede';
+                } else if (error.message.includes('worker')) {
+                    errorMessage = 'Erro do worker';
+                } else if (error.message.includes('instantiate')) {
+                    errorMessage = 'Erro de instanciação';
+                }
+                
+                updateConnectionStatus('error', errorMessage);
+                throw error;
+            }
         }
         
         async function loadParquetData() {
             try {
+                updateConnectionStatus('connecting', 'Carregando dados...');
                 console.log('📁 Loading parquet file into DuckDB...');
                 
                 // Fetch the parquet file as a blob
@@ -43,6 +99,8 @@
                 
                 const arrayBuffer = await response.arrayBuffer();
                 console.log(`📊 Downloaded ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)} MB`);
+                
+                updateConnectionStatus('connecting', 'Processando dados...');
                 
                 // Register the file with DuckDB
                 await db.registerFileBuffer('despesas.parquet', new Uint8Array(arrayBuffer));
@@ -58,15 +116,76 @@
                 const totalRecords = countResult.toArray()[0].total;
                 console.log(`✅ Loaded ${totalRecords.toLocaleString()} records from parquet`);
                 
+                updateConnectionStatus('connected', `${totalRecords.toLocaleString()} registros`);
                 return totalRecords;
                 
             } catch (error) {
                 console.error('❌ Error loading parquet:', error);
+                updateConnectionStatus('error', 'Erro ao carregar dados');
                 throw error;
             }
         }
         
+        async function checkConnectionHealth() {
+            try {
+                if (!conn) return false;
+                
+                // Try a simple query to test connection
+                await conn.query("SELECT 1 as test");
+                return true;
+            } catch (error) {
+                console.warn('Connection health check failed:', error);
+                return false;
+            }
+        }
+        
+        async function ensureConnection() {
+            try {
+                const isHealthy = await checkConnectionHealth();
+                
+                if (!isHealthy) {
+                    updateConnectionStatus('connecting', 'Reconectando...');
+                    console.log('🔄 Connection lost, attempting to reconnect...');
+                    
+                    // Close existing connection if it exists
+                    if (conn) {
+                        try {
+                            await conn.close();
+                        } catch (e) {
+                            console.warn('Error closing existing connection:', e);
+                        }
+                        conn = null;
+                    }
+                    
+                    // Try to reconnect
+                    if (db) {
+                        conn = await db.connect();
+                        
+                        // Test the new connection
+                        await conn.query("SELECT 1 as test");
+                        
+                        updateConnectionStatus('connected', 'Reconectado');
+                        console.log('✅ Reconnected successfully');
+                        return true;
+                    } else {
+                        // DB instance is gone, need full reinitialization
+                        console.log('🔄 DB instance lost, reinitializing...');
+                        await initDuckDB();
+                        await loadParquetData();
+                        return true;
+                    }
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('❌ Connection recovery failed:', error);
+                updateConnectionStatus('error', 'Falha na reconexão');
+                throw new Error(`Connection recovery failed: ${error.message}`);
+            }
+        }
+        
         async function queryAggregatedData(minValue = 0, partyFilter = '', categoryFilter = '', searchFilter = '') {
+            await ensureConnection();
             console.log('🔍 Querying aggregated data...');
             
             let whereClause = "WHERE nome_parlamentar IS NOT NULL AND fornecedor IS NOT NULL";
@@ -112,6 +231,7 @@
         }
         
         async function getValueRange(partyFilter = '', categoryFilter = '', searchFilter = '') {
+            await ensureConnection();
             console.log('🔍 Querying value range...');
             
             let whereClause = "WHERE nome_parlamentar IS NOT NULL AND fornecedor IS NOT NULL";
@@ -151,6 +271,7 @@
         }
         
         async function getFilterOptions() {
+            await ensureConnection();
             console.log('🔍 Getting filter options...');
             
             // Get unique parties
@@ -175,13 +296,27 @@
         }
         
         // Make functions globally available
+        // Add cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            stopConnectionMonitoring();
+        });
+        
+        // Make connection status functions globally accessible
+        window.updateConnectionStatus = updateConnectionStatus;
+        window.getConnectionStatus = () => connectionStatus;
+        
         window.duckdbAPI = {
             initDuckDB,
             loadParquetData,
             queryAggregatedData,
             getValueRange,
             getFilterOptions,
-            query: (sql) => conn.query(sql)
+            query: async (sql) => {
+                await ensureConnection();
+                return conn.query(sql);
+            },
+            getConnectionStatus: () => connectionStatus,
+            ensureConnection
         };
         
     </script>
@@ -367,6 +502,23 @@
             background: #9CA3AF;
         }
         
+        /* Transaction card enhancements */
+        .transaction-card {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        
+        .transaction-card:hover {
+            transform: translateY(-1px);
+        }
+        
+        /* Responsive card spacing */
+        @media (max-width: 640px) {
+            .transaction-card {
+                padding: 0.75rem;
+            }
+        }
+        
         /* Smooth scroll behavior */
         .smooth-scroll {
             scroll-behavior: smooth;
@@ -448,14 +600,6 @@
                             <option value="">Todas as Categorias</option>
                         </select>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="showCompanyNames" class="w-3 h-3">
-                        <label for="showCompanyNames" class="text-xs text-gray-600 dark:text-gray-300">Exibir nome das Empresas</label>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="showEdgeAmounts" class="w-3 h-3">
-                        <label for="showEdgeAmounts" class="text-xs text-gray-600 dark:text-gray-300">Mostrar gasto</label>
-                    </div>
                     <div>
                         <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                             <span id="minRange">Min: R$ 0</span>
@@ -473,20 +617,20 @@
                 <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Estatísticas</div>
                 <div class="stats-grid text-sm" id="stats">
                     <div class="bg-gray-200 dark:bg-gray-800 rounded p-3 border-l-2 border-supplier">
-                        <div class="text-lg font-bold text-supplier" id="totalDeputados">-</div>
-                        <div class="text-gray-500 dark:text-gray-400 text-xs">Deputados</div>
+                        <div class="text-sm font-semibold text-supplier" id="totalDeputados">-</div>
+                        <div class="text-gray-500 dark:text-gray-400 text-2xs">Deputados</div>
                     </div>
                     <div class="bg-gray-200 dark:bg-gray-800 rounded p-3 border-l-2 border-supplier">
-                        <div class="text-lg font-bold text-supplier" id="totalFornecedores">-</div>
-                        <div class="text-gray-500 dark:text-gray-400 text-xs">Empresas</div>
+                        <div class="text-sm font-semibold text-supplier" id="totalFornecedores">-</div>
+                        <div class="text-gray-500 dark:text-gray-400 text-2xs">Empresas</div>
                     </div>
                     <div class="bg-gray-200 dark:bg-gray-800 rounded p-3 border-l-2 border-supplier">
-                        <div class="text-lg font-bold text-supplier" id="totalValue">-</div>
-                        <div class="text-gray-500 dark:text-gray-400 text-xs">Total (R$)</div>
+                        <div class="text-sm font-semibold text-supplier" id="totalValue">-</div>
+                        <div class="text-gray-500 dark:text-gray-400 text-2xs">Total (R$)</div>
                     </div>
                     <div class="bg-gray-200 dark:bg-gray-800 rounded p-3 border-l-2 border-supplier">
-                        <div class="text-lg font-bold text-supplier" id="totalTransactions">-</div>
-                        <div class="text-gray-500 dark:text-gray-400 text-xs">Transações</div>
+                        <div class="text-sm font-semibold text-supplier" id="totalTransactions">-</div>
+                        <div class="text-gray-500 dark:text-gray-400 text-2xs">Transações</div>
                     </div>
                 </div>
             </div>
@@ -496,24 +640,38 @@
                 <div>
                     <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Análise de Rede</div>
                     <div class="space-y-2">
-                        <div class="flex items-center justify-between py-2">
+                        <div class="flex items-center justify-between py-1">
+                            <label for="showCompanyNames" class="text-xs text-gray-600 dark:text-gray-300">Exibir nome das Empresas</label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="showCompanyNames" class="sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between py-1">
+                            <label for="showEdgeAmounts" class="text-xs text-gray-600 dark:text-gray-300">Mostrar gasto</label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="showEdgeAmounts" class="sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>                        
+                        <div class="flex items-center justify-between py-1">
                             <label for="networkDensityToggle" class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
                                 <span>🔗</span>
                                 <span>Rede mais Densa</span>
                             </label>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="networkDensityToggle" class="sr-only peer" data-active="false">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
-                        <div class="flex items-center justify-between py-2">
+                        <div class="flex items-center justify-between py-1">
                             <label for="topExpensesToggle" class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
                                 <span>💰</span>
                                 <span>Top 15 Gastos</span>
                             </label>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="topExpensesToggle" class="sr-only peer" data-active="false">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
                     </div>
@@ -531,7 +689,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Main Content -->
         <div class="flex-1 flex flex-col relative">
             <!-- Visualization -->
@@ -613,10 +771,43 @@
                 await updateVisualization();
                 
                 setupEventListeners();
+                startConnectionMonitoring();
                 
             } catch (error) {
                 console.error('❌ Erro:', error);
-                document.getElementById('loading').innerHTML = `Erro: ${error.message}`;
+                updateConnectionStatus('error', 'Erro de inicialização');
+                document.getElementById('loading').innerHTML = `
+                    <div class="text-red-400">
+                        <div class="text-lg mb-2">❌ Erro de Conexão</div>
+                        <div class="text-sm">${error.message}</div>
+                        <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                            🔄 Tentar Novamente
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Periodic connection health check
+        let healthCheckInterval;
+        
+        function startConnectionMonitoring() {
+            // Check connection health every 30 seconds
+            healthCheckInterval = setInterval(async () => {
+                if (connectionStatus === 'connected') {
+                    const isHealthy = await checkConnectionHealth();
+                    if (!isHealthy) {
+                        console.warn('🔴 Connection lost during health check');
+                        updateConnectionStatus('error', 'Conexão perdida');
+                    }
+                }
+            }, 30000);
+        }
+        
+        function stopConnectionMonitoring() {
+            if (healthCheckInterval) {
+                clearInterval(healthCheckInterval);
+                healthCheckInterval = null;
             }
         }
         
@@ -838,7 +1029,7 @@
             
             document.getElementById('totalDeputados').textContent = deputados.size;
             document.getElementById('totalFornecedores').textContent = fornecedores.size;
-            document.getElementById('totalValue').textContent = `R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            document.getElementById('totalValue').textContent = `${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
             document.getElementById('totalTransactions').textContent = totalTransactions.toLocaleString();
             
             // Update category pie chart
@@ -907,19 +1098,33 @@
         }
         
         function updateStatisticsForFilteredData(filteredData) {
-            if (!window.currentAggregatedData || !filteredData) return;
+            if (!window.currentAggregatedData || !filteredData) {
+                console.log('Missing data for statistics update');
+                return;
+            }
             
-            console.log('Updating statistics for filtered data:', filteredData);
+            console.log('Updating statistics for filtered data - nodes:', filteredData.nodes.length, 'links:', filteredData.links.length);
             
-            // Get the IDs of filtered nodes
-            const filteredNodeIds = new Set(filteredData.nodes.map(node => node.id));
+            // Get the labels of filtered nodes for easier matching
+            const filteredDeputados = new Set(
+                filteredData.nodes
+                    .filter(n => n.type === 'deputado')
+                    .map(n => n.label)
+            );
+            const filteredFornecedores = new Set(
+                filteredData.nodes
+                    .filter(n => n.type === 'fornecedor')
+                    .map(n => n.label)
+            );
             
-            // Filter aggregated data to only include entities that are in the filtered nodes
+            // Filter aggregated data to only include records where BOTH deputado and fornecedor are in filtered nodes
             const filteredAggregatedData = window.currentAggregatedData.filter(record => {
-                const deputadoId = filteredData.nodes.find(n => n.type === 'deputado' && n.label.includes(record.nome_parlamentar))?.id;
-                const fornecedorId = filteredData.nodes.find(n => n.type === 'fornecedor' && n.label === record.fornecedor)?.id;
-                return (deputadoId && filteredNodeIds.has(deputadoId)) || (fornecedorId && filteredNodeIds.has(fornecedorId));
+                const deputadoLabel = `${record.nome_parlamentar} (${record.sigla_partido})`;
+                const fornecedorLabel = record.fornecedor;
+                return filteredDeputados.has(deputadoLabel) && filteredFornecedores.has(fornecedorLabel);
             });
+            
+            console.log('Filtered aggregated data records:', filteredAggregatedData.length);
             
             // Calculate filtered statistics
             const deputados = new Set(filteredAggregatedData.map(r => `${r.nome_parlamentar} (${r.sigla_partido})`));
@@ -930,7 +1135,7 @@
             // Update statistics display
             document.getElementById('totalDeputados').textContent = deputados.size;
             document.getElementById('totalFornecedores').textContent = fornecedores.size;
-            document.getElementById('totalValue').textContent = `R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            document.getElementById('totalValue').textContent = `${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
             document.getElementById('totalTransactions').textContent = totalTransactions.toLocaleString();
             
             console.log('Updated stats - Deputados:', deputados.size, 'Fornecedores:', fornecedores.size, 'Value:', totalValue);
@@ -1023,6 +1228,102 @@
             }).join('');
         }
         
+        function createTimeSeriesChart(detailsData) {
+            const canvas = document.getElementById('timeSeriesChart');
+            if (!canvas || !detailsData || detailsData.length === 0) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 30;
+            
+            // Clear canvas with transparent background
+            ctx.clearRect(0, 0, width, height);
+            
+            // Sort all transactions by date and filter out negative values
+            const sortedData = detailsData
+                .filter(item => item.data_emissao && Number(item.valor_liquido) > 0)
+                .sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
+            
+            if (sortedData.length === 0) {
+                ctx.fillStyle = '#9CA3AF';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Sem dados temporais', width / 2, height / 2);
+                return;
+            }
+            
+            // Get date range and value range
+            const firstDate = new Date(sortedData[0].data_emissao);
+            const lastDate = new Date(sortedData[sortedData.length - 1].data_emissao);
+            const dateRange = lastDate - firstDate || 86400000; // 1 day minimum
+            
+            const values = sortedData.map(item => Number(item.valor_liquido));
+            const maxValue = Math.max(...values);
+            const minValue = Math.min(...values);
+            const valueRange = maxValue - minValue || 1;
+            
+            // Draw axes
+            ctx.strokeStyle = '#6B7280';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            // Y axis
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            // X axis
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+            
+            // Calculate bar width based on number of transactions and available space
+            const availableWidth = width - 2 * padding;
+            const barWidth = Math.max(1, Math.min(4, availableWidth / sortedData.length));
+            
+            // Draw all transaction bars
+            sortedData.forEach(item => {
+                const date = new Date(item.data_emissao);
+                const value = Number(item.valor_liquido);
+                
+                // Calculate positions
+                const x = padding + ((date - firstDate) / dateRange) * (width - 2 * padding);
+                const barHeight = ((value - minValue) / valueRange) * (height - 2 * padding);
+                const y = height - padding - barHeight;
+                
+                // Draw bar in red color
+                ctx.fillStyle = '#EF4444'; // Red color
+                ctx.fillRect(x - barWidth/2, y, barWidth, barHeight);
+            });
+            
+            // Draw labels
+            ctx.fillStyle = '#9CA3AF';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            
+            // X-axis labels (first, middle, last dates)
+            const formatDate = (date) => {
+                return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(-2)}`;
+            };
+            
+            ctx.fillText(formatDate(firstDate), padding, height - 10);
+            if (dateRange > 86400000) { // More than 1 day
+                const middleDate = new Date(firstDate.getTime() + dateRange / 2);
+                ctx.fillText(formatDate(middleDate), width / 2, height - 10);
+                ctx.fillText(formatDate(lastDate), width - padding, height - 10);
+            }
+            
+            // Y-axis labels
+            ctx.textAlign = 'right';
+            const formatValue = (value) => {
+                if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+                if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+                return value.toFixed(0);
+            };
+            
+            ctx.fillText(formatValue(maxValue), padding - 5, padding + 5);
+            if (valueRange > 0) {
+                ctx.fillText(formatValue(minValue), padding - 5, height - padding + 5);
+            }
+        }
+        
         function initializeVisualization() {
             // Clear loading message
             const loadingEl = document.querySelector('#loading');
@@ -1043,7 +1344,7 @@
                 
                 document.getElementById('totalDeputados').textContent = deputados.size;
                 document.getElementById('totalFornecedores').textContent = fornecedores.size;
-                document.getElementById('totalValue').textContent = `R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                document.getElementById('totalValue').textContent = `${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
                 document.getElementById('totalTransactions').textContent = totalTransactions.toLocaleString();
                 
                 createCategoryPieChart(window.currentAggregatedData);
@@ -1339,6 +1640,30 @@
             const closeBtn = document.getElementById('close-panel');
             const rightPanel = document.getElementById('right-panel');
             
+            // Reset all nodes to normal appearance first
+            const svg = d3.select('#network-svg');
+            const searchFilter = document.getElementById('searchBox').value.trim().toLowerCase();
+            svg.selectAll('circle')
+                .attr("stroke-width", d => {
+                    // Keep search highlights if they exist
+                    return (searchFilter && d.label.toLowerCase().includes(searchFilter)) ? 3 : 1.5;
+                })
+                .attr("stroke", d => {
+                    // Reset to normal stroke colors
+                    if (searchFilter && d.label.toLowerCase().includes(searchFilter)) {
+                        return "#fff"; // Keep white stroke for search matches
+                    }
+                    return "#fff"; // Normal white stroke
+                })
+                .attr("r", d => d.type === 'deputado' ? 8 : 6); // Reset to normal radius
+            
+            // Highlight the selected node
+            svg.selectAll('circle')
+                .filter(d => d.id === nodeData.id)
+                .attr("stroke-width", 4)
+                .attr("stroke", "#FFD700") // Gold highlight for selection
+                .attr("r", d => (d.type === 'deputado' ? 8 : 6) + 2); // Slightly larger
+            
             // Slide in the right panel
             rightPanel.classList.remove('translate-x-full');
             
@@ -1395,7 +1720,7 @@
                     const colorIndex = Math.abs(hashCode(categoria)) % colors.length;
                     const color = colors[colorIndex];
                     
-                    return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-2xs font-normal ${color.bg} ${color.text} border ${color.bg.replace('bg-', 'border-').replace('dark:bg-', 'dark:border-')}" title="${categoria}"><span class="w-1 h-1 rounded-full bg-current opacity-60"></span>${categoria}</span>`;
+                    return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-light ${color.bg} ${color.text}" style="font-size: 8px;" title="${categoria}"><span class="w-1 h-1 rounded-full bg-current"></span>${categoria}</span>`;
                 };
                 
                 let contentHTML = '';
@@ -1409,24 +1734,40 @@
                             <h4 class="text-base font-bold text-deputy mb-1">${nodeData.label}</h4>
                             <div class="flex justify-between items-center text-xs text-gray-400 mb-1">
                                 <span>Deputado • ${nodeData.party}</span>
-                                <span>${formatCurrency(totalValue)}</span>
+                                <span>Gastou • ${formatCurrency(totalValue)}</span>
                             </div>
-                            <div class="text-xs text-gray-400">${formatNumber(totalTransactions)} transações individuais</div>
+                            <div class="text-xs text-gray-400">TRANSAÇÕES (${formatNumber(totalTransactions)})</div>
                         </div>
                         <div class="flex-1 flex flex-col min-h-0">
+                            <!-- Time Series Chart -->
+                            <div class="mb-3">
+                                <h5 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">FREQUÊNCIA DOS GASTOS</h5>
+                                <div class="bg-gray-800 rounded p-3">
+                                    <canvas id="timeSeriesChart" width="280" height="120" class="w-full"></canvas>
+                                </div>
+                            </div>
+                            
                             <h5 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide flex-shrink-0">Transações</h5>
-                            <div class="node-info-scroll-container space-y-1.5 enhanced-scroll smooth-scroll">
+                            <div class="node-info-scroll-container space-y-2 enhanced-scroll smooth-scroll">
                                 ${detailsData.map(item => `
-                                    <div class="bg-gray-700 rounded p-2.5 border-l-2 border-supplier hover:bg-gray-600 transition-colors cursor-pointer" onclick="highlightNodeInVisualization('${item.fornecedor.replace(/'/g, "\\'")}', 'fornecedor')">
-                                        <div class="font-medium text-supplier text-sm mb-1.5 truncate" title="${item.fornecedor}">${item.fornecedor}</div>
-                                        <div class="grid grid-cols-2 gap-2 text-xs text-gray-300 mb-1">
-                                            <div class="font-semibold">${formatCurrency(item.valor_liquido)}</div>
-                                            <div class="text-gray-400 text-right">${formatDate(item.data_emissao)}</div>
+                                    <div class="transaction-card bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-lg p-3 hover:bg-gray-700/70 hover:border-gray-500/50 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md" onclick="highlightNodeInVisualization('${item.fornecedor.replace(/'/g, "\\'")}', 'fornecedor')">
+                                        <!-- Line 1: Fornecedor -->
+                                        <div class="font-semibold text-white text-sm truncate mb-2">
+                                            ${item.fornecedor}
                                         </div>
-                                        <div class="mt-1 flex flex-wrap gap-1">
+                                        
+                                        <!-- Line 2: Value + Date -->
+                                        <div class="flex justify-between items-center mb-2">
+                                            <div class="font-bold text-supplier text-base">${formatCurrency(item.valor_liquido)}</div>
+                                            <div class="text-xs text-gray-400">
+                                                ${formatDate(item.data_emissao)}
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Line 3: Category Badge -->
+                                        <div class="flex justify-start">
                                             ${getCategoryBadge(item.categoria_despesa)}
                                         </div>
-                                        ${item.subcategoria_despesa ? `<div class="text-xs text-gray-500 truncate mt-1" title="${item.subcategoria_despesa}">${item.subcategoria_despesa}</div>` : ''}
                                     </div>
                                 `).join('')}
                             </div>
@@ -1441,24 +1782,40 @@
                             <h4 class="text-base font-bold text-supplier mb-1">${nodeData.label}</h4>
                             <div class="flex justify-between items-center text-xs text-gray-400 mb-1">
                                 <span>Empresa</span>
-                                <span>${formatCurrency(totalValue)}</span>
+                                <span>Recebeu • ${formatCurrency(totalValue)}</span>
                             </div>
-                            <div class="text-xs text-gray-400">${formatNumber(totalTransactions)} transações individuais</div>
+                            <div class="text-xs text-gray-400">TRANSAÇÕES (${formatNumber(totalTransactions)})</div>
                         </div>
                         <div class="flex-1 flex flex-col min-h-0">
+                            <!-- Time Series Chart -->
+                            <div class="mb-3">
+                                <h5 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">FREQUÊNCIA DOS GASTOS</h5>
+                                <div class="bg-gray-800 rounded p-3">
+                                    <canvas id="timeSeriesChart" width="280" height="120" class="w-full"></canvas>
+                                </div>
+                            </div>
+                            
                             <h5 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide flex-shrink-0">Transações</h5>
-                            <div class="node-info-scroll-container space-y-1.5 enhanced-scroll smooth-scroll">
+                            <div class="node-info-scroll-container space-y-2 enhanced-scroll smooth-scroll">
                                 ${detailsData.map(item => `
-                                    <div class="bg-gray-700 rounded p-2.5 border-l-2 border-deputy hover:bg-gray-600 transition-colors cursor-pointer" onclick="highlightNodeInVisualization('${item.nome_parlamentar.replace(/'/g, "\\'")}', 'deputado')">
-                                        <div class="font-medium text-deputy text-sm mb-1.5">${item.nome_parlamentar} (${item.sigla_partido})</div>
-                                        <div class="grid grid-cols-2 gap-2 text-xs text-gray-300 mb-1">
-                                            <div class="font-semibold">${formatCurrency(item.valor_liquido)}</div>
-                                            <div class="text-gray-400 text-right">${formatDate(item.data_emissao)}</div>
+                                    <div class="transaction-card bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 rounded-lg p-3 hover:bg-gray-700/70 hover:border-gray-500/50 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md" onclick="highlightNodeInVisualization('${item.nome_parlamentar.replace(/'/g, "\\'")}', 'deputado')">
+                                        <!-- Line 1: Parlamentar • Partido -->
+                                        <div class="font-semibold text-white text-sm truncate mb-2">
+                                            ${item.nome_parlamentar} • ${item.sigla_partido}
                                         </div>
-                                        <div class="mt-1 flex flex-wrap gap-1">
+                                        
+                                        <!-- Line 2: Value + Date -->
+                                        <div class="flex justify-between items-center mb-2">
+                                            <div class="font-bold text-deputy text-base">${formatCurrency(item.valor_liquido)}</div>
+                                            <div class="text-xs text-gray-400">
+                                                ${formatDate(item.data_emissao)}
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Line 3: Category Badge -->
+                                        <div class="flex justify-start">
                                             ${getCategoryBadge(item.categoria_despesa)}
                                         </div>
-                                        ${item.subcategoria_despesa ? `<div class="text-xs text-gray-500 truncate mt-1" title="${item.subcategoria_despesa}">${item.subcategoria_despesa}</div>` : ''}
                                     </div>
                                 `).join('')}
                             </div>
@@ -1467,6 +1824,12 @@
                 }
                 
                 content.innerHTML = contentHTML;
+                
+                // Create time series chart after content is set
+                setTimeout(() => {
+                    createTimeSeriesChart(detailsData);
+                }, 50);
+                
             } catch (error) {
                 console.error('Erro ao carregar detalhes:', error);
                 content.innerHTML = `<div class="text-red-400 text-sm">Erro ao carregar detalhes: ${error.message}</div>`;
@@ -1591,6 +1954,23 @@
             const rightPanel = document.getElementById('right-panel');
             const content = document.getElementById('node-info-content');
             const closeBtn = document.getElementById('close-panel');
+            
+            // Reset all nodes to normal appearance when hiding panel
+            const svg = d3.select('#network-svg');
+            const searchFilter = document.getElementById('searchBox').value.trim().toLowerCase();
+            svg.selectAll('circle')
+                .attr("stroke-width", d => {
+                    // Keep search highlights if they exist
+                    return (searchFilter && d.label.toLowerCase().includes(searchFilter)) ? 3 : 1.5;
+                })
+                .attr("stroke", d => {
+                    // Reset to normal stroke colors
+                    if (searchFilter && d.label.toLowerCase().includes(searchFilter)) {
+                        return "#fff"; // Keep white stroke for search matches
+                    }
+                    return "#fff"; // Normal white stroke
+                })
+                .attr("r", d => d.type === 'deputado' ? 8 : 6); // Reset to normal radius
             
             // Slide out the right panel
             rightPanel.classList.add('translate-x-full');
@@ -1752,11 +2132,17 @@
             }
         }
         
-        // Initialize everything when page loads
-        window.onload = () => {
-            loadData();
+        // Initialize everything when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup theme toggle first
             setupThemeToggle();
-        };
+            
+            // Then load data
+            loadData().catch(error => {
+                console.error('Failed to load data:', error);
+                updateConnectionStatus('error', 'Falha na inicialização');
+            });
+        });
         
     </script>
 </body>
