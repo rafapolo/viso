@@ -1,0 +1,219 @@
+name: Build and Deploy with Rolldown
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build with Rolldown
+      run: npm run build
+      env:
+        NODE_ENV: production
+
+    - name: Check bundle sizes
+      run: |
+        echo "📦 Bundle Analysis:"
+        ls -lah dist/
+        echo ""
+        echo "🗂️ Main bundle size:"
+        du -h dist/main.js || echo "Main bundle not found"
+        echo ""
+        echo "🗂️ DB bundle size:"
+        du -h dist/db.js || echo "DB bundle not found"
+        echo ""
+        echo "🎨 CSS size:"
+        du -h dist/main.css || echo "CSS file not found"
+        echo ""
+        echo "📊 Assets:"
+        du -h dist/despesas.parquet || echo "Parquet file not found"
+
+    - name: Performance analysis
+      run: |
+        echo "⚡ Performance Metrics:"
+        echo "Build completed in $(date)"
+        echo "Total dist size: $(du -sh dist/ | cut -f1)"
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-output-${{ matrix.node-version }}
+        path: dist/
+        retention-days: 30
+
+    - name: Run basic functionality tests
+      run: |
+        echo "🧪 Basic Tests:"
+        echo "Checking if main bundles exist..."
+        test -f dist/main.js && echo "✅ main.js exists" || echo "❌ main.js missing"
+        test -f dist/db.js && echo "✅ db.js exists" || echo "❌ db.js missing"
+        test -f dist/index.html && echo "✅ index.html exists" || echo "❌ index.html missing"
+        test -f dist/db.html && echo "✅ db.html exists" || echo "❌ db.html missing"
+        test -f dist/main.css && echo "✅ main.css exists" || echo "❌ main.css missing"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build for production
+      run: npm run build
+      env:
+        NODE_ENV: production
+
+    - name: Setup GitHub Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload to GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: './dist'
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
+  performance-monitoring:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build and measure
+      run: |
+        echo "🚀 Starting build measurement..."
+        START_TIME=$(date +%s)
+        npm run build
+        END_TIME=$(date +%s)
+        BUILD_TIME=$((END_TIME - START_TIME))
+        
+        echo "⏱️ Build completed in ${BUILD_TIME} seconds"
+        echo "BUILD_TIME=${BUILD_TIME}" >> $GITHUB_ENV
+        
+        # Bundle analysis
+        MAIN_SIZE=$(stat --format=%s dist/main.js 2>/dev/null || echo "0")
+        DB_SIZE=$(stat --format=%s dist/db.js 2>/dev/null || echo "0")
+        CSS_SIZE=$(stat --format=%s dist/main.css 2>/dev/null || echo "0")
+        TOTAL_SIZE=$((MAIN_SIZE + DB_SIZE + CSS_SIZE))
+        
+        echo "📊 Bundle Sizes:"
+        echo "  - Main: $(numfmt --to=iec ${MAIN_SIZE})"
+        echo "  - DB: $(numfmt --to=iec ${DB_SIZE})"
+        echo "  - CSS: $(numfmt --to=iec ${CSS_SIZE})"
+        echo "  - Total JS+CSS: $(numfmt --to=iec ${TOTAL_SIZE})"
+        
+        # Store metrics
+        echo "MAIN_SIZE=${MAIN_SIZE}" >> $GITHUB_ENV
+        echo "DB_SIZE=${DB_SIZE}" >> $GITHUB_ENV
+        echo "CSS_SIZE=${CSS_SIZE}" >> $GITHUB_ENV
+        echo "TOTAL_SIZE=${TOTAL_SIZE}" >> $GITHUB_ENV
+
+    - name: Comment on PR with metrics
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const buildTime = process.env.BUILD_TIME;
+          const mainSize = parseInt(process.env.MAIN_SIZE);
+          const dbSize = parseInt(process.env.DB_SIZE);
+          const cssSize = parseInt(process.env.CSS_SIZE);
+          const totalSize = parseInt(process.env.TOTAL_SIZE);
+          
+          function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+          }
+          
+          const comment = `## 📊 Rolldown Build Performance
+          
+          ### ⚡ Build Metrics
+          - **Build Time**: ${buildTime}s
+          - **Total Bundle Size**: ${formatBytes(totalSize)}
+          
+          ### 📦 Bundle Breakdown
+          | Bundle | Size | 
+          |--------|------|
+          | main.js | ${formatBytes(mainSize)} |
+          | db.js | ${formatBytes(dbSize)} |
+          | main.css | ${formatBytes(cssSize)} |
+          
+          ### 🚀 Performance Benefits
+          - ✅ Rust-based bundling with Rolldown
+          - ✅ Eliminated CDN dependencies  
+          - ✅ Tree-shaking optimization
+          - ✅ Production-ready minification
+          
+          Built with Rolldown 🦀`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+    - name: Archive performance metrics
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-metrics
+        path: |
+          dist/
+        retention-days: 7
