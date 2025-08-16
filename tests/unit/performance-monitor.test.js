@@ -159,7 +159,7 @@ describe('PerformanceMonitor', () => {
       }
 
       recordCacheOperation(operation, type, duration, success = true, size = 0) {
-        const cache = this.metrics.cache;
+        const {cache} = this.metrics;
         
         switch (operation) {
           case 'hit':
@@ -212,7 +212,7 @@ describe('PerformanceMonitor', () => {
       }
 
       recordStorageOperation(operation, duration, size = 0, compressionRatio = 0) {
-        const storage = this.metrics.storage;
+        const {storage} = this.metrics;
         
         storage.opfsOperations++;
         storage.opfsTime += duration;
@@ -261,7 +261,7 @@ describe('PerformanceMonitor', () => {
       }
 
       getCacheMetrics() {
-        const cache = this.metrics.cache;
+        const {cache} = this.metrics;
         const totalRequests = cache.hits + cache.misses;
         const hitRate = totalRequests > 0 ? (cache.hits / totalRequests) * 100 : 0;
         const avgRequestTime = totalRequests > 0 ? cache.totalRequestTime / totalRequests : 0;
@@ -282,7 +282,7 @@ describe('PerformanceMonitor', () => {
       }
 
       calculateCacheEfficiency() {
-        const cache = this.metrics.cache;
+        const {cache} = this.metrics;
         const totalRequests = cache.hits + cache.misses;
         
         if (totalRequests === 0) return 0;
@@ -297,7 +297,7 @@ describe('PerformanceMonitor', () => {
       }
 
       getWorkerMetrics() {
-        const workers = this.metrics.workers;
+        const {workers} = this.metrics;
         const result = {};
         
         for (const [type, metrics] of Object.entries(workers)) {
@@ -329,7 +329,7 @@ describe('PerformanceMonitor', () => {
       }
 
       getSystemMetrics() {
-        const system = this.metrics.system;
+        const {system} = this.metrics;
         const uptime = Date.now() - system.sessionStart;
         
         let avgMemoryUsage = 0;
@@ -624,7 +624,7 @@ describe('PerformanceMonitor', () => {
       const monitor = new MockPerformanceMonitor();
       monitor.recordStorageOperation('write', 50, 2048, 0.6);
       
-      const storage = monitor.metrics.storage;
+      const {storage} = monitor.metrics;
       expect(storage.opfsOperations).toBe(1);
       expect(storage.opfsTime).toBe(50);
       expect(storage.compressionRatio).toBe(0.6);
@@ -720,7 +720,7 @@ describe('PerformanceMonitor', () => {
   describe('System Metrics', () => {
     test('should calculate system uptime', () => {
       const monitor = new MockPerformanceMonitor();
-      const sessionStart = monitor.metrics.system.sessionStart;
+      const {sessionStart} = monitor.metrics.system;
       
       const metrics = monitor.getSystemMetrics();
       expect(metrics.uptime).toBeGreaterThan(0);
