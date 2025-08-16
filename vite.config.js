@@ -53,7 +53,20 @@ export default defineConfig({
             'src/shared/error-handler.js',
             'src/shared/app-config.js',
             'src/shared/performance-utils.js',
-            'src/shared/security-utils.js'
+            'src/shared/security-utils.js',
+            'src/shared/formatters.js',
+            'src/shared/color-utils.js',
+            'src/shared/data-utils.js',
+            'src/shared/state-manager.js',
+            'src/shared/ui-utils.js'
+          ],
+          utils: [
+            'src/utils/query-builder.js',
+            'src/utils/query-utils.js'
+          ],
+          apps: [
+            'src/apps/network-app.js',
+            'src/apps/db-app.js'
           ]
         },
         
@@ -112,8 +125,11 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src'),
       '@shared': resolve(__dirname, 'src/shared'),
+      '@apps': resolve(__dirname, 'src/apps'),
       '@db': resolve(__dirname, 'src/db'),
       '@index': resolve(__dirname, 'src/index'),
+      '@features': resolve(__dirname, 'src/features'),
+      '@utils': resolve(__dirname, 'src/utils'),
       '@tests': resolve(__dirname, 'tests')
     }
   },

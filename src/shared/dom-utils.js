@@ -15,7 +15,6 @@ export class DOMUtils {
       
       return element;
     } catch (error) {
-      console.warn(`Element not found: ${selector}`, error);
       return null;
     }
   }
@@ -27,9 +26,6 @@ export class DOMUtils {
    */
   static getElementById(id) {
     const element = document.getElementById(id);
-    if (!element) {
-      console.warn(`Element with ID '${id}' not found`);
-    }
     return element;
   }
 
@@ -43,7 +39,6 @@ export class DOMUtils {
     try {
       return context.querySelectorAll(selector);
     } catch (error) {
-      console.warn(`Elements not found: ${selector}`, error);
       return [];
     }
   }
@@ -66,7 +61,6 @@ export class DOMUtils {
       }
       return true;
     } catch (error) {
-      console.error('Error updating element content:', error);
       return false;
     }
   }
@@ -90,7 +84,6 @@ export class DOMUtils {
       });
       return true;
     } catch (error) {
-      console.error('Error updating element attributes:', error);
       return false;
     }
   }
@@ -117,7 +110,6 @@ export class DOMUtils {
       });
       return true;
     } catch (error) {
-      console.error('Error toggling classes:', error);
       return false;
     }
   }
@@ -137,7 +129,6 @@ export class DOMUtils {
       el.classList.add(...classList);
       return true;
     } catch (error) {
-      console.error('Error adding classes:', error);
       return false;
     }
   }
@@ -157,7 +148,6 @@ export class DOMUtils {
       el.classList.remove(...classList);
       return true;
     } catch (error) {
-      console.error('Error removing classes:', error);
       return false;
     }
   }
@@ -267,7 +257,6 @@ export class DOMUtils {
       el.addEventListener(event, handler, options);
       return true;
     } catch (error) {
-      console.error('Error adding event listener:', error);
       return false;
     }
   }
@@ -351,7 +340,7 @@ export class DOMUtils {
    * @param {number} threshold - Visibility threshold (0-1)
    * @returns {boolean} Whether element is visible
    */
-  static isElementVisible(element, threshold = 0) {
+  static isElementVisible(element, _threshold = 0) {
     const el = typeof element === 'string' ? this.getElement(element) : element;
     if (!el) return false;
 
@@ -377,7 +366,6 @@ export class DOMUtils {
     try {
       return el.value || '';
     } catch (error) {
-      console.warn('Error getting element value:', error);
       return null;
     }
   }
@@ -396,7 +384,6 @@ export class DOMUtils {
       el.value = value;
       return true;
     } catch (error) {
-      console.error('Error setting element value:', error);
       return false;
     }
   }

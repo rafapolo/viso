@@ -1,0 +1,149 @@
+/* Range Slider Styles */
+.slider-track {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.slider-track::-webkit-slider-track {
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    background: #d1d5db;
+    border-radius: 4px;
+}
+
+.dark .slider-track::-webkit-slider-track {
+    background: #374151;
+}
+
+.slider-track::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #FFC000;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.dark .slider-track::-webkit-slider-thumb {
+    border-color: #1f2937;
+}
+
+.slider-track::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    background: #d1d5db;
+    border-radius: 4px;
+    border: none;
+}
+
+.dark .slider-track::-moz-range-track {
+    background: #374151;
+}
+
+.slider-track::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #FFC000;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.dark .slider-track::-moz-range-thumb {
+    border-color: #1f2937;
+}
+
+.slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #FFC000;
+    cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #FFC000;
+    cursor: pointer;
+    border: none;
+}
+
+/* Full screen layout */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.sidebar-header {
+    text-align: center;
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.legend-items {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+#node-info-content {
+    display: none;
+    padding-top: 12px;
+    border-top: 1px solid rgba(75, 85, 99, 0.3);
+    margin-top: 12px;
+}
+
+/* Transaction card enhancements */
+.transaction-card {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.transaction-card:hover {
+    transform: translateY(-1px);
+}
+
+/* Responsive card spacing */
+@media (max-width: 640px) {
+    .transaction-card {
+        padding: 0.75rem;
+    }
+}
+
+/* Force proper scrolling on node info panel */
+.node-info-scroll-container {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 0;
+    max-height: calc(100vh - 200px);
+}
+
+/* Ensure right panel has proper height calculations */
+#right-panel {
+    max-height: 100vh;
+}
+
+#node-info-section {
+    max-height: calc(100vh - 60px); /* Account for header */
+}

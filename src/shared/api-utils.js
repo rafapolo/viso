@@ -23,7 +23,6 @@ export class APIUtils {
         success: true
       };
     } catch (error) {
-      console.error('DuckDB query error:', error);
       throw new Error(`Query execution failed: ${error.message}`);
     }
   }
@@ -41,7 +40,6 @@ export class APIUtils {
       await window.duckdbAPI.initDuckDB();
       return { success: true };
     } catch (error) {
-      console.error('❌ DuckDB initialization failed:', error);
       throw new Error(`DuckDB initialization failed: ${error.message}`);
     }
   }
@@ -66,7 +64,6 @@ export class APIUtils {
       
       return totalRecords;
     } catch (error) {
-      console.error('❌ Failed to load parquet data:', error);
       throw new Error(`Failed to load data: ${error.message}`);
     }
   }
@@ -84,7 +81,6 @@ export class APIUtils {
       const schema = await window.duckdbAPI.getSchema();
       return schema;
     } catch (error) {
-      console.error('❌ Failed to get database schema:', error);
       throw new Error(`Schema retrieval failed: ${error.message}`);
     }
   }
@@ -108,10 +104,6 @@ export class APIUtils {
     
     const isAvailable = typeof window.duckdbAPI !== 'undefined';
     
-    if (!isAvailable) {
-      console.error(`❌ DuckDB API not loaded after ${maxAttempts} attempts (${maxAttempts * intervalMs}ms)`);
-    } else {
-    }
     
     return isAvailable;
   }
@@ -131,19 +123,14 @@ export class APIUtils {
     const offset = (page - 1) * pageSize;
     const paginatedQuery = `${baseQuery} LIMIT ${pageSize} OFFSET ${offset}`;
     
-    try {
-      const result = await this.executeDuckDBQuery(paginatedQuery);
-      
-      return {
-        ...result,
-        currentPage: page,
-        pageSize,
-        hasMore: result.data.length === pageSize
-      };
-    } catch (error) {
-      console.error('Paginated query error:', error);
-      throw error;
-    }
+    const result = await this.executeDuckDBQuery(paginatedQuery);
+    
+    return {
+      ...result,
+      currentPage: page,
+      pageSize,
+      hasMore: result.data.length === pageSize
+    };
   }
 
   /**
@@ -164,7 +151,6 @@ export class APIUtils {
         const result = await this.executeDuckDBQuery(queries[i]);
         results.push(result);
       } catch (error) {
-        console.error(`Query ${i + 1} failed:`, error);
         results.push({ success: false, error: error.message });
       }
     }
@@ -182,7 +168,6 @@ export class APIUtils {
       const result = await this.executeDuckDBQuery('SELECT 1 as test');
       return result.success && result.data.length > 0;
     } catch (error) {
-      console.warn('Connection health check failed:', error);
       return false;
     }
   }
@@ -263,11 +248,9 @@ export class APIUtils {
           linesBetweenQueries: 2
         });
       } else {
-        console.warn('SQL formatter not available');
         return sql.trim();
       }
     } catch (error) {
-      console.warn('SQL formatting error:', error);
       return sql.trim();
     }
   }
@@ -318,7 +301,6 @@ export class APIUtils {
       URL.revokeObjectURL(url);
       
     } catch (error) {
-      console.error('CSV export failed:', error);
       throw new Error(`Failed to export CSV: ${error.message}`);
     }
   }
@@ -341,7 +323,6 @@ export class APIUtils {
           lastError = error;
           
           if (attempt < maxRetries) {
-            console.warn(`API call failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying...`, error);
             await new Promise(resolve => setTimeout(resolve, delayMs * Math.pow(2, attempt)));
           }
         }

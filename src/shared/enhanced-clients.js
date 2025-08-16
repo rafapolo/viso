@@ -21,14 +21,13 @@ export class FileSystemWorkerClient {
       return success;
       
     } catch (error) {
-      console.error('Failed to initialize filesystem worker:', error);
       return false;
     }
   }
 
   async downloadAndCache(url, path, onProgress) {
     return new Promise((resolve, reject) => {
-      const id = this.sendMessage('download', { url, path }, {
+      this.sendMessage('download', { url, path }, {
         onProgress,
         onComplete: resolve,
         onError: reject
@@ -120,7 +119,6 @@ export class FileSystemWorkerClient {
   }
 
   handleError(error) {
-    console.error('Filesystem worker error:', error);
     for (const [id, { reject }] of this.pendingMessages.entries()) {
       reject(error);
     }
@@ -157,7 +155,6 @@ export class DataProcessingWorkerClient {
       return success;
       
     } catch (error) {
-      console.error('Failed to initialize data processing worker:', error);
       return false;
     }
   }
@@ -243,7 +240,6 @@ export class DataProcessingWorkerClient {
   }
 
   handleError(error) {
-    console.error('Data processing worker error:', error);
     for (const [id, { reject }] of this.pendingMessages.entries()) {
       reject(error);
     }
@@ -280,7 +276,6 @@ export class BackgroundSyncClient {
       return true;
       
     } catch (error) {
-      console.error('Failed to initialize background sync worker:', error);
       return false;
     }
   }
@@ -422,14 +417,13 @@ export class BackgroundSyncClient {
         try {
           listener(event.data);
         } catch (error) {
-          console.error('Background sync listener error:', error);
+          // Silently ignore listener errors
         }
       }
     }
   }
 
-  handleError(error) {
-    console.error('Background sync worker error:', error);
+  handleError(_error) {
   }
 
   terminate() {

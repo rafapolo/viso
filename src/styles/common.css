@@ -1,0 +1,69 @@
+/* Loading Spinner - Shared between both pages */
+.loading-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #374151;
+    border-radius: 50%;
+    border-top-color: #FFC000;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Enhanced Typography and Visual Hierarchy */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    letter-spacing: -0.01em;
+    line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Monda', 'Inter', sans-serif;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+/* Enhanced general button styling */
+button:not(.sample-query) {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+button:not(.sample-query):hover {
+    transform: translateY(-1px);
+}
+
+/* Enhanced scrollbar styles */
+.enhanced-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #6B7280 #374151;
+}
+
+.enhanced-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.enhanced-scroll::-webkit-scrollbar-track {
+    background: #374151;
+    border-radius: 4px;
+}
+
+.enhanced-scroll::-webkit-scrollbar-thumb {
+    background: #6B7280;
+    border-radius: 4px;
+}
+
+.enhanced-scroll::-webkit-scrollbar-thumb:hover {
+    background: #9CA3AF;
+}
+
+/* Smooth scroll behavior */
+.smooth-scroll {
+    scroll-behavior: smooth;
+}
