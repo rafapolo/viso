@@ -41,6 +41,10 @@ The refactored codebase introduces a modular architecture with the following key
    - `dom-utils.js` - DOM manipulation and safety
    - `error-handler.js` - Centralized error handling
    - `api-utils.js` - API communication utilities
+   - `🆕 opfs-storage-manager.js` - OPFS storage operations
+   - `🆕 cache-manager.js` - Advanced caching with compression
+   - `🆕 offline-data-manager.js` - Offline data orchestration
+   - `🆕 performance-monitor.js` - Performance tracking and optimization
 
 2. **State Management** (`src/state-manager.js`)
    - Application state management
@@ -63,6 +67,21 @@ The refactored codebase introduces a modular architecture with the following key
    - Canvas manipulation and rendering
    - Interactive features
 
+6. **🆕 Enhanced Core** (`src/shared/enhanced-core.js`)
+   - Enhanced DuckDB manager with offline support
+   - Progressive loading and caching
+   - Worker-based query processing
+
+7. **🆕 Worker System** (`src/shared/workers/`)
+   - File system worker for OPFS operations
+   - Data processing worker for SQL queries
+   - Background sync worker for data updates
+
+8. **🆕 Storage Management** (`src/shared/storage-management-ui.js`)
+   - Storage management interface
+   - Performance monitoring UI
+   - Cache and offline data controls
+
 ## Test Categories
 
 ### Unit Tests
@@ -75,6 +94,10 @@ Unit tests focus on individual modules and functions, using mock implementations
 - **Shared Utils**: Tests DOM utilities and error handling mechanisms
 - **State Manager**: Tests state management, history, and persistence
 - **Chart Utils**: Tests chart creation and data visualization
+- **🆕 OPFS Storage Manager**: Tests file storage, compression, and OPFS operations
+- **🆕 Cache Manager**: Tests multi-layer caching, TTL, and cache efficiency
+- **🆕 Offline Data Manager**: Tests dataset management and offline capabilities
+- **🆕 Performance Monitor**: Tests metrics collection and performance analysis
 
 ### Integration Tests
 
