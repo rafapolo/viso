@@ -44,12 +44,8 @@ export class EnhancedDuckDBManager {
         version: '1.0'
       });
 
-      if (appConfig.development.enableLogging) {
-        console.log('🚀 Enhanced Core initialized with offline support');
-      }
-      
     } catch (error) {
-      console.warn('Failed to initialize offline support:', error);
+      // Silently ignore initialization errors
     }
   }
 
@@ -120,7 +116,6 @@ export class EnhancedDuckDBManager {
       return { initialized: true, fromCache: result.fromCache };
       
     } catch (error) {
-      console.error('❌ Error initializing enhanced DuckDB:', error);
       this.updateConnectionStatus('error', 'Failed to initialize database');
       throw error;
     }
@@ -148,7 +143,6 @@ export class EnhancedDuckDBManager {
         // Try cached result first
         const cached = await this.cacheManager.get(key, { format: 'json' });
         if (cached) {
-          console.log(`🎯 Query cache hit: ${sql.substring(0, 50)}...`);
           return cached;
         }
       }
@@ -275,7 +269,6 @@ export class EnhancedDuckDBManager {
       return range;
       
     } catch (error) {
-      console.warn('Failed to get value range:', error);
       return { min: 0, max: 100000 };
     }
   }
@@ -323,7 +316,6 @@ export class EnhancedDuckDBManager {
       return options;
       
     } catch (error) {
-      console.warn('Failed to get filter options:', error);
       return { parties: [], categories: [] };
     }
   }
@@ -361,7 +353,6 @@ export class EnhancedDuckDBManager {
       return result && result.rows.length > 0;
       
     } catch (error) {
-      console.warn('Connection health check failed:', error);
       return false;
     }
   }
@@ -435,13 +426,12 @@ export class EnhancedDuckDBManager {
   }
 
   updateConnectionStatus(status, message = '') {
-    console.log(`🔌 Enhanced Status: ${status}${message ? ` - ${message}` : ''}`);
     
     this.statusCallbacks.forEach(callback => {
       try {
         callback(status, message);
       } catch (error) {
-        console.error('Error in status callback:', error);
+        // Silently ignore callback errors
       }
     });
   }
