@@ -29,7 +29,7 @@ export class StatisticsCharts {
     DOMUtils.updateContent('totalValue', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), false);
     DOMUtils.updateContent('totalTransactions', totalTransactions.toLocaleString(), false);
 
-    console.log(`📊 Statistics updated - Deputados: ${deputados.size}, Fornecedores: ${fornecedores.size}, Value: ${totalValue}`);
+    // Statistics updated
   }
 
   /**
@@ -39,11 +39,11 @@ export class StatisticsCharts {
    */
   updateStatisticsForFilteredData(filteredData, originalAggregatedData) {
     if (!originalAggregatedData || !filteredData) {
-      console.log('Missing data for statistics update');
+      // Missing data for statistics update
       return;
     }
 
-    console.log('Updating statistics for filtered data - nodes:', filteredData.nodes.length, 'links:', filteredData.links.length);
+    // Updating statistics for filtered data
 
     // Get the labels of filtered nodes for easier matching
     const filteredDeputados = new Set(
@@ -64,7 +64,7 @@ export class StatisticsCharts {
       return filteredDeputados.has(deputadoLabel) && filteredFornecedores.has(fornecedorLabel);
     });
 
-    console.log('Filtered aggregated data records:', filteredAggregatedData.length);
+    // Filtered aggregated data processed
 
     // Update statistics with filtered data
     this.updateStatistics(filteredAggregatedData);
@@ -140,7 +140,7 @@ export class StatisticsCharts {
 
       // Draw pie slices
       let currentAngle = -Math.PI / 2; // Start from top
-      categoryData.forEach(([category, value], index) => {
+      categoryData.forEach(([_category, value], index) => {
         const sliceAngle = (value / total) * 2 * Math.PI;
         const color = colors[index % colors.length];
 
@@ -323,7 +323,7 @@ export class StatisticsCharts {
     const barWidth = Math.max(1, Math.min(4, availableWidth / sortedData.length));
     const barPositions = [];
 
-    sortedData.forEach((item, index) => {
+    sortedData.forEach((item, _index) => {
       const date = new Date(item.data_emissao);
       const value = Number(item.valor_liquido);
 
