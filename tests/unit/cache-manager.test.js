@@ -265,7 +265,7 @@ describe('CacheManager', () => {
             shouldDelete = true;
           } else if (tags && tags.some(tag => metadata.tags.includes(tag))) {
             shouldDelete = true;
-          } else if (namespace && key.startsWith(namespace + ':')) {
+          } else if (namespace && key.startsWith(`${namespace}:`)) {
             shouldDelete = true;
           } else if (!pattern && !tags && !namespace) {
             shouldDelete = true;
@@ -358,7 +358,7 @@ describe('CacheManager', () => {
         const k = 1024;
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
       }
 
       createCachedFunction(fn, namespace, options = {}) {

@@ -1,10 +1,9 @@
 // Enhanced Core with Offline Support
 // Integrates existing DuckDB functionality with new OPFS and Worker capabilities
 
-import offlineDataManager from './offline-data-manager.js';
-import dataProcessingWorkerClient from './data-processing-worker-client.js';
-import backgroundSyncClient from './background-sync-client.js';
-import cacheManager from './cache-manager.js';
+import { OfflineDataManager } from './offline-manager.js';
+import { DataProcessingWorkerClient, BackgroundSyncClient } from './enhanced-clients.js';
+import { CacheManager } from './enhanced-storage.js';
 import { ErrorHandler } from './error-handler.js';
 import appConfig from './app-config.js';
 
@@ -17,6 +16,12 @@ export class EnhancedDuckDBManager {
     this.statusCallbacks = [];
     this.datasets = new Map();
     
+    // Initialize components
+    this.offlineDataManager = new OfflineDataManager();
+    this.dataProcessingWorkerClient = new DataProcessingWorkerClient();
+    this.backgroundSyncClient = new BackgroundSyncClient();
+    this.cacheManager = new CacheManager();
+    
     // Initialize offline data manager
     this.initializeOfflineSupport();
   }
@@ -27,13 +32,13 @@ export class EnhancedDuckDBManager {
   async initializeOfflineSupport() {
     try {
       // Setup offline data manager listeners
-      offlineDataManager.addListener((event, data) => {
+      this.offlineDataManager.addListener((event, data) => {
         this.handleOfflineEvent(event, data);
       });
 
       // Register default dataset
-      await offlineDataManager.registerDataset('despesas', {
-        url: appConfig.database.parquetUrl,
+      await this.offlineDataManager.registerDataset('despesas', {
+        url: 'https://rafapolo.github.io/transparencia-dados/despesas_publicas_deputados.parquet',
         format: 'parquet',
         autoUpdate: true,
         version: '1.0'
@@ -89,10 +94,10 @@ export class EnhancedDuckDBManager {
       this.updateConnectionStatus('connecting', 'Initializing enhanced database...');
       
       // Initialize workers first
-      await dataProcessingWorkerClient.initialize();
+      await this.dataProcessingWorkerClient.initialize();
       
       // Load data with progressive loading
-      const result = await offlineDataManager.loadDataset('despesas', {
+      const result = await this.offlineDataManager.loadDataset('despesas', {
         onProgress: (progress) => {
           this.updateConnectionStatus('connecting', 
             `Loading data... ${Math.round(progress.progress)}%`
@@ -141,21 +146,19 @@ export class EnhancedDuckDBManager {
       
       if (useCache) {
         // Try cached result first
-        const cached = await cacheManager.get(key, { format: 'json' });
+        const cached = await this.cacheManager.get(key, { format: 'json' });
         if (cached) {
-          if (appConfig.development.enableLogging) {
-            console.log(`🎯 Query cache hit: ${sql.substring(0, 50)}...`);
-          }
+          console.log(`🎯 Query cache hit: ${sql.substring(0, 50)}...`);
           return cached;
         }
       }
       
       // Execute query in worker
-      const result = await dataProcessingWorkerClient.executeQuery(sql, options);
+      const result = await this.dataProcessingWorkerClient.executeQuery(sql, options);
       
       // Cache result if caching is enabled
       if (useCache && result.rowCount > 0) {
-        await cacheManager.set(key, JSON.stringify(result), {
+        await this.cacheManager.set(key, JSON.stringify(result), {
           tags: ['query-result', 'sql'],
           ttl: cacheTTL
         });
@@ -179,7 +182,7 @@ export class EnhancedDuckDBManager {
 
     try {
       // Use data processing worker for aggregation
-      const result = await dataProcessingWorkerClient.aggregateData('despesas', {
+      const result = await this.dataProcessingWorkerClient.aggregateData('despesas', {
         groupBy: ['nome_parlamentar', 'sigla_partido', 'fornecedor', 'categoria_despesa'],
         aggregates: {
           valor_total: 'SUM(valor_liquido)',
@@ -243,13 +246,13 @@ export class EnhancedDuckDBManager {
     
     try {
       // Try cache first
-      const cached = await cacheManager.get(cacheKey, { format: 'json' });
+      const cached = await this.cacheManager.get(cacheKey, { format: 'json' });
       if (cached) {
         return cached;
       }
       
       // Calculate using aggregation
-      const result = await dataProcessingWorkerClient.aggregateData('despesas', {
+      const result = await this.dataProcessingWorkerClient.aggregateData('despesas', {
         aggregates: {
           min_valor: 'MIN(grouped_total)',
           max_valor: 'MAX(grouped_total)'
@@ -264,7 +267,7 @@ export class EnhancedDuckDBManager {
       };
       
       // Cache result
-      await cacheManager.set(cacheKey, JSON.stringify(range), {
+      await this.cacheManager.set(cacheKey, JSON.stringify(range), {
         tags: ['value-range'],
         ttl: 10 * 60 * 1000 // 10 minutes
       });
@@ -285,20 +288,20 @@ export class EnhancedDuckDBManager {
     
     try {
       // Try cache first
-      const cached = await cacheManager.get(cacheKey, { format: 'json' });
+      const cached = await this.cacheManager.get(cacheKey, { format: 'json' });
       if (cached) {
         return cached;
       }
       
       // Get distinct values using worker
       const [partiesResult, categoriesResult] = await Promise.all([
-        dataProcessingWorkerClient.executeQuery(`
+        this.dataProcessingWorkerClient.executeQuery(`
           SELECT DISTINCT sigla_partido 
           FROM despesas 
           WHERE sigla_partido IS NOT NULL 
           ORDER BY sigla_partido
         `),
-        dataProcessingWorkerClient.executeQuery(`
+        this.dataProcessingWorkerClient.executeQuery(`
           SELECT DISTINCT categoria_despesa 
           FROM despesas 
           WHERE categoria_despesa IS NOT NULL 
@@ -312,7 +315,7 @@ export class EnhancedDuckDBManager {
       };
       
       // Cache for 1 hour
-      await cacheManager.set(cacheKey, JSON.stringify(options), {
+      await this.cacheManager.set(cacheKey, JSON.stringify(options), {
         tags: ['filter-options'],
         ttl: 60 * 60 * 1000
       });
@@ -354,7 +357,7 @@ export class EnhancedDuckDBManager {
       if (!this.isInitialized) return false;
       
       // Simple test query
-      const result = await dataProcessingWorkerClient.executeQuery('SELECT 1 as test');
+      const result = await this.dataProcessingWorkerClient.executeQuery('SELECT 1 as test');
       return result && result.rows.length > 0;
       
     } catch (error) {
@@ -367,15 +370,15 @@ export class EnhancedDuckDBManager {
    * Get offline status
    */
   async getOfflineStatus() {
-    return await offlineDataManager.getOfflineStatus();
+    return await this.offlineDataManager.getOfflineStatus();
   }
 
   /**
    * Clear offline data
    */
   async clearOfflineData() {
-    await offlineDataManager.clearAllData();
-    await cacheManager.clear({ tags: ['query-result'] });
+    await this.offlineDataManager.clearAllData();
+    await this.cacheManager.clear({ tags: ['query-result'] });
   }
 
   /**
@@ -385,7 +388,7 @@ export class EnhancedDuckDBManager {
     try {
       this.updateConnectionStatus('connecting', 'Refreshing data...');
       
-      const result = await offlineDataManager.loadDataset('despesas', {
+      const result = await this.offlineDataManager.loadDataset('despesas', {
         forceRefresh: true,
         onProgress: (progress) => {
           this.updateConnectionStatus('connecting', 
@@ -395,7 +398,7 @@ export class EnhancedDuckDBManager {
       });
       
       // Clear query cache to ensure fresh results
-      await cacheManager.clear({ tags: ['query-result'] });
+      await this.cacheManager.clear({ tags: ['query-result'] });
       
       this.updateConnectionStatus('connected', 
         `✅ Data refreshed • ${this.formatBytes(result.data.byteLength)}`
@@ -419,7 +422,7 @@ export class EnhancedDuckDBManager {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
   }
 
   // Connection status methods (compatible with original)
@@ -465,10 +468,10 @@ export class EnhancedDuckDBManager {
 
   // Cleanup
   async close() {
-    await offlineDataManager.shutdown();
-    await cacheManager.shutdown();
-    dataProcessingWorkerClient.terminate();
-    backgroundSyncClient.terminate();
+    await this.offlineDataManager.shutdown();
+    await this.cacheManager.shutdown();
+    this.dataProcessingWorkerClient.terminate();
+    this.backgroundSyncClient.terminate();
   }
 }
 

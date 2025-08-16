@@ -150,7 +150,7 @@ describe('OfflineDataManager', () => {
           registerInWorker = true
         } = options;
         
-        let dataset = this.datasets.get(name);
+        const dataset = this.datasets.get(name);
         if (!dataset) {
           throw new Error(`Dataset '${name}' is not registered`);
         }
