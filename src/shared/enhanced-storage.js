@@ -14,14 +14,11 @@ export class OPFSStorageManager {
         this.rootHandle = await navigator.storage.getDirectory();
         this.isSupported = true;
         this.initialized = true;
-        console.log('✅ OPFS initialized successfully');
         return true;
       } else {
-        console.warn('⚠️ OPFS not supported in this browser');
         return false;
       }
     } catch (error) {
-      console.error('❌ Failed to initialize OPFS:', error);
       return false;
     }
   }
@@ -114,7 +111,6 @@ export class OPFSStorageManager {
       await this.deleteMetadata(path);
       return true;
     } catch (error) {
-      console.warn(`Failed to delete file ${path}:`, error);
       return false;
     }
   }
@@ -150,7 +146,6 @@ export class OPFSStorageManager {
       
       return compressed.buffer;
     } catch (error) {
-      console.warn('Compression failed, storing uncompressed:', error);
       return data;
     }
   }
@@ -186,7 +181,6 @@ export class OPFSStorageManager {
       
       return decompressed.buffer;
     } catch (error) {
-      console.warn('Decompression failed, returning as-is:', error);
       return data;
     }
   }
@@ -266,7 +260,6 @@ export class CacheManager {
       return null;
       
     } catch (error) {
-      console.warn(`Cache get failed for key ${key}:`, error);
       this.stats.misses++;
       return null;
     }
@@ -302,7 +295,6 @@ export class CacheManager {
       return true;
       
     } catch (error) {
-      console.warn(`Cache set failed for key ${key}:`, error);
       return false;
     }
   }
@@ -314,7 +306,6 @@ export class CacheManager {
       this.stats.deletes++;
       return true;
     } catch (error) {
-      console.warn(`Cache delete failed for key ${key}:`, error);
       return false;
     }
   }
@@ -341,14 +332,12 @@ export class CacheManager {
       
       return cleared;
     } catch (error) {
-      console.warn('Cache clear failed:', error);
       return 0;
     }
   }
 
   async cleanup() {
     let cleaned = 0;
-    const now = Date.now();
     
     // Clean memory cache
     for (const [key, entry] of this.memoryCache.entries()) {
@@ -421,7 +410,6 @@ export const createFileSystemWorker = () => {
           }
           return false;
         } catch (error) {
-          console.error('OPFS init failed:', error);
           return false;
         }
       }

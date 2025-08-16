@@ -1,13 +1,13 @@
 // Database Application Main Controller - Refactored Version
-import { EditorManager } from './db/editor-manager.js';
-import { QueryExecutor } from './db/query-executor.js';
-import { PaginationHandler } from './db/pagination-handler.js';
-import { ResultsDisplay } from './db/results-display.js';
-import { APIUtils } from './shared/api-utils.js';
-import { ErrorHandler } from './shared/error-handler.js';
-import { DOMUtils } from './shared/dom-utils.js';
+import { EditorManager } from '../db/editor-manager.js';
+import { QueryExecutor } from '../db/query-executor.js';
+import { PaginationHandler } from '../db/pagination-handler.js';
+import { ResultsDisplay } from '../db/results-display.js';
+import { APIUtils } from '../shared/api-utils.js';
+import { ErrorHandler } from '../shared/error-handler.js';
+import { DOMUtils } from '../shared/dom-utils.js';
 // import { APP_CONSTANTS } from './shared/constants.js';
-import { SankeyTab } from './utils.js';
+import { SankeyTab } from '../features/visualization/sankey-tab.js';
 
 /**
  * Main Database Application Controller
@@ -29,13 +29,11 @@ class DatabaseApp {
    */
   async initialize() {
     try {
-      console.log('🚀 Initializing Database Application...');
 
       // Initialize core modules
       this.initializeModules();
 
       // Setup the Monaco editor
-      console.log('🔧 Monaco available:', typeof window.monaco !== 'undefined');
       await this.setupEditor();
 
       // Load initial data and schema
@@ -47,7 +45,6 @@ class DatabaseApp {
       // Mark as initialized
       this.isInitialized = true;
 
-      console.log('✅ Database Application initialized successfully');
 
     } catch (error) {
       ErrorHandler.handleError(error, 'Database App Initialization');
@@ -74,7 +71,6 @@ class DatabaseApp {
     // Initialize Sankey tab
     this.sankeyTab = new SankeyTab();
 
-    console.log('📦 All modules initialized');
   }
 
   /**
@@ -88,9 +84,6 @@ class DatabaseApp {
       const defaultQuery = this.getDefaultQuery();
       this.editorManager.setValue(defaultQuery);
 
-      console.log('📝 Editor setup complete');
-      console.log('📝 Editor initialized:', this.editorManager ? 'Yes' : 'No');
-      console.log('📝 Editor has value:', this.editorManager && this.editorManager.getValue() ? 'Yes' : 'No');
 
     } catch (error) {
       ErrorHandler.handleError(error, 'Editor Setup');
@@ -103,32 +96,22 @@ class DatabaseApp {
    */
   async loadInitialData() {
     try {
-      console.log('🚀 Starting database initialization...');
       
       // Initialize DuckDB first
-      console.log('🔧 Initializing DuckDB...');
-      console.log('🔧 DuckDB API available:', typeof window.duckdbAPI !== 'undefined');
       await APIUtils.initializeDuckDB();
-      console.log('✅ DuckDB initialized');
       
       // Load parquet data to create the despesas table
-      console.log('📦 Loading parquet data...');
       await APIUtils.loadParquetData('./despesas.parquet');
-      console.log('✅ Parquet data loaded');
 
       // Load database schema
-      console.log('📋 Loading database schema...');
       await this.loadSchema();
-      console.log('✅ Schema loaded');
 
       // Load query from URL if specified, otherwise execute default query
-      console.log('🔍 Checking for URL query parameter...');
       await this.loadQueryFromUrl();
       
       // Only execute default query if no URL query was loaded
       const urlParams = new URLSearchParams(window.location.search);
       if (!urlParams.get('query')) {
-        console.log('🔍 Executing default query (Sankey)...');
         
         // Mark Sankey button as selected for default load
         const sankeyButton = document.querySelector('[data-id="sankey-fluxos"]');
@@ -140,15 +123,10 @@ class DatabaseApp {
         }
         
         await this.executeDefaultQuery();
-        console.log('✅ Default query (Sankey) executed');
       }
 
-      console.log('📊 Initial data loaded successfully');
-      console.log('🔍 Current results:', this.queryExecutor.currentResults ? 'Available' : 'Not available');
-      console.log('📝 Editor value:', this.editorManager ? `${this.editorManager.getValue().substring(0, 100)}...` : 'Editor not available');
 
     } catch (error) {
-      console.error('❌ Failed to load initial data:', error);
       ErrorHandler.handleError(error, 'Initial Data Load');
       // Don't throw - allow app to continue with limited functionality
     }
@@ -421,7 +399,6 @@ LIMIT 500`;
     const queryId = urlParams.get('query');
     
     if (queryId) {
-      console.log('📋 Loading query from URL:', queryId);
       const registry = this.getQueryRegistry();
       const queryData = registry[queryId];
       
@@ -447,12 +424,10 @@ LIMIT 500`;
             await this.executeSampleQuery(queryData.query);
           }
           
-          console.log(`✅ Loaded query "${queryData.title}" from URL`);
-          return;
+          
         }
       }
       
-      console.warn('⚠️ Query not found in registry:', queryId);
     }
   }
 
@@ -467,7 +442,6 @@ LIMIT 500`;
     this.setupSampleQueries();
     this.setupResizeHandle();
 
-    console.log('🎧 Event listeners setup complete');
   }
 
   /**
@@ -597,7 +571,6 @@ LIMIT 500`;
         }
         
         if (query) {
-          console.log('📋 Sample query clicked, query length:', query.length);
           
           // Remove selected class from all query buttons
           document.querySelectorAll('.sample-query').forEach(button => {
@@ -630,7 +603,6 @@ LIMIT 500`;
     const editorContainer = document.querySelector('.editor-container');
     
     if (!resizeHandle || !editorContainer) {
-      console.warn('⚠️ Resize handle or editor container not found');
       return;
     }
 
@@ -655,7 +627,6 @@ LIMIT 500`;
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       
-      console.log('🔧 Started resizing editor');
     };
 
     const handleMouseMove = (e) => {
@@ -690,7 +661,6 @@ LIMIT 500`;
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       
-      console.log('✅ Finished resizing editor');
     };
 
     // Add mousedown event listener
@@ -704,10 +674,8 @@ LIMIT 500`;
         this.editorManager.editor.layout();
       }
       
-      console.log('🔄 Reset editor height to default');
     });
 
-    console.log('🎛️ Resize handle setup complete');
   }
 
   /**
@@ -716,7 +684,6 @@ LIMIT 500`;
    */
   async executeSampleQuery(query) {
     if (!this.isInitialized) {
-      console.warn('Application not fully initialized');
       return;
     }
 
@@ -751,7 +718,6 @@ LIMIT 500`;
    */
   async executeCurrentQuery() {
     if (!this.isInitialized) {
-      console.warn('Application not fully initialized');
       return;
     }
 
@@ -788,7 +754,6 @@ LIMIT 500`;
    */
   clearResults() {
     this.resultsDisplay.clearResults();
-    console.log('🧹 Results cleared');
   }
 
   /**
@@ -800,7 +765,6 @@ LIMIT 500`;
 
     try {
       this.editorManager.setValue(query);
-      console.log('📝 Sample query loaded');
 
     } catch (error) {
       ErrorHandler.handleError(error, 'Sample Query Load');
@@ -831,7 +795,6 @@ LIMIT 500`;
       // Execute query and export
       await APIUtils.exportToCSV(query, 'database_query_results');
 
-      console.log('📤 Results exported successfully');
 
     } catch (error) {
       ErrorHandler.handleError(error, 'Export Results');
@@ -925,7 +888,6 @@ LIMIT 500`;
    */
   async refresh() {
     try {
-      console.log('🔄 Refreshing database connection...');
       
       await this.loadSchema();
       
@@ -938,7 +900,6 @@ LIMIT 500`;
         }
       }
       
-      console.log('✅ Database connection refreshed');
 
     } catch (error) {
       ErrorHandler.handleError(error, 'Database Refresh');
@@ -954,7 +915,6 @@ LIMIT 500`;
       const currentQueryId = this.getCurrentQueryId();
       
       if (!currentQueryId) {
-        console.warn('⚠️ No active query to share');
         return null;
       }
 
@@ -962,7 +922,6 @@ LIMIT 500`;
       const queryData = registry[currentQueryId];
       
       if (!queryData) {
-        console.warn('⚠️ Query data not found for ID:', currentQueryId);
         return null;
       }
 
@@ -990,11 +949,9 @@ LIMIT 500`;
           }, 2000);
         }
         
-        console.log('📋 Query shared successfully:', shareUrl);
         return shareUrl;
         
       } catch (clipboardError) {
-        console.warn('⚠️ Failed to copy to clipboard, falling back to text selection');
         
         // Fallback: create temporary input and select text
         const tempInput = document.createElement('input');
@@ -1018,7 +975,6 @@ LIMIT 500`;
       }
 
     } catch (error) {
-      console.error('❌ Error sharing query:', error);
       
       // Show error feedback
       const shareBtn = document.getElementById('share-btn');
@@ -1038,7 +994,6 @@ LIMIT 500`;
    * Dispose of the application and cleanup resources
    */
   dispose() {
-    console.log('🧹 Disposing Database Application...');
     
     // Dispose of modules
     if (this.editorManager) {
@@ -1057,7 +1012,6 @@ LIMIT 500`;
     }
 
     this.isInitialized = false;
-    console.log('✅ Database Application disposed');
   }
 }
 
@@ -1071,22 +1025,18 @@ async function waitForDependencies() {
   
   while (retries < maxRetries) {
     if (typeof window.monaco !== 'undefined' && typeof window.duckdbAPI !== 'undefined') {
-      console.log('✅ All dependencies loaded after', retries * 100, 'ms');
       return true;
     }
     
-    console.log('⏳ Waiting for dependencies... Monaco:', typeof window.monaco, 'DuckDB API:', typeof window.duckdbAPI);
     await new Promise(resolve => setTimeout(resolve, 100));
     retries++;
   }
   
-  console.warn('⚠️ Timed out waiting for dependencies');
   return false;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    console.log('🚀 DOM loaded, waiting for dependencies...');
     await waitForDependencies();
     
     dbApp = new DatabaseApp();
@@ -1101,7 +1051,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     
   } catch (error) {
-    console.error('Failed to initialize Database Application:', error);
     ErrorHandler.handleError(error, 'Database App Startup');
   }
 });
