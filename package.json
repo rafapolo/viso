@@ -1,0 +1,84 @@
+{
+  "name": "viso",
+  "version": "1.0.0",
+  "description": "VISO - Parliamentary Expenses Visualization",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run lint && npm run test && vite build",
+    "build:prod": "NODE_ENV=production npm run build",
+    "build:staging": "NODE_ENV=staging npm run build",
+    "build:analyze": "npm run build && npm run analyze:bundle",
+    "preview": "vite preview",
+    "start": "npm run preview",
+    "clean": "rm -rf dist coverage .nyc_output",
+    "lint": "eslint src tests --ext .js --fix",
+    "lint:check": "eslint src tests --ext .js",
+    "format": "prettier --write 'src/**/*.js' 'tests/**/*.js' '*.json' '*.md'",
+    "format:check": "prettier --check 'src/**/*.js' 'tests/**/*.js' '*.json' '*.md'",
+    "type-check": "jsdoc -t templates/haruki src/**/*.js --dry-run",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:debug": "node test-runner.js debug",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:all": "npm run lint:check && npm run test && npm run test:e2e",
+    "test:ci": "npm run lint:check && npm run test:coverage && npm run test:e2e",
+    "analyze:bundle": "vite-bundle-analyzer dist",
+    "analyze:deps": "npm ls --depth=0",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:fix": "npm audit fix",
+    "validate": "npm run lint:check && npm run format:check && npm run type-check && npm run test:all",
+    "precommit": "npm run format && npm run lint && npm run test",
+    "prepare": "husky install || true",
+    "postinstall": "npm run security:audit || true"
+  },
+  "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.28.0",
+    "d3": "^7.8.5",
+    "d3-sankey": "^0.12.3",
+    "monaco-editor": "^0.44.0",
+    "sql-formatter": "^15.3.2"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@playwright/test": "^1.40.0",
+    "cssnano": "^7.1.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-jest": "^27.6.0",
+    "husky": "^8.0.3",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "prettier": "^3.1.1",
+    "terser": "^5.43.1",
+    "vite": "^5.0.0",
+    "vite-bundle-analyzer": "^0.7.0",
+    "vite-plugin-html": "^3.2.2"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "testMatch": [
+      "<rootDir>/tests/unit/**/*.test.js",
+      "<rootDir>/tests/integration/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "tests/**/*.js",
+      "!tests/**/*.test.js",
+      "!tests/setup.js",
+      "!tests/mocks/**",
+      "!tests/fixtures/**",
+      "!tests/debug/**"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ]
+  }
+}
