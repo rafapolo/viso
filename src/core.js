@@ -301,7 +301,7 @@ class DuckDBManager {
 
     updateConnectionStatus(status, message = '') {
         this.connectionStatus = status;
-        console.log(`🔌 Connection Status: ${status}${message ? ` - ${message}` : ''}`);
+        // Connection status updated
         
         this.statusCallbacks.forEach(callback => {
             try {
@@ -319,10 +319,10 @@ class DuckDBManager {
     async initDuckDB() {
         try {
             this.updateConnectionStatus('connecting', 'Inicializando DuckDB...');
-            console.log('🚀 Initializing DuckDB...');
+            // Initializing DuckDB
             
             if (this.db && this.conn) {
-                console.log('🔄 DuckDB already initialized, reusing connection');
+                // DuckDB already initialized, reusing connection
                 this.updateConnectionStatus('connected', 'Já Conectado');
                 return { db: this.db, conn: this.conn };
             }
@@ -345,7 +345,7 @@ class DuckDBManager {
             this.updateConnectionStatus('connecting', 'Testando conexão...');
             await this.conn.query('SELECT 1 as test');
             
-            console.log('✅ DuckDB initialized and tested successfully');
+            // DuckDB initialized and tested successfully
             this.updateConnectionStatus('connected', 'Conectado e testado');
             
             return { db: this.db, conn: this.conn };
@@ -369,7 +369,7 @@ class DuckDBManager {
     async loadParquetData(parquetPath = './despesas.parquet') {
         try {
             this.updateConnectionStatus('connecting', 'Carregando dados...');
-            console.log('📁 Loading parquet file into DuckDB...');
+            // Loading parquet file into DuckDB
             
             const response = await fetch(parquetPath);
             if (!response.ok) {
@@ -377,7 +377,7 @@ class DuckDBManager {
             }
             
             const arrayBuffer = await response.arrayBuffer();
-            console.log(`📊 Downloaded ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)} MB`);
+            // Downloaded parquet data
             
             this.updateConnectionStatus('connecting', 'Processando dados...');
             
@@ -390,7 +390,7 @@ class DuckDBManager {
             
             const countResult = await this.conn.query("SELECT COUNT(*) as total FROM despesas");
             const totalRecords = countResult.toArray()[0].total;
-            console.log(`✅ Loaded ${totalRecords.toLocaleString()} records from parquet`);
+            // Loaded records from parquet
             
             this.updateConnectionStatus('connected', `✅ despesas • ${FormatUtils.formatNumberAbbreviated(totalRecords)} records`);
             return totalRecords;
@@ -419,7 +419,7 @@ class DuckDBManager {
             
             if (!isHealthy) {
                 this.updateConnectionStatus('connecting', 'Reconectando...');
-                console.log('🔄 Connection lost, attempting to reconnect...');
+                // Connection lost, attempting to reconnect
                 
                 if (this.conn) {
                     try {
@@ -434,10 +434,10 @@ class DuckDBManager {
                     this.conn = await this.db.connect();
                     await this.conn.query("SELECT 1 as test");
                     this.updateConnectionStatus('connected', 'Reconectado');
-                    console.log('✅ Reconnected successfully');
+                    // Reconnected successfully
                     return true;
                 } else {
-                    console.log('🔄 DB instance lost, reinitializing...');
+                    // DB instance lost, reinitializing
                     await this.initDuckDB();
                     await this.loadParquetData();
                     return true;
@@ -484,7 +484,7 @@ class DuckDBManager {
 
     async queryAggregatedData(minValue = 0, partyFilter = '', categoryFilter = '', searchFilter = '') {
         await this.ensureConnection();
-        console.log('🔍 Querying aggregated data...');
+        // Querying aggregated data
         
         let whereClause = "WHERE nome_parlamentar IS NOT NULL AND fornecedor IS NOT NULL";
         
@@ -516,17 +516,17 @@ class DuckDBManager {
             LIMIT 10000
         `;
         
-        console.log('📊 Executing query:', query);
+        // Executing query
         const result = await this.conn.query(query);
         const data = result.toArray();
         
-        console.log(`✅ Query returned ${data.length} aggregated records`);
+        // Query completed
         return data;
     }
 
     async getValueRange(partyFilter = '', categoryFilter = '', searchFilter = '') {
         await this.ensureConnection();
-        console.log('🔍 Querying value range...');
+        // Querying value range
         
         let whereClause = "WHERE nome_parlamentar IS NOT NULL AND fornecedor IS NOT NULL";
         
@@ -556,7 +556,7 @@ class DuckDBManager {
             ) as aggregated_data
         `;
         
-        console.log('📊 Executing value range query:', query);
+        // Executing value range query
         const result = await this.conn.query(query);
         const data = result.toArray();
         
@@ -565,7 +565,7 @@ class DuckDBManager {
                 min: Math.max(0, Number(data[0].min_valor)) || 0,
                 max: Number(data[0].max_valor)
             };
-            console.log('📊 Value range from DB:', range);
+            // Value range from DB
             return range;
         }
         
@@ -574,7 +574,7 @@ class DuckDBManager {
 
     async getFilterOptions() {
         await this.ensureConnection();
-        console.log('🔍 Getting filter options...');
+        // Getting filter options
         
         const partiesResult = await this.conn.query(`
             SELECT DISTINCT sigla_partido 
@@ -606,14 +606,14 @@ class DuckDBManager {
             }
         }, intervalMs);
         
-        console.log(`🔍 Connection monitoring started (${intervalMs}ms interval)`);
+        // Connection monitoring started
     }
 
     stopConnectionMonitoring() {
         if (this.monitoringInterval) {
             clearInterval(this.monitoringInterval);
             this.monitoringInterval = null;
-            console.log('⏹️ Connection monitoring stopped');
+            // Connection monitoring stopped
         }
     }
 

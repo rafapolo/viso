@@ -1,5 +1,5 @@
 // Filter Management for Index Application
-import { APIUtils } from '../shared/api-utils.js';
+// import { APIUtils } from '../shared/api-utils.js';
 import { DOMUtils } from '../shared/dom-utils.js';
 import { ErrorHandler } from '../shared/error-handler.js';
 
@@ -154,7 +154,7 @@ export class FilterManager {
     // Update current value display
     this.updateSliderDisplay();
 
-    console.log(`📊 Range updated: min=${rangeMin}, max=${rangeMax}, current=${slider.value}`);
+    // Range updated
   }
 
   /**
@@ -392,7 +392,7 @@ export class FilterManager {
       this.setupEventListeners(updateCallback);
       this.updateSliderDisplay();
       
-      console.log('✅ Filter manager initialized');
+      // Filter manager initialized
     } catch (error) {
       ErrorHandler.handleError(error, 'Filter Manager Initialization');
     }
