@@ -1,4 +1,4 @@
-const rawData = [];
+// const rawData = [];
 let processedData = { nodes: [], links: [] };
 const networkFilters = {
     densityMode: false, // Toggleable, uses 20% when enabled
@@ -14,7 +14,7 @@ async function loadData() {
         await window.duckdbAPI.initDuckDB();
         
         progressEl.textContent = 'Carregando arquivo parquet...';
-        const totalRecords = await window.duckdbAPI.loadParquetData();
+        await window.duckdbAPI.loadParquetData();
         
         progressEl.textContent = 'Configurando filtros...';
         await populateFilters();
@@ -109,12 +109,12 @@ async function populateFilters() {
 }
 
 async function processData() {
-    const minValue = parseFloat(document.getElementById('minValue').value) || 0;
+    // Process data with current filters
     const partyFilter = document.getElementById('partyFilter').value;
     const categoryFilter = document.getElementById('categoryFilter').value;
     const searchFilter = document.getElementById('searchBox').value.trim();
     
-    console.log(`🔍 Filters - minValue: ${minValue}, party: ${partyFilter}, category: ${categoryFilter}, search: ${searchFilter}`);
+    // Processing data with filters
     
     // Get the individual transaction value range (not aggregated sums)
     const valueRange = await window.duckdbAPI.getValueRange(partyFilter, categoryFilter, searchFilter);
@@ -135,7 +135,7 @@ async function processData() {
         
         slider.min = rangeMin;
         slider.max = rangeMax;
-        console.log(`🎚️ Slider updated: min=${rangeMin}, max=${rangeMax}`);
+        // Slider updated
         
         // If current slider value is outside the new range, adjust it
         if (currentValue < rangeMin || currentValue > rangeMax) {
@@ -157,7 +157,7 @@ async function processData() {
         };
         minValueDisplay.textContent = formatValue(actualMinValue);
         
-        console.log(`📊 Range updated: min=${rangeMin}, max=${rangeMax}, current=${actualMinValue}`);
+        // Range updated
     } else {
         // No data available - reset to defaults
         const slider = document.getElementById('minValue');
@@ -313,7 +313,7 @@ async function processData() {
     // Store aggregatedData for network filtering stats
     window.currentAggregatedData = aggregatedData;
     
-    console.log(`Processados ${nodes.length} nós e ${links.length} links`);
+    // Data processed
 }
 
 function calculateNodeDensity(data) {
@@ -333,7 +333,7 @@ function calculateNodeDensity(data) {
 function filterNodesByDensity(densityScores) {
     // Filter nodes with at least 2 connections
     const filteredScores = [...densityScores.entries()]
-        .filter(([nodeId, score]) => score >= 2);
+        .filter(([_nodeId, score]) => score >= 2);
     
     // Sort by density score and take top 20%
     const sortedNodes = filteredScores
@@ -346,8 +346,8 @@ function filterNodesByDensity(densityScores) {
 function updateDensityStats() {
     // Simplified: just log density info for debugging
     if (window.densityInfo) {
-        const percentage = ((window.densityInfo.filteredNodes / window.densityInfo.totalNodes) * 100).toFixed(1);
-        console.log(`Densidade: ${window.densityInfo.filteredNodes} de ${window.densityInfo.totalNodes} nós (${percentage}%)`);
+        // const percentage = ((window.densityInfo.filteredNodes / window.densityInfo.totalNodes) * 100).toFixed(1);
+        // Density info updated
     }
 }
 
@@ -375,7 +375,7 @@ function applyNetworkFilters() {
             return filteredNodeIds.has(sourceId) && filteredNodeIds.has(targetId);
         });
         
-        console.log(`Densidade 20%: ${filteredNodes.length} nós de ${processedData.nodes.length} (${((filteredNodes.length/processedData.nodes.length)*100).toFixed(1)}%)`);
+        // Density filter applied
     }
     
     // Apply top expenses filter
@@ -403,11 +403,11 @@ function applyNetworkFilters() {
 
 function updateStatisticsForFilteredData(filteredData) {
     if (!window.currentAggregatedData || !filteredData) {
-        console.log('Missing data for statistics update');
+        // Missing data for statistics update
         return;
     }
     
-    console.log('Updating statistics for filtered data - nodes:', filteredData.nodes.length, 'links:', filteredData.links.length);
+    // Updating statistics for filtered data
     
     // Get the labels of filtered nodes for easier matching
     const filteredDeputados = new Set(
@@ -428,7 +428,7 @@ function updateStatisticsForFilteredData(filteredData) {
         return filteredDeputados.has(deputadoLabel) && filteredFornecedores.has(fornecedorLabel);
     });
     
-    console.log('Filtered aggregated data records:', filteredAggregatedData.length);
+    // Filtered aggregated data processed
     
     // Calculate filtered statistics
     const deputados = new Set(filteredAggregatedData.map(r => `${r.nome_parlamentar} (${r.sigla_partido})`));
@@ -442,7 +442,7 @@ function updateStatisticsForFilteredData(filteredData) {
     document.getElementById('totalValue').textContent = `${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     document.getElementById('totalTransactions').textContent = totalTransactions.toLocaleString();
     
-    console.log('Updated stats - Deputados:', deputados.size, 'Fornecedores:', fornecedores.size, 'Value:', totalValue);
+    // Statistics updated
     
     // Update category pie chart with filtered data
     createCategoryPieChart(filteredAggregatedData);
@@ -496,7 +496,7 @@ function createCategoryPieChart(data) {
     
     // Draw pie slices
     let currentAngle = -Math.PI / 2; // Start from top
-    categoryData.forEach(([category, value], index) => {
+    categoryData.forEach(([_category, value], index) => {
         const sliceAngle = (value / total) * 2 * Math.PI;
         const color = colors[index % colors.length];
         
@@ -607,7 +607,7 @@ function createTimeSeriesChart(detailsData) {
     const barPositions = [];
     
     // Draw transaction bars with gradient and improved visuals
-    sortedData.forEach((item, index) => {
+    sortedData.forEach((item, _index) => {
         const date = new Date(item.data_emissao);
         const value = Number(item.valor_liquido);
         
@@ -887,7 +887,7 @@ function initializeVisualization() {
     
     // Check if we have data to visualize
     if (!filteredData.nodes || filteredData.nodes.length === 0) {
-        console.log('Nenhum dado para visualizar');
+        // No data to visualize
         if (loadingEl) {
             loadingEl.style.display = 'flex';
             loadingEl.innerHTML = 'Nenhum dado encontrado com os filtros aplicados';
@@ -895,7 +895,7 @@ function initializeVisualization() {
         return;
     }
     
-    console.log('🎨 Criando visualização D3.js...');
+    // Creating D3.js visualization
     
     const svg = d3.select("#network-svg");
     const container = svg.node().parentElement;
@@ -939,7 +939,7 @@ function initializeVisualization() {
         target: d.target
     }));
     
-    console.log(`Creating D3 visualization: ${nodes.length} nodes, ${links.length} links`);
+    // D3 visualization setup
     
     // Function to calculate node radius
     const getNodeRadius = (d) => {
@@ -1140,7 +1140,7 @@ function initializeVisualization() {
     // Initial zoom out to show full network
     setTimeout(fitToView, 2000);
     
-    console.log('✅ D3.js visualization created successfully!');
+    // D3.js visualization created successfully
     
     // Apply initial theme colors
     updateD3Colors();
@@ -1286,7 +1286,7 @@ async function showNodeInfo(nodeData) {
         if (nodeData.type === 'deputado') {
             const totalTransactions = detailsData.length;
             const totalValue = detailsData.reduce((sum, item) => sum + Number(item.valor_liquido), 0);
-            console.log(`📊 Deputado details - Transactions: ${totalTransactions}, Value: ${totalValue}`);
+            // Deputado details loaded
             
             contentHTML = `
                 <div class="pb-3 border-b border-gray-600 mb-3">
@@ -1335,7 +1335,7 @@ async function showNodeInfo(nodeData) {
         } else {
             const totalTransactions = detailsData.length;
             const totalValue = detailsData.reduce((sum, item) => sum + Number(item.valor_liquido), 0);
-            console.log(`📊 Fornecedor details - Transactions: ${totalTransactions}, Value: ${totalValue}`);
+            // Fornecedor details loaded
             
             contentHTML = `
                 <div class="pb-3 border-b border-gray-600 mb-3">
@@ -1430,12 +1430,12 @@ async function getEntityDetails(nodeData) {
         `;
     }
     
-    console.log('🔍 Executing entity details query:', query);
+    // Executing entity details query
     const result = await window.duckdbAPI.query(query);
     return result.toArray();
 }
 
-function highlightNodeInVisualization(entityName, entityType) {
+function highlightNodeInVisualization(entityName, entityType) { // Used in HTML onclick handlers
     if (!window.currentVisualization) return;
     
     // Find the target node
@@ -1807,5 +1807,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.updateConnectionStatus('error', 'Falha na inicialização');
     });
 });
+
+// Make functions available globally for onclick handlers
+window.highlightNodeInVisualization = highlightNodeInVisualization;
 
 export { loadData, setupEventListeners, initializeVisualization };

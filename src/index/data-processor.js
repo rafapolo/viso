@@ -27,7 +27,7 @@ export class DataProcessor {
       // Apply network filters
       this.processedData = this.applyNetworkFilters(networkData, filters);
 
-      console.log(`📊 Processed ${this.rawData.length} records into ${this.processedData.nodes.length} nodes and ${this.processedData.links.length} links`);
+      // Data processed into network format
       
       return this.processedData;
 
@@ -207,7 +207,7 @@ export class DataProcessor {
       topNodes.includes(link.source) && topNodes.includes(link.target)
     );
 
-    console.log(`🔗 Density filter: ${filteredNodes.length}/${networkData.nodes.length} nodes, ${filteredLinks.length}/${networkData.links.length} links`);
+    // Density filter applied
 
     return {
       nodes: filteredNodes,
@@ -235,7 +235,7 @@ export class DataProcessor {
 
     const filteredNodes = networkData.nodes.filter(node => topNodes.includes(node.id));
 
-    console.log(`💰 Top expenses filter: ${filteredNodes.length}/${networkData.nodes.length} nodes, ${filteredLinks.length}/${networkData.links.length} links`);
+    // Top expenses filter applied
 
     return {
       nodes: filteredNodes,
@@ -430,7 +430,7 @@ export class DataProcessor {
    * @param {Array} transactionData - Transaction data
    * @returns {Array} Pie chart data
    */
-  createCategoryPieChartData(transactionData) {
+  createCategoryPieChartData(_transactionData) {
     const categoryTotals = new Map();
 
     // Handle empty or undefined data
