@@ -4,119 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viso ↦ Despesas ↦ DB</title>
-    <link href="https://fonts.googleapis.com/css2?family=Monda:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
-    <link rel="shortcut icon" type="image/x-icon" href="https://extrapolo.com/favicon.ico">
-    <script type="module">
-        import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/+esm';
-        
-        let db;
-        let conn;
-        
-        window.duckdbAPI = {
-            async initDuckDB() {
-                console.log('🚀 Initializing DuckDB...');
-                
-                const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-                const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
-                const worker = await duckdb.createWorker(bundle.mainWorker);
-                const logger = new duckdb.ConsoleLogger();
-                db = new duckdb.AsyncDuckDB(logger, worker);
-                await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-                
-                conn = await db.connect();
-                console.log('✅ DuckDB initialized');
-                
-                return { db, conn };
-            },
-            
-            async loadParquetData() {
-                try {
-                    console.log('📁 Loading parquet file into DuckDB...');
-                    
-                    const response = await fetch('./public/despesas.parquet');
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    const arrayBuffer = await response.arrayBuffer();
-                    console.log(`📊 Downloaded ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)} MB`);
-                    
-                    await db.registerFileBuffer('despesas.parquet', new Uint8Array(arrayBuffer));
-                    
-                    await conn.query(`
-                        CREATE VIEW despesas AS 
-                        SELECT * FROM read_parquet('despesas.parquet')
-                    `);
-                    
-                    const countResult = await conn.query("SELECT COUNT(*) as total FROM despesas");
-                    const totalRecords = countResult.toArray()[0].total;
-                    console.log(`✅ Loaded ${totalRecords.toLocaleString()} records from parquet`);
-                    
-                    return totalRecords;
-                    
-                } catch (error) {
-                    console.error('❌ Error loading parquet:', error);
-                    throw error;
-                }
-            },
-            
-            async executeQuery(sql) {
-                try {
-                    const startTime = performance.now();
-                    const result = await conn.query(sql);
-                    const endTime = performance.now();
-                    const executionTime = endTime - startTime;
-                    
-                    return {
-                        data: result.toArray(),
-                        columns: result.schema.fields.map(f => f.name),
-                        rowCount: result.numRows,
-                        executionTime: executionTime
-                    };
-                } catch (error) {
-                    throw new Error(error.message);
-                }
-            },
-            
-            async getSchema() {
-                try {
-                    const result = await conn.query("DESCRIBE despesas");
-                    return result.toArray();
-                } catch (error) {
-                    console.error('Error getting schema:', error);
-                    return [];
-                }
-            }
-        };
-    </script>
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="/node_modules/monaco-editor/min/vs/editor/editor.main.css">
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        'duckdb': {
-                            50: '#fffbeb',
-                            100: '#fef3c7',
-                            200: '#fde68a',
-                            300: '#fcd34d',
-                            400: '#fbbf24', 
-                            500: '#FFC000', // DuckDB yellow
-                            600: '#d97706',
-                            700: '#b45309',
-                            800: '#92400e',
-                            900: '#78350f'
-                        }
-                    },
-                    fontFamily: {
-                        'sans': ['Monda', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
-                    }
-                }
-            }
-        }
+        // Set up Monaco Editor base URL
+        var require = { paths: { 'vs': '/node_modules/monaco-editor/min/vs' } };
     </script>
+    <script src="/node_modules/monaco-editor/min/vs/loader.js"></script>
+    <script src="/node_modules/monaco-editor/min/vs/editor/editor.main.nls.js"></script>
+    <script src="/node_modules/monaco-editor/min/vs/editor/editor.main.js"></script>
+    <script type="module" src="./src/db-api.js"></script>
+    <script src="./src/db-config.js"></script>
     <style>
         .loading-spinner {
             display: inline-block;
@@ -133,13 +31,22 @@
         }
 
         .resize-handle {
-            height: 4px;
+            height: 6px;
             cursor: row-resize;
             position: relative;
+            transition: all 0.2s ease;
+            user-select: none;
         }
 
         .resize-handle:hover {
-            background-color: #FFC000;
+            background-color: #FFC000 !important;
+            height: 8px;
+        }
+
+        .resize-handle:active,
+        .resize-handle.active {
+            background-color: #FFC000 !important;
+            height: 8px;
         }
 
         /* Modern card-based query button types */
@@ -235,47 +142,6 @@
         
         
 
-        /* Tooltip styles */
-        .tooltip {
-            position: relative;
-        }
-        
-        .tooltip::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            left: 50%;
-            bottom: 100%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 11px;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            z-index: 1000;
-            margin-bottom: 5px;
-        }
-        
-        .tooltip::before {
-            content: '';
-            position: absolute;
-            left: 50%;
-            bottom: 100%;
-            transform: translateX(-50%);
-            border: 5px solid transparent;
-            border-top-color: rgba(0, 0, 0, 0.9);
-            opacity: 0;
-            transition: opacity 0.2s;
-            z-index: 1000;
-        }
-        
-        .tooltip:hover::after,
-        .tooltip:hover::before {
-            opacity: 1;
-        }
 
         /* Enhanced Typography and Visual Hierarchy */
         body {
@@ -294,7 +160,7 @@
         .sample-query {
             font-family: 'Inter', sans-serif;
             font-weight: 500;
-            font-size: 0.75rem; /* 12px - replaces text-xs */
+            font-size: 13px;
             line-height: 1.5;
             letter-spacing: -0.005em;
             padding: 8px 12px;
@@ -398,74 +264,16 @@
             outline-offset: 2px;
         }
 
-        /* Enhanced Tab System Styling */
-        #tabs-container > div {
+
+        /* Enhanced general button styling */
+        button:not(.sample-query) {
             font-family: 'Inter', sans-serif;
             font-weight: 500;
             font-size: 13px;
-            background: linear-gradient(145deg, #f8fafc, #f1f5f9);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-
-        #tabs-container > div:hover {
-            background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-        }
-
-        #tabs-container > div.tab-active {
-            background: linear-gradient(145deg, #ffffff, #f8fafc);
-            border-bottom-color: transparent;
-            z-index: 10;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1),
-                        0 -1px 0 rgba(255, 255, 255, 1);
-        }
-
-        .dark #tabs-container > div {
-            background: linear-gradient(145deg, #374151, #1f2937);
-            border-color: rgba(255, 255, 255, 0.1);
-            color: #f9fafb;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-        }
-
-        .dark #tabs-container > div:hover {
-            background: linear-gradient(145deg, #4b5563, #374151);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-        }
-
-        .dark #tabs-container > div.tab-active {
-            background: linear-gradient(145deg, #1f2937, #111827);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3),
-                        0 -1px 0 rgba(31, 41, 55, 1);
-        }
-
-        /* Enhanced New Tab Button */
-        #new-tab-btn {
-            font-family: 'Inter', sans-serif;
-            font-weight: 500;
-            background: linear-gradient(145deg, #3b82f6, #2563eb);
-            border: none;
-            color: white;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
-        }
-
-        #new-tab-btn:hover {
-            background: linear-gradient(145deg, #2563eb, #1d4ed8);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
-        }
-
-        /* Enhanced general button styling */
-        button:not(.sample-query):not(#new-tab-btn) {
-            font-family: 'Inter', sans-serif;
-            font-weight: 500;
             transition: all 0.2s ease;
         }
 
-        button:not(.sample-query):not(#new-tab-btn):hover {
+        button:not(.sample-query):hover {
             transform: translateY(-1px);
         }
 
@@ -481,6 +289,140 @@
 
         table td {
             font-weight: 400;
+        }
+
+        /* Sankey diagram styles */
+        .sankey-container {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: inherit;
+        }
+
+        .sankey-container .node rect,
+        #sankey .node rect {
+            cursor: move;
+            fill-opacity: .9;
+            shape-rendering: crispEdges;
+        }
+
+        .sankey-container .node text,
+        #sankey .node text {
+            pointer-events: none;
+            text-shadow: 0 1px 0 rgba(0,0,0,0.8);
+            font-size: 12px;
+            fill: currentColor;
+        }
+
+        .sankey-container .link,
+        #sankey .link {
+            fill: none;
+            stroke-opacity: .5;
+        }
+
+        .sankey-container .link:hover,
+        #sankey .link:hover {
+            stroke-opacity: .8;
+        }
+
+        /* Enhanced Sankey hover styles */
+        .sankey-container .link,
+        #sankey .link {
+            transition: stroke-opacity 0.15s ease, filter 0.15s ease;
+            cursor: pointer;
+        }
+
+        .sankey-container .link:hover,
+        #sankey .link:hover {
+            stroke-opacity: 0.9 !important;
+            filter: drop-shadow(0 0 6px rgba(255, 192, 0, 0.4));
+        }
+
+        .sankey-container .node rect,
+        #sankey .node rect {
+            transition: fill-opacity 0.15s ease, filter 0.15s ease;
+            cursor: pointer;
+        }
+
+        .sankey-container .node:hover rect,
+        #sankey .node:hover rect {
+            fill-opacity: 1;
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+        }
+
+        .sankey-container .node text,
+        #sankey .node text {
+            transition: fill 0.15s ease;
+        }
+
+        .sankey-container .node:hover text,
+        #sankey .node:hover text {
+            fill: #ffffff;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+        }
+
+        /* Sankey highlight states */
+        .sankey-container .link.highlighted,
+        #sankey .link.highlighted {
+            stroke-opacity: 1 !important;
+            filter: drop-shadow(0 0 10px rgba(255, 192, 0, 0.6));
+            z-index: 10;
+        }
+
+        .sankey-container .node.highlighted rect,
+        #sankey .node.highlighted rect {
+            fill-opacity: 1;
+            filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5));
+        }
+
+        .sankey-container .node.highlighted text,
+        #sankey .node.highlighted text {
+            fill: #ffffff;
+            font-weight: 600;
+        }
+
+        /* Fade out non-related elements when highlighting */
+        .sankey-container.highlighting .link:not(.highlighted),
+        #sankey.highlighting .link:not(.highlighted) {
+            stroke-opacity: 0.1 !important;
+        }
+
+        .sankey-container.highlighting .node:not(.highlighted) rect,
+        #sankey.highlighting .node:not(.highlighted) rect {
+            fill-opacity: 0.3;
+        }
+
+        .sankey-container.highlighting .node:not(.highlighted) text,
+        #sankey.highlighting .node:not(.highlighted) text {
+            fill: #666;
+        }
+
+        /* Tooltip specific styles */
+        .sankey-tooltip {
+            font-feature-settings: 'tnum' 1;
+        }
+
+        .sankey-tooltip .tooltip-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #FFC000;
+        }
+
+        .sankey-tooltip .tooltip-detail {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            font-size: 12px;
+        }
+
+        .sankey-tooltip .tooltip-detail .label {
+            opacity: 0.8;
+        }
+
+        .sankey-tooltip .tooltip-detail .value {
+            font-weight: 500;
+            color: #ffffff;
         }
     </style>
 </head>
@@ -512,6 +454,10 @@
                            class="w-full px-3 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-duckdb-500 focus:border-transparent">
                 </div>
                 
+                <!-- Fluxos Button -->
+                <div class="mb-3">
+                    
+                </div>
                 
                 <div id="sample-queries-list" class="space-y-1">
                     <!-- Exemplos -->
@@ -522,20 +468,50 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
+                        <div class="sample-query" data-id="sankey-fluxos">
+                            📊 Fluxos para top 100 Empresas
+                        </div>
                         <div class="category-content category-exemplos space-y-1" style="display: block;">
-                    <div class="sample-query tooltip" data-query="SELECT * FROM despesas LIMIT 10" data-tooltip="Visualização rápida dos dados - Execução: ~0.1s" data-id="ver-primeiros-10-registros">
+                    <div class="sample-query" data-query="SELECT *
+FROM despesas
+LIMIT 10" data-id="ver-primeiros-10-registros">
                         📄 Ver primeiros 10 registros
                     </div>
-                    <div class="sample-query tooltip" data-query="SELECT fornecedor, COUNT(*) as total, SUM(valor_liquido) as value FROM despesas GROUP BY fornecedor ORDER BY value DESC LIMIT 15" data-tooltip="Ranking de fornecedores por receita total - Execução: ~0.5s" data-id="top-fornecedores-por-valor">
+                    <div class="sample-query" data-query="SELECT fornecedor,
+    COUNT(*) AS total,
+    SUM(valor_liquido) AS value
+FROM despesas
+GROUP BY fornecedor
+ORDER BY value DESC
+LIMIT 15" data-id="top-fornecedores-por-valor">
                         📊 Top fornecedores por valor
                     </div>
-                    <div class="sample-query" data-query="SELECT categoria_despesa, COUNT(*) as count, AVG(valor_liquido) as avg FROM despesas GROUP BY categoria_despesa ORDER BY count DESC LIMIT 10" data-id="top-categorias">
+                    <div class="sample-query" data-query="SELECT categoria_despesa,
+    COUNT(*) AS count,
+    AVG(valor_liquido) AS avg
+FROM despesas
+GROUP BY categoria_despesa
+ORDER BY count DESC
+LIMIT 10" data-id="top-categorias">
                         📈 Top categorias
                     </div>
-                    <div class="sample-query" data-query="SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total DESC LIMIT 20" data-id="top-deputados">
+                    <div class="sample-query" data-query="SELECT nome_parlamentar,
+    sigla_partido,
+    SUM(valor_liquido) AS total
+FROM despesas
+GROUP BY nome_parlamentar, sigla_partido
+ORDER BY total DESC
+LIMIT 20" data-id="top-deputados">
                         👥 Top deputados
                     </div>
-                    <div class="sample-query" data-query="SELECT fornecedor, COUNT(DISTINCT nome_parlamentar) as deputies, SUM(valor_liquido) as total FROM despesas GROUP BY fornecedor HAVING deputies > 5 ORDER BY total DESC LIMIT 15" data-id="fornecedores-multi-deputados">
+                    <div class="sample-query" data-query="SELECT fornecedor,
+    COUNT(DISTINCT nome_parlamentar) AS deputies,
+    SUM(valor_liquido) AS total
+FROM despesas
+GROUP BY fornecedor
+HAVING deputies > 5
+ORDER BY total DESC
+LIMIT 15" data-id="fornecedores-multi-deputados">
                         🏢 Fornecedores multi-deputados
                     </div>
                         </div>
@@ -550,13 +526,44 @@
                             </svg>
                         </div>
                         <div class="category-content category-temporal space-y-1" style="display: none;">
-                    <div class="sample-query" data-query="SELECT EXTRACT(YEAR FROM data_emissao) as ano, EXTRACT(MONTH FROM data_emissao) as mes, SUM(valor_liquido) as total, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano, mes ORDER BY ano DESC, mes DESC LIMIT 24" data-id="tendencias-mensais-2-anos">
+                    <div class="sample-query" data-query="SELECT EXTRACT(YEAR FROM data_emissao) AS ano,
+    EXTRACT(MONTH FROM data_emissao) AS mes,
+    SUM(valor_liquido) AS total,
+    COUNT(*) AS transacoes
+FROM despesas
+WHERE data_emissao IS NOT NULL
+GROUP BY ano, mes
+ORDER BY ano DESC, mes DESC
+LIMIT 24" data-id="tendencias-mensais-2-anos">
                         📅 Tendências mensais (2 anos)
                     </div>
-                    <div class="sample-query" data-query="SELECT CASE EXTRACT(DOW FROM data_emissao) WHEN 0 THEN 'Domingo' WHEN 1 THEN 'Segunda' WHEN 2 THEN 'Terça' WHEN 3 THEN 'Quarta' WHEN 4 THEN 'Quinta' WHEN 5 THEN 'Sexta' WHEN 6 THEN 'Sábado' END as dia_semana, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE data_emissao IS NOT NULL GROUP BY EXTRACT(DOW FROM data_emissao) ORDER BY EXTRACT(DOW FROM data_emissao)" data-id="padrao-por-dia-da-semana">
+                    <div class="sample-query" data-query="SELECT 
+    CASE EXTRACT(DOW FROM data_emissao) 
+        WHEN 0 THEN 'Domingo' 
+        WHEN 1 THEN 'Segunda' 
+        WHEN 2 THEN 'Terça' 
+        WHEN 3 THEN 'Quarta' 
+        WHEN 4 THEN 'Quinta' 
+        WHEN 5 THEN 'Sexta' 
+        WHEN 6 THEN 'Sábado' 
+    END AS dia_semana,
+    COUNT(*) AS total_despesas,
+    SUM(valor_liquido) AS valor_total,
+    AVG(valor_liquido) AS valor_medio
+FROM despesas 
+WHERE data_emissao IS NOT NULL 
+GROUP BY EXTRACT(DOW FROM data_emissao) 
+ORDER BY EXTRACT(DOW FROM data_emissao)" data-id="padrao-por-dia-da-semana">
                         📊 Padrão por dia da semana
                     </div>
-                    <div class="sample-query" data-query="SELECT EXTRACT(YEAR FROM data_emissao) as ano, SUM(valor_liquido) as total_ano, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano ORDER BY ano DESC" data-id="comparacao-ano-a-ano">
+                    <div class="sample-query" data-query="SELECT 
+    EXTRACT(YEAR FROM data_emissao) AS ano,
+    SUM(valor_liquido) AS total_ano,
+    COUNT(*) AS transacoes
+FROM despesas 
+WHERE data_emissao IS NOT NULL 
+GROUP BY ano 
+ORDER BY ano DESC" data-id="comparacao-ano-a-ano">
                         📈 Comparação ano a ano
                     </div>
                         </div>
@@ -571,13 +578,39 @@
                             </svg>
                         </div>
                         <div class="category-content category-category space-y-1" style="display: none;">
-                    <div class="sample-query" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas ORDER BY valor_liquido DESC LIMIT 20" data-id="top-transacoes-mais-caras">
+                    <div class="sample-query" data-query="SELECT 
+    nome_parlamentar,
+    sigla_partido,
+    categoria_despesa,
+    valor_liquido,
+    fornecedor,
+    data_emissao
+FROM despesas 
+ORDER BY valor_liquido DESC 
+LIMIT 20" data-id="top-transacoes-mais-caras">
                         💰 Top transações mais caras
                     </div>
-                    <div class="sample-query" data-query="SELECT categoria_despesa, subcategoria_despesa, COUNT(*) as total_transacoes, SUM(valor_liquido) as total_valor, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY categoria_despesa, subcategoria_despesa ORDER BY total_valor DESC LIMIT 30" data-id="categorias-e-subcategorias">
+                    <div class="sample-query" data-query="SELECT 
+    categoria_despesa,
+    subcategoria_despesa,
+    COUNT(*) AS total_transacoes,
+    SUM(valor_liquido) AS total_valor,
+    AVG(valor_liquido) AS valor_medio
+FROM despesas 
+GROUP BY categoria_despesa, subcategoria_despesa 
+ORDER BY total_valor DESC 
+LIMIT 30" data-id="categorias-e-subcategorias">
                         🏛️ Categorias e subcategorias
                     </div>
-                    <div class="sample-query" data-query="SELECT categoria_despesa, MAX(valor_liquido) as maior_valor, AVG(valor_liquido) as valor_medio, MIN(valor_liquido) as menor_valor, COUNT(*) as total FROM despesas GROUP BY categoria_despesa ORDER BY maior_valor DESC" data-id="estatisticas-por-categoria">
+                    <div class="sample-query" data-query="SELECT 
+    categoria_despesa,
+    MAX(valor_liquido) AS maior_valor,
+    AVG(valor_liquido) AS valor_medio,
+    MIN(valor_liquido) AS menor_valor,
+    COUNT(*) AS total
+FROM despesas 
+GROUP BY categoria_despesa 
+ORDER BY maior_valor DESC" data-id="estatisticas-por-categoria">
                         📊 Estatísticas por categoria
                     </div>
                         </div>
@@ -592,13 +625,41 @@
                             </svg>
                         </div>
                         <div class="category-content category-travel space-y-1" style="display: none;">
-                    <div class="sample-query" data-query="SELECT categoria_despesa, COUNT(*) as total, SUM(valor_liquido) as valor FROM despesas WHERE categoria_despesa ILIKE '%PASSAGEM%' OR categoria_despesa ILIKE '%VEÍCULOS%' OR categoria_despesa ILIKE '%COMBUSTÍVEIS%' OR categoria_despesa ILIKE '%HOSPEDAGEM%' OR categoria_despesa ILIKE '%LOCAÇÃO%' OR categoria_despesa ILIKE '%TÁXI%' GROUP BY categoria_despesa ORDER BY valor DESC" data-id="gastos-relacionados-a-viagens">
+                    <div class="sample-query" data-query="SELECT 
+    categoria_despesa,
+    COUNT(*) AS total,
+    SUM(valor_liquido) AS valor
+FROM despesas 
+WHERE categoria_despesa ILIKE '%PASSAGEM%' 
+   OR categoria_despesa ILIKE '%VEÍCULOS%' 
+   OR categoria_despesa ILIKE '%COMBUSTÍVEIS%' 
+   OR categoria_despesa ILIKE '%HOSPEDAGEM%' 
+   OR categoria_despesa ILIKE '%LOCAÇÃO%' 
+   OR categoria_despesa ILIKE '%TÁXI%' 
+GROUP BY categoria_despesa 
+ORDER BY valor DESC" data-id="gastos-relacionados-a-viagens">
                         ✈️ Gastos relacionados a viagens
                     </div>
-                    <div class="sample-query" data-query="SELECT ano_competencia, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE ano_competencia IS NOT NULL GROUP BY ano_competencia ORDER BY ano_competencia DESC" data-id="despesas-por-ano-de-competencia">
+                    <div class="sample-query" data-query="SELECT 
+    ano_competencia,
+    COUNT(*) AS total_despesas,
+    SUM(valor_liquido) AS valor_total,
+    AVG(valor_liquido) AS valor_medio
+FROM despesas 
+WHERE ano_competencia IS NOT NULL 
+GROUP BY ano_competencia 
+ORDER BY ano_competencia DESC" data-id="despesas-por-ano-de-competencia">
                         📅 Despesas por ano de competência
                     </div>
-                    <div class="sample-query" data-query="SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gastos, COUNT(*) as num_despesas FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total_gastos DESC LIMIT 25" data-id="top-gastos-por-deputado">
+                    <div class="sample-query" data-query="SELECT 
+    nome_parlamentar,
+    sigla_partido,
+    SUM(valor_liquido) AS total_gastos,
+    COUNT(*) AS num_despesas
+FROM despesas 
+GROUP BY nome_parlamentar, sigla_partido 
+ORDER BY total_gastos DESC 
+LIMIT 25" data-id="top-gastos-por-deputado">
                         📍 Top gastos por deputado
                     </div>
                         </div>
@@ -613,16 +674,71 @@
                             </svg>
                         </div>
                         <div class="category-content category-vendor space-y-1" style="display: none;">
-                    <div class="sample-query" data-query="SELECT fornecedor, SUM(valor_liquido) as receita_total, COUNT(*) as total_transacoes, COUNT(DISTINCT nome_parlamentar) as deputados_atendidos, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY fornecedor ORDER BY receita_total DESC LIMIT 20" data-id="top-fornecedores-por-receita">
+                    <div class="sample-query" data-query="SELECT 
+    fornecedor,
+    SUM(valor_liquido) AS receita_total,
+    COUNT(*) AS total_transacoes,
+    COUNT(DISTINCT nome_parlamentar) AS deputados_atendidos,
+    AVG(valor_liquido) AS valor_medio
+FROM despesas 
+GROUP BY fornecedor 
+ORDER BY receita_total DESC 
+LIMIT 20" data-id="top-fornecedores-por-receita">
                         💼 Top fornecedores por receita
                     </div>
-                    <div class="sample-query tooltip" data-query="WITH market_share AS (SELECT fornecedor, SUM(valor_liquido) as receita, (SUM(valor_liquido) * 100.0 / (SELECT SUM(valor_liquido) FROM despesas)) as participacao FROM despesas GROUP BY fornecedor ORDER BY receita DESC) SELECT fornecedor, receita, ROUND(participacao, 2) as participacao_pct FROM market_share LIMIT 15" data-tooltip="Análise avançada com CTE - Market share dos fornecedores - Execução: ~1.2s" data-id="concentracao-do-mercado">
+                    <div class="sample-query" data-query="WITH market_share AS (
+    SELECT 
+        fornecedor,
+        SUM(valor_liquido) AS receita,
+        (SUM(valor_liquido) * 100.0 / (
+            SELECT SUM(valor_liquido) FROM despesas
+        )) AS participacao
+    FROM despesas 
+    GROUP BY fornecedor 
+    ORDER BY receita DESC
+)
+SELECT 
+    fornecedor,
+    receita,
+    ROUND(participacao, 2) AS participacao_pct
+FROM market_share 
+LIMIT 15" data-id="concentracao-do-mercado">
                         📈 Concentração do mercado (%)
                     </div>
-                    <div class="sample-query" data-query="SELECT fornecedor, nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gasto, COUNT(*) as transacoes FROM despesas GROUP BY fornecedor, nome_parlamentar, sigla_partido HAVING SUM(valor_liquido) > 50000 ORDER BY total_gasto DESC LIMIT 30" data-id="relacionamentos-de-alto-valor">
+                    <div class="sample-query" data-query="SELECT 
+    fornecedor,
+    nome_parlamentar,
+    sigla_partido,
+    SUM(valor_liquido) AS total_gasto,
+    COUNT(*) AS transacoes
+FROM despesas 
+GROUP BY fornecedor, nome_parlamentar, sigla_partido 
+HAVING SUM(valor_liquido) > 50000 
+ORDER BY total_gasto DESC 
+LIMIT 30" data-id="relacionamentos-de-alto-valor">
                         🤝 Relacionamentos de alto valor
                     </div>
-                    <div class="sample-query tooltip" data-query="WITH fornecedor_categoria AS (SELECT categoria_despesa, fornecedor, COUNT(*) as num_transacoes, SUM(valor_liquido) as gasto_total, ROW_NUMBER() OVER (PARTITION BY categoria_despesa ORDER BY COUNT(*) DESC, SUM(valor_liquido) DESC) as rank_transacoes FROM despesas GROUP BY categoria_despesa, fornecedor) SELECT categoria_despesa, fornecedor as principal_fornecedor, num_transacoes, gasto_total FROM fornecedor_categoria WHERE rank_transacoes = 1 ORDER BY num_transacoes DESC" data-tooltip="🏆 Análise avançada - Principal fornecedor por categoria - Window functions - Execução: ~2.8s" data-id="principal-fornecedor-por-categoria">
+                    <div class="sample-query" data-query="WITH fornecedor_categoria AS (
+    SELECT 
+        categoria_despesa,
+        fornecedor,
+        COUNT(*) AS num_transacoes,
+        SUM(valor_liquido) AS gasto_total,
+        ROW_NUMBER() OVER (
+            PARTITION BY categoria_despesa 
+            ORDER BY COUNT(*) DESC, SUM(valor_liquido) DESC
+        ) AS rank_transacoes
+    FROM despesas 
+    GROUP BY categoria_despesa, fornecedor
+)
+SELECT 
+    categoria_despesa,
+    fornecedor AS principal_fornecedor,
+    num_transacoes,
+    gasto_total
+FROM fornecedor_categoria 
+WHERE rank_transacoes = 1 
+ORDER BY num_transacoes DESC" data-id="principal-fornecedor-por-categoria">
                         👑 Principal fornecedor por categoria
                     </div>
                         </div>
@@ -637,10 +753,58 @@
                             </svg>
                         </div>
                         <div class="category-content category-parliamentary space-y-1" style="display: none;">
-                            <div class="sample-query" data-query="SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gasto, COUNT(*) as num_transacoes, AVG(valor_liquido) as gasto_medio FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total_gasto DESC LIMIT 20" data-id="ranking-de-gastos-por-deputado">
+                            <div class="sample-query" data-query="SELECT 
+    nome_parlamentar,
+    sigla_partido,
+    SUM(valor_liquido) AS total_gasto,
+    COUNT(*) AS num_transacoes,
+    AVG(valor_liquido) AS gasto_medio
+FROM despesas 
+GROUP BY nome_parlamentar, sigla_partido 
+ORDER BY total_gasto DESC 
+LIMIT 20" data-id="ranking-de-gastos-por-deputado">
                                 📊 Ranking de gastos por deputado
                             </div>
-                            <div class="sample-query" data-query="WITH activity_stats AS (SELECT nome_parlamentar, sigla_partido, COUNT(*) as num_transacoes, SUM(valor_liquido) as total_gasto FROM despesas GROUP BY nome_parlamentar, sigla_partido), top_active AS (SELECT 'Mais ativos' as tipo, nome_parlamentar, sigla_partido, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes DESC LIMIT 10), least_active AS (SELECT 'Menos ativos' as tipo, nome_parlamentar, sigla_partido, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes ASC LIMIT 10) SELECT * FROM (SELECT * FROM top_active UNION ALL SELECT * FROM least_active) ORDER BY CASE WHEN tipo = 'Mais ativos' THEN 1 ELSE 2 END, num_transacoes DESC" data-id="deputados-mais-menos-ativos">
+                            <div class="sample-query" data-query="WITH activity_stats AS (
+    SELECT 
+        nome_parlamentar,
+        sigla_partido,
+        COUNT(*) AS num_transacoes,
+        SUM(valor_liquido) AS total_gasto
+    FROM despesas 
+    GROUP BY nome_parlamentar, sigla_partido
+),
+top_active AS (
+    SELECT 
+        'Mais ativos' AS tipo,
+        nome_parlamentar,
+        sigla_partido,
+        num_transacoes,
+        total_gasto
+    FROM activity_stats 
+    ORDER BY num_transacoes DESC 
+    LIMIT 10
+),
+least_active AS (
+    SELECT 
+        'Menos ativos' AS tipo,
+        nome_parlamentar,
+        sigla_partido,
+        num_transacoes,
+        total_gasto
+    FROM activity_stats 
+    ORDER BY num_transacoes ASC 
+    LIMIT 10
+)
+SELECT * 
+FROM (
+    SELECT * FROM top_active 
+    UNION ALL 
+    SELECT * FROM least_active
+) 
+ORDER BY 
+    CASE WHEN tipo = 'Mais ativos' THEN 1 ELSE 2 END,
+    num_transacoes DESC" data-id="deputados-mais-menos-ativos">
                                 🎯 Deputados mais/menos ativos
                             </div>
                         </div>
@@ -655,19 +819,93 @@
                             </svg>
                         </div>
                         <div class="category-content category-audit space-y-1" style="display: none;">
-                            <div class="sample-query tooltip mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao, COUNT(*) as duplicatas FROM despesas GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao HAVING COUNT(*) > 1 ORDER BY duplicatas DESC, valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta possíveis duplicatas - Execução: ~2.1s" data-id="possiveis-despesas-duplicadas">
+                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT 
+    nome_parlamentar,
+    sigla_partido,
+    categoria_despesa,
+    fornecedor,
+    valor_liquido,
+    data_emissao,
+    COUNT(*) AS duplicatas
+FROM despesas 
+GROUP BY 
+    nome_parlamentar,
+    sigla_partido,
+    categoria_despesa,
+    fornecedor,
+    valor_liquido,
+    data_emissao 
+HAVING COUNT(*) > 1 
+ORDER BY duplicatas DESC, valor_liquido DESC 
+LIMIT 20" data-id="possiveis-despesas-duplicadas">
                                 🔄 Possíveis despesas duplicadas
                             </div>
-                            <div class="sample-query tooltip mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT valor_liquido, COUNT(*) as frequencia FROM despesas WHERE valor_liquido % 100 = 0 AND valor_liquido >= 1000 GROUP BY valor_liquido ORDER BY frequencia DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Identifica valores redondos suspeitos - Execução: ~0.8s" data-id="valores-redondos-suspeitos">
+                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT 
+    valor_liquido,
+    COUNT(*) AS frequencia
+FROM despesas 
+WHERE valor_liquido % 100 = 0 
+  AND valor_liquido >= 1000 
+GROUP BY valor_liquido 
+ORDER BY frequencia DESC 
+LIMIT 20" data-id="valores-redondos-suspeitos">
                                 🎯 Valores redondos suspeitos
                             </div>
-                            <div class="sample-query tooltip mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas WHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) AND valor_liquido > 5000 ORDER BY valor_liquido DESC LIMIT 25" data-tooltip="⚠️ Auditoria - Gastos suspeitos em fins de semana - Execução: ~1.3s" data-id="gastos-altos-em-fins-de-semana">
+                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT 
+    nome_parlamentar,
+    sigla_partido,
+    categoria_despesa,
+    valor_liquido,
+    fornecedor,
+    data_emissao
+FROM despesas 
+WHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) 
+  AND valor_liquido > 5000 
+ORDER BY valor_liquido DESC 
+LIMIT 25" data-id="gastos-altos-em-fins-de-semana">
                                 🏖️ Gastos altos em fins de semana
                             </div>
-                            <div class="sample-query tooltip mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH outliers AS (SELECT *, (valor_liquido - AVG(valor_liquido) OVER (PARTITION BY categoria_despesa)) / STDDEV(valor_liquido) OVER (PARTITION BY categoria_despesa) as z_score FROM despesas WHERE valor_liquido IS NOT NULL) SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, ROUND(z_score, 2) as desvio_padrao FROM outliers WHERE ABS(z_score) > 3 ORDER BY ABS(z_score) DESC LIMIT 30" data-tooltip="🧮 Análise estatística avançada - Window functions - Execução: ~3.2s" data-id="outliers-estatisticos">
+                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="WITH outliers AS (
+    SELECT *,
+        (valor_liquido - AVG(valor_liquido) OVER (
+            PARTITION BY categoria_despesa
+        )) / STDDEV(valor_liquido) OVER (
+            PARTITION BY categoria_despesa
+        ) AS z_score
+    FROM despesas 
+    WHERE valor_liquido IS NOT NULL
+)
+SELECT 
+    nome_parlamentar,
+    sigla_partido,
+    categoria_despesa,
+    valor_liquido,
+    fornecedor,
+    ROUND(z_score, 2) AS desvio_padrao
+FROM outliers 
+WHERE ABS(z_score) > 3 
+ORDER BY ABS(z_score) DESC 
+LIMIT 30" data-id="outliers-estatisticos">
                                 📊 Outliers estatísticos (Z > 3)
                             </div>
-                            <div class="sample-query tooltip mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, COUNT(*) as frequencia FROM despesas WHERE valor_liquido > 50000 GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor HAVING COUNT(*) > 1 ORDER BY valor_liquido DESC LIMIT 20" data-tooltip="⚠️ Auditoria - Detecta valores altos repetidos entre mesmas partes - Execução: ~0.9s" data-id="valores-altos-duplicados">
+                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT 
+    nome_parlamentar,
+    sigla_partido,
+    categoria_despesa,
+    valor_liquido,
+    fornecedor,
+    COUNT(*) AS frequencia
+FROM despesas 
+WHERE valor_liquido > 50000 
+GROUP BY 
+    nome_parlamentar,
+    sigla_partido,
+    categoria_despesa,
+    valor_liquido,
+    fornecedor 
+HAVING COUNT(*) > 1 
+ORDER BY valor_liquido DESC 
+LIMIT 20" data-id="valores-altos-duplicados">
                                 ⚖️ Valores altos duplicados
                             </div>
                         </div>
@@ -680,13 +918,7 @@
         <!-- Main Content -->
         <div class="flex-1 flex flex-col min-w-0">
             <div class="h-16 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-5 justify-between">
-                <div class="flex items-center gap-1">
-                    <div id="tabs-container" class="flex items-center gap-1">
-                        <!-- Tabs will be dynamically generated here -->
-                    </div>
-                    <button id="new-tab-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors ml-2">
-                        + Nova
-                    </button>
+                <div class="flex items-center gap-3">
                 </div>
                 
                 <div class="flex items-center gap-3">
@@ -708,7 +940,19 @@
                     
                     <div class="flex-1 bg-gray-50 dark:bg-gray-950 min-h-0 flex flex-col min-w-0">
                         <div id="results-container" class="flex-1 overflow-auto min-w-0">
-                            <!-- Results containers will be dynamically generated here -->
+                            <div id="results" class="h-full flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 gap-2">
+                                <div class="text-5xl opacity-30">📊</div>
+                                <div>Execute uma consulta para ver os resultados</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sankey Diagram Container -->
+                        <div id="sankey-container" class="flex-1 overflow-auto min-w-0 hidden">
+                            <div class="p-4">
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Visualização dos fornecedores com mais de 100 registros</p>
+                                <div id="sankey-loading" class="text-center py-8 text-gray-500 dark:text-gray-400">Carregando dados...</div>
+                                <svg id="sankey" width="100%" height="600" class="border border-gray-300 dark:border-gray-600 rounded"></svg>
+                            </div>
                         </div>
                         
                         <!-- Pagination Controls -->
@@ -745,21 +989,21 @@
                     </div>
                 </div>
                 
-                <div class="resize-handle h-1 bg-gray-300 dark:bg-gray-700 hover:bg-duckdb-500 transition-colors" id="resize-handle"></div>
+                <div class="resize-handle bg-gray-300 dark:bg-gray-700 hover:bg-duckdb-500 transition-colors" id="resize-handle" title="Arraste para redimensionar"></div>
 
                 <div class="editor-container h-80 border-b border-gray-300 dark:border-gray-700 min-w-0">
                     <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 gap-2">
                         <button id="run-query-btn" class="px-3 py-1.5 bg-duckdb-500 text-black rounded text-xs hover:bg-duckdb-600 transition-colors disabled:opacity-50 flex items-center gap-1.5" disabled>
-                            ▶️ Executar
+                            ▶️ 
                         </button>
                         <button id="clear-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5">
-                            🗑️ Limpar
+                            🗑️
                         </button>
                         <div class="flex-1"></div>
                         <span class="text-xs text-gray-500 dark:text-gray-400">Ctrl+Enter para executar</span>
                     </div>
-                    <div id="editors-container" class="h-[calc(100%-2.5rem)] relative">
-                        <!-- Editor containers will be dynamically generated here -->
+                    <div id="editor" class="h-[calc(100%-2.5rem)] relative">
+                        <!-- Monaco editor will be initialized here -->
                     </div>
                 </div>
             </div>
@@ -786,1195 +1030,14 @@
                 </div>
             </div>
             
-            <div id="panel-content" class="px-4 pt-4 pb-2 flex-1 overflow-y-auto">
-                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Esquema: despesas</div>
+            <div id="panel-content" class="px-4 pb-2 flex-1 overflow-y-auto min-h-0">
                 <div id="schema-tree">
-                    <div class="text-gray-500 dark:text-gray-400 text-xs py-8 text-center">Carregando...</div>
+                    <div class="text-gray-500 dark:text-gray-400 text-xs text-center">Carregando...</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        let currentResults = null;
-        let tabs = {};
-        let activeTabId = null;
-        let tabCounter = 0;
-        
-        // Pagination constants
-        const ROWS_PER_PAGE = 100;
-        const MAX_VISIBLE_PAGES = 10;
-        
-        async function initializeApp() {
-            try {
-                // Initialize DuckDB
-                await window.duckdbAPI.initDuckDB();
-                
-                // Load parquet data
-                updateStatus('Carregando dados...');
-                const totalRecords = await window.duckdbAPI.loadParquetData();
-                
-                // Load schema
-                updateStatus('Carregando esquema...');
-                await loadSchema();
-                
-                
-                // Initialize Monaco Editor
-                updateStatus('Configurando editor...');
-                await initializeEditor();
-                
-                // Setup event listeners
-                setupEventListeners();
-                
-                // Enable controls
-                const runBtn = document.getElementById('run-query-btn');
-                const exportBtn = document.getElementById('export-btn');
-                if (runBtn) runBtn.disabled = false;
-                if (exportBtn) exportBtn.disabled = false;
-                
-                updateStatus(`despesas - ${totalRecords.toLocaleString()} registros`);
-                
-            } catch (error) {
-                console.error('Initialization error:', error);
-                updateStatus('Erro: ' + error.message, true);
-            }
-        }
-        
-        function updateStatus(message, isError = false) {
-            const statusEl = document.getElementById('connection-status');
-            if (statusEl) {
-                statusEl.innerHTML = isError ? 
-                    `❌ ${message}` : 
-                    `✅ ${message}`;
-                statusEl.className = isError ? 'text-xs text-red-500 dark:text-red-400' : 'text-xs text-duckdb-500';
-            }
-        }
-        
-        function setDisconnectedStatus() {
-            const statusEl = document.getElementById('connection-status');
-            if (statusEl) {
-                statusEl.innerHTML = '❌ Desconectado';
-                statusEl.className = 'text-xs text-red-500 dark:text-red-400';
-            }
-        }
-        
-        function getDataTypeIcon(columnType) {
-            const type = columnType.toUpperCase();
-            
-            // String/Text types
-            if (type.includes('VARCHAR') || type.includes('TEXT') || type.includes('CHAR') || type.includes('STRING')) {
-                return '📝';
-            }
-            
-            // Integer types
-            if (type.includes('BIGINT') || type.includes('INTEGER') || type.includes('INT') || type.includes('TINYINT') || type.includes('SMALLINT')) {
-                return '🔢';
-            }
-            
-            // Decimal/Float types
-            if (type.includes('DOUBLE') || type.includes('FLOAT') || type.includes('REAL') || type.includes('DECIMAL') || type.includes('NUMERIC')) {
-                return '#️⃣';
-            }
-            
-            // Date/Time types
-            if (type.includes('TIMESTAMP') || type.includes('DATETIME') || type.includes('DATE') || type.includes('TIME')) {
-                return '🕐';
-            }
-            
-            // Boolean types
-            if (type.includes('BOOLEAN') || type.includes('BOOL') || type.includes('BIT')) {
-                return '☑️';
-            }
-            
-            // JSON/Object types
-            if (type.includes('JSON') || type.includes('OBJECT')) {
-                return '🧩';
-            }
-            
-            // Array/List types
-            if (type.includes('ARRAY') || type.includes('LIST')) {
-                return '📋';
-            }
-            
-            // UUID types
-            if (type.includes('UUID')) {
-                return '🆔';
-            }
-            
-            // Binary/Blob types
-            if (type.includes('BLOB') || type.includes('BINARY') || type.includes('VARBINARY')) {
-                return '📦';
-            }
-            
-            // Default fallback
-            return '📌';
-        }
-        
-        // Tab Management Functions
-        function createNewTab(name = null) {
-            tabCounter++;
-            const tabId = `tab-${tabCounter}`;
-            const tabName = name || `Consulta ${tabCounter}`;
-            
-            // Create tab data structure
-            tabs[tabId] = {
-                id: tabId,
-                name: tabName,
-                editor: null,
-                results: null,
-                currentPage: 1,
-                totalPages: 0
-            };
-            
-            // Create tab HTML elements
-            createTabElements(tabId, tabName);
-            
-            // Switch to new tab
-            switchToTab(tabId);
-            
-            return tabId;
-        }
-        
-        function createTabElements(tabId, tabName) {
-            // Create tab button
-            const tabButton = document.createElement('div');
-            tabButton.className = 'flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-800 border border-gray-400 dark:border-gray-600 border-b-0 cursor-pointer text-xs rounded-t gap-2 min-w-32';
-            tabButton.dataset.tabId = tabId;
-            tabButton.innerHTML = `
-                <span>📝</span>
-                <span class="tab-name">${tabName}</span>
-                <span class="opacity-50 cursor-pointer p-0.5 rounded hover:opacity-100 hover:bg-gray-300 dark:hover:bg-gray-700 close-tab" data-tab-id="${tabId}">×</span>
-            `;
-            
-            // Add click handlers
-            tabButton.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('close-tab')) {
-                    switchToTab(tabId);
-                }
-            });
-            
-            tabButton.querySelector('.close-tab').addEventListener('click', (e) => {
-                e.stopPropagation();
-                closeTab(tabId);
-            });
-            
-            // Create editor container
-            const editorContainer = document.createElement('div');
-            editorContainer.id = `editor-${tabId}`;
-            editorContainer.className = 'w-full h-full hidden';
-            
-            // Create results container
-            const resultsContainer = document.createElement('div');
-            resultsContainer.id = `results-${tabId}`;
-            resultsContainer.className = 'w-full h-full hidden flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 gap-2';
-            resultsContainer.innerHTML = `
-                <div class="text-5xl opacity-30">📊</div>
-                <div>Execute uma consulta para ver os resultados</div>
-            `;
-            
-            // Add to containers
-            document.getElementById('tabs-container').appendChild(tabButton);
-            document.getElementById('editors-container').appendChild(editorContainer);
-            document.getElementById('results-container').appendChild(resultsContainer);
-        }
-        
-        function switchToTab(tabId) {
-            // Remove active class from all tabs
-            document.querySelectorAll('#tabs-container > div').forEach(tab => {
-                tab.classList.remove('tab-active');
-                tab.classList.remove('bg-gray-200', 'dark:bg-gray-800');
-                tab.classList.add('bg-gray-100', 'dark:bg-gray-700');
-            });
-            
-            // Hide all editors and results
-            document.querySelectorAll('#editors-container > div').forEach(editor => {
-                editor.classList.add('hidden');
-            });
-            
-            document.querySelectorAll('#results-container > div').forEach(result => {
-                result.classList.add('hidden');
-            });
-            
-            // Show active tab
-            const activeTab = document.querySelector(`[data-tab-id="${tabId}"]`);
-            if (activeTab) {
-                activeTab.classList.add('tab-active');
-                activeTab.classList.remove('bg-gray-100', 'dark:bg-gray-700');
-                activeTab.classList.add('bg-gray-200', 'dark:bg-gray-800');
-            }
-            
-            // Show active editor and results
-            const editorContainer = document.getElementById(`editor-${tabId}`);
-            const resultsContainer = document.getElementById(`results-${tabId}`);
-            
-            if (editorContainer) editorContainer.classList.remove('hidden');
-            if (resultsContainer) resultsContainer.classList.remove('hidden');
-            
-            // Set as active tab
-            activeTabId = tabId;
-            
-            // Initialize editor if not already created
-            if (tabs[tabId] && !tabs[tabId].editor) {
-                initializeTabEditor(tabId);
-            }
-            
-            // Update stats display
-            updateTabStats(tabId);
-        }
-        
-        function closeTab(tabId) {
-            // Don't close if it's the only tab
-            if (Object.keys(tabs).length <= 1) {
-                return;
-            }
-            
-            // Dispose Monaco editor
-            if (tabs[tabId] && tabs[tabId].editor) {
-                tabs[tabId].editor.dispose();
-            }
-            
-            // Remove from tabs object
-            delete tabs[tabId];
-            
-            // Remove DOM elements
-            const tabButton = document.querySelector(`[data-tab-id="${tabId}"]`);
-            const editorContainer = document.getElementById(`editor-${tabId}`);
-            const resultsContainer = document.getElementById(`results-${tabId}`);
-            
-            if (tabButton) tabButton.remove();
-            if (editorContainer) editorContainer.remove();
-            if (resultsContainer) resultsContainer.remove();
-            
-            // Switch to another tab if this was active
-            if (activeTabId === tabId) {
-                const remainingTabs = Object.keys(tabs);
-                if (remainingTabs.length > 0) {
-                    switchToTab(remainingTabs[0]);
-                }
-            }
-        }
-        
-        function updateTabStats(tabId) {
-            const tab = tabs[tabId];
-            if (tab && tab.results) {
-                document.getElementById('result-stats').textContent = `${tab.results.rowCount} linhas`;
-                document.getElementById('execution-stats').textContent = `Consulta executada em ${tab.results.executionTime.toFixed(2)}ms`;
-            } else {
-                document.getElementById('result-stats').textContent = '';
-                document.getElementById('execution-stats').textContent = 'despesas';
-            }
-        }
-        
-        async function loadSchema() {
-            try {
-                const schema = await window.duckdbAPI.getSchema();
-                const schemaTree = document.getElementById('schema-tree');
-                
-                if (schema.length > 0) {
-                    const schemaHTML = `
-                        <div class="p-4 border-b border-gray-300 dark:border-gray-700">
-                            <div id="connection-status" class="text-xs text-red-500 dark:text-red-400">
-                                ❌ Desconectado
-                            </div>
-                        </div>
-                        ${schema.map(col => 
-                            `<div class="py-1 flex items-center gap-1.5 text-xs">
-                                <span class="w-3 h-3 opacity-60">${getDataTypeIcon(col.column_type)}</span>
-                                <span>${col.column_name}</span>
-                                <span class="text-gray-500 dark:text-gray-400 text-xs ml-auto">${col.column_type}</span>
-                            </div>`
-                        ).join('')}`;
-                    schemaTree.innerHTML = schemaHTML;
-                } else {
-                    schemaTree.innerHTML = '<div class="text-red-500 dark:text-red-400">Falha ao carregar esquema</div>';
-                }
-            } catch (error) {
-                document.getElementById('schema-tree').innerHTML = '<div class="text-red-500 dark:text-red-400">Erro ao carregar esquema</div>';
-            }
-        }
-        
-        async function initializeEditor() {
-            return new Promise((resolve) => {
-                require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
-                require(['vs/editor/editor.main'], function () {
-                    // Create the first tab
-                    createNewTab('Consulta 1');
-                    resolve();
-                });
-            });
-        }
-        
-        function initializeTabEditor(tabId) {
-            const editorContainer = document.getElementById(`editor-${tabId}`);
-            if (!editorContainer || tabs[tabId].editor) return;
-            
-            const isDark = document.documentElement.classList.contains('dark');
-            const editor = monaco.editor.create(editorContainer, {
-                value: 'SELECT * FROM despesas LIMIT 10;',
-                language: 'sql',
-                theme: isDark ? 'vs-dark' : 'vs',
-                automaticLayout: true,
-                minimap: { enabled: false },
-                fontSize: 13,
-                lineNumbers: 'on',
-                wordWrap: 'on',
-                scrollBeyondLastLine: false
-            });
-            
-            // Add keyboard shortcut for running query
-            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, executeQuery);
-            
-            // Store editor reference
-            tabs[tabId].editor = editor;
-        }
-        
-        function setupEventListeners() {
-            // Run query button
-            const runBtn = document.getElementById('run-query-btn');
-            if (runBtn) {
-                runBtn.addEventListener('click', executeQuery);
-            }
-            
-            // Clear button
-            const clearBtn = document.getElementById('clear-btn');
-            if (clearBtn) {
-                clearBtn.addEventListener('click', () => {
-                    if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor) {
-                        tabs[activeTabId].editor.setValue('');
-                    }
-                    clearResults();
-                });
-            }
-            
-            // New tab button
-            const newTabBtn = document.getElementById('new-tab-btn');
-            if (newTabBtn) {
-                newTabBtn.addEventListener('click', () => {
-                    createNewTab();
-                });
-            }
-            
-            // Sample query buttons
-            document.querySelectorAll('.sample-query').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const query = e.target.dataset.query;
-                    const analysisId = e.target.dataset.id;
-                    if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor && query) {
-                        // Reset all filters when "Top categorias" is clicked
-                        if (analysisId === 'top-categorias') {
-                            resetAllFilters();
-                        }
-                        
-                        // Remove selected class from all query buttons
-                        document.querySelectorAll('.sample-query').forEach(button => {
-                            button.classList.remove('selected');
-                        });
-                        
-                        // Add selected class to clicked button
-                        e.target.classList.add('selected');
-                        
-                        tabs[activeTabId].editor.setValue(query);
-                        
-                        // Update URL with query for sharing (use slug ID if available)
-                        updateURLWithQuery(query, e.target.textContent.trim(), analysisId);
-                        
-                        executeQuery();
-                    }
-                });
-            });
-            
-            // Export button
-            const exportBtn = document.getElementById('export-btn');
-            if (exportBtn) {
-                exportBtn.addEventListener('click', exportResults);
-            }
-            
-            // Mobile pagination buttons
-            const prevMobileBtn = document.getElementById('pagination-prev-mobile');
-            const nextMobileBtn = document.getElementById('pagination-next-mobile');
-            
-            if (prevMobileBtn) {
-                prevMobileBtn.addEventListener('click', () => {
-                    if (activeTabId && tabs[activeTabId]) {
-                        goToPage(activeTabId, tabs[activeTabId].currentPage - 1);
-                    }
-                });
-            }
-            
-            if (nextMobileBtn) {
-                nextMobileBtn.addEventListener('click', () => {
-                    if (activeTabId && tabs[activeTabId]) {
-                        goToPage(activeTabId, tabs[activeTabId].currentPage + 1);
-                    }
-                });
-            }
-
-        }
-        
-        async function executeQuery() {
-            if (!activeTabId || !tabs[activeTabId] || !tabs[activeTabId].editor) return;
-            
-            const sql = tabs[activeTabId].editor.getValue().trim();
-            if (!sql) return;
-            
-            const runBtn = document.getElementById('run-query-btn');
-            const resultsContent = document.getElementById(`results-${activeTabId}`);
-            const executionStats = document.getElementById('execution-stats');
-            
-            try {
-                // Show loading state
-                runBtn.disabled = true;
-                runBtn.innerHTML = '<span class="loading-spinner"></span> Executando';
-                resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><span class="loading-spinner"></span><div>Executando consulta...</div></div>';
-                
-                // Execute query
-                const result = await window.duckdbAPI.executeQuery(sql);
-                tabs[activeTabId].results = result;
-                tabs[activeTabId].currentPage = 1; // Reset to first page
-                
-                // Display results
-                displayResults(result, activeTabId);
-                
-                // Update stats
-                updateTabStats(activeTabId);
-                
-            } catch (error) {
-                // Display error
-                resultsContent.innerHTML = `<div class="bg-red-900/20 border border-red-500 text-red-200 p-3 m-3 rounded">
-                    <strong>Erro:</strong> ${error.message}
-                </div>`;
-                executionStats.textContent = 'Consulta falhou';
-                
-            } finally {
-                // Reset button
-                runBtn.disabled = false;
-                runBtn.innerHTML = '▶️ Executar';
-            }
-        }
-        
-        function displayResults(result, tabId) {
-            const resultsContent = document.getElementById(`results-${tabId}`);
-            
-            // Ensure the results container has proper classes for scrolling
-            resultsContent.className = 'w-full h-full overflow-auto';
-            
-            if (result.rowCount === 0) {
-                resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><div class="text-2xl opacity-50">📄</div><div>Nenhum resultado encontrado</div></div>';
-                hidePagination();
-                return;
-            }
-            
-            // Calculate pagination
-            const tab = tabs[tabId];
-            const totalPages = Math.ceil(result.rowCount / ROWS_PER_PAGE);
-            tab.totalPages = totalPages;
-            
-            // Show pagination only if more than 100 rows
-            if (result.rowCount > ROWS_PER_PAGE) {
-                showPagination(tabId);
-                updatePaginationInfo(tabId);
-            } else {
-                hidePagination();
-            }
-            
-            // Calculate current page data
-            const startIndex = (tab.currentPage - 1) * ROWS_PER_PAGE;
-            const endIndex = Math.min(startIndex + ROWS_PER_PAGE, result.rowCount);
-            const displayRows = result.data.slice(startIndex, endIndex);
-            
-            // Create table
-            let tableHTML = '<div class="p-4"><table class="border-collapse text-xs" style="width: auto; min-width: max-content;">';
-            
-            // Headers
-            tableHTML += '<thead><tr>';
-            result.columns.forEach(col => {
-                tableHTML += `<th class="bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 p-2 border-b border-r border-gray-300 dark:border-gray-700 font-medium text-left sticky top-0 z-10 whitespace-nowrap" style="min-width: 150px;">${col}</th>`;
-            });
-            tableHTML += '</tr></thead>';
-            
-            // Rows for current page
-            tableHTML += '<tbody>';
-            displayRows.forEach((row, index) => {
-                tableHTML += `<tr class="hover:bg-gray-100 dark:hover:bg-gray-900">`;
-                result.columns.forEach(col => {
-                    const value = row[col];
-                    const displayValue = value === null ? '<span class="text-gray-500 dark:text-gray-400 italic">NULL</span>' : 
-                                       typeof value === 'number' ? value.toLocaleString() : 
-                                       String(value).length > 100 ? String(value).substring(0, 97) + '...' : 
-                                       String(value);
-                    tableHTML += `<td class="p-1.5 border-b border-r border-gray-300 dark:border-gray-700 whitespace-nowrap" style="min-width: 150px;">${displayValue}</td>`;
-                });
-                tableHTML += '</tr>';
-            });
-            tableHTML += '</tbody></table></div>';
-            
-            resultsContent.innerHTML = tableHTML;
-        }
-        
-        function showPagination(tabId) {
-            const paginationContainer = document.getElementById('pagination-container');
-            paginationContainer.classList.remove('hidden');
-            generatePaginationButtons(tabId);
-        }
-        
-        function hidePagination() {
-            const paginationContainer = document.getElementById('pagination-container');
-            paginationContainer.classList.add('hidden');
-        }
-        
-        function updatePaginationInfo(tabId) {
-            const tab = tabs[tabId];
-            const result = tab.results;
-            
-            if (!result) return;
-            
-            const startIndex = (tab.currentPage - 1) * ROWS_PER_PAGE + 1;
-            const endIndex = Math.min(tab.currentPage * ROWS_PER_PAGE, result.rowCount);
-            
-            document.getElementById('pagination-start').textContent = startIndex.toLocaleString();
-            document.getElementById('pagination-end').textContent = endIndex.toLocaleString();
-            document.getElementById('pagination-total').textContent = result.rowCount.toLocaleString();
-        }
-        
-        function generatePaginationButtons(tabId) {
-            const tab = tabs[tabId];
-            const totalPages = tab.totalPages;
-            const currentPage = tab.currentPage;
-            const paginationNav = document.getElementById('pagination-nav');
-            
-            // Update mobile buttons
-            const prevMobileBtn = document.getElementById('pagination-prev-mobile');
-            const nextMobileBtn = document.getElementById('pagination-next-mobile');
-            
-            if (prevMobileBtn) {
-                prevMobileBtn.disabled = currentPage === 1;
-                prevMobileBtn.classList.toggle('opacity-50', currentPage === 1);
-                prevMobileBtn.classList.toggle('cursor-not-allowed', currentPage === 1);
-            }
-            
-            if (nextMobileBtn) {
-                nextMobileBtn.disabled = currentPage === totalPages;
-                nextMobileBtn.classList.toggle('opacity-50', currentPage === totalPages);
-                nextMobileBtn.classList.toggle('cursor-not-allowed', currentPage === totalPages);
-            }
-            
-            let buttonsHTML = '';
-            
-            // Previous button
-            buttonsHTML += `
-                <button onclick="goToPage('${tabId}', ${currentPage - 1})" 
-                        class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 ${currentPage === 1 ? 'cursor-not-allowed opacity-50' : ''}"
-                        ${currentPage === 1 ? 'disabled' : ''}>
-                    <span class="sr-only">Anterior</span>
-                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                    </svg>
-                </button>
-            `;
-            
-            // Calculate visible page range
-            let startPage = Math.max(1, currentPage - Math.floor(MAX_VISIBLE_PAGES / 2));
-            let endPage = Math.min(totalPages, startPage + MAX_VISIBLE_PAGES - 1);
-            
-            // Adjust start if we're near the end
-            if (endPage - startPage < MAX_VISIBLE_PAGES - 1) {
-                startPage = Math.max(1, endPage - MAX_VISIBLE_PAGES + 1);
-            }
-            
-            // First page and ellipsis if needed
-            if (startPage > 1) {
-                buttonsHTML += `
-                    <button onclick="goToPage('${tabId}', 1)" 
-                            class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        1
-                    </button>
-                `;
-                if (startPage > 2) {
-                    buttonsHTML += `
-                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200">
-                            ...
-                        </span>
-                    `;
-                }
-            }
-            
-            // Page numbers
-            for (let i = startPage; i <= endPage; i++) {
-                const isActive = i === currentPage;
-                buttonsHTML += `
-                    <button onclick="goToPage('${tabId}', ${i})" 
-                            class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                                isActive 
-                                    ? 'z-10 bg-duckdb-500 border-duckdb-500 text-black' 
-                                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                            }">
-                        ${i}
-                    </button>
-                `;
-            }
-            
-            // Last page and ellipsis if needed
-            if (endPage < totalPages) {
-                if (endPage < totalPages - 1) {
-                    buttonsHTML += `
-                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200">
-                            ...
-                        </span>
-                    `;
-                }
-                buttonsHTML += `
-                    <button onclick="goToPage('${tabId}', ${totalPages})" 
-                            class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        ${totalPages}
-                    </button>
-                `;
-            }
-            
-            // Next button
-            buttonsHTML += `
-                <button onclick="goToPage('${tabId}', ${currentPage + 1})" 
-                        class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 ${currentPage === totalPages ? 'cursor-not-allowed opacity-50' : ''}"
-                        ${currentPage === totalPages ? 'disabled' : ''}>
-                    <span class="sr-only">Próximo</span>
-                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                    </svg>
-                </button>
-            `;
-            
-            paginationNav.innerHTML = buttonsHTML;
-        }
-        
-        function goToPage(tabId, page) {
-            const tab = tabs[tabId];
-            if (!tab || !tab.results || page < 1 || page > tab.totalPages) return;
-            
-            tab.currentPage = page;
-            displayResults(tab.results, tabId);
-        }
-        
-        function clearResults() {
-            if (!activeTabId) return;
-            
-            const resultsContent = document.getElementById(`results-${activeTabId}`);
-            if (resultsContent) {
-                resultsContent.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-2"><div class="text-5xl opacity-30">📊</div><div>Execute uma consulta para ver os resultados</div></div>';
-            }
-            
-            document.getElementById('execution-stats').textContent = 'despesas';
-            document.getElementById('result-stats').textContent = '';
-            
-            // Hide pagination
-            hidePagination();
-            
-            if (tabs[activeTabId]) {
-                tabs[activeTabId].results = null;
-                tabs[activeTabId].currentPage = 1;
-                tabs[activeTabId].totalPages = 0;
-            }
-        }
-
-        
-        function exportResults() {
-            if (!activeTabId || !tabs[activeTabId] || !tabs[activeTabId].results || !tabs[activeTabId].results.data.length) {
-                alert('Nenhum resultado para exportar');
-                return;
-            }
-            
-            const currentResults = tabs[activeTabId].results;
-            
-            // Convert to CSV
-            const headers = currentResults.columns.join(',');
-            const rows = currentResults.data.map(row => 
-                currentResults.columns.map(col => {
-                    const value = row[col];
-                    if (value === null) return '';
-                    if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-                        return `"${value.replace(/"/g, '""')}"`;
-                    }
-                    return value;
-                }).join(',')
-            );
-            
-            const csv = [headers, ...rows].join('\n');
-            
-            // Download
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `query_results_${tabs[activeTabId].name.replace(/\s+/g, '_')}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-        
-        // Add resize functionality
-        function initializeResize() {
-            const resizeHandle = document.getElementById('resize-handle');
-            const editorContainer = document.querySelector('.editor-container');
-            const resultsArea = document.querySelector('.results-area');
-            let isResizing = false;
-            
-            resizeHandle.addEventListener('mousedown', (e) => {
-                isResizing = true;
-                document.addEventListener('mousemove', handleResize);
-                document.addEventListener('mouseup', stopResize);
-                e.preventDefault();
-            });
-            
-            function handleResize(e) {
-                if (!isResizing) return;
-                
-                const containerRect = document.querySelector('.content-area').getBoundingClientRect();
-                const newHeight = e.clientY - containerRect.top;
-                const minHeight = 200;
-                const maxHeight = containerRect.height - 200;
-                
-                if (newHeight >= minHeight && newHeight <= maxHeight) {
-                    editorContainer.style.height = newHeight + 'px';
-                }
-            }
-            
-            function stopResize() {
-                isResizing = false;
-                document.removeEventListener('mousemove', handleResize);
-                document.removeEventListener('mouseup', stopResize);
-            }
-        }
-        
-        // Add navigation functionality
-        function setupNavigation() {
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    // Remove active state from all nav items
-                    document.querySelectorAll('.nav-item').forEach(i => {
-                        i.classList.remove('bg-gray-200', 'dark:bg-gray-800', 'border-r-2', 'border-duckdb-500');
-                        i.classList.add('hover:bg-gray-200', 'dark:hover:bg-gray-800');
-                    });
-                    // Add active state to clicked item
-                    item.classList.remove('hover:bg-gray-200', 'dark:hover:bg-gray-800');
-                    item.classList.add('bg-gray-200', 'dark:bg-gray-800', 'border-r-2', 'border-duckdb-500');
-                });
-            });
-        }
-        
-        // Add dark mode toggle functionality
-        function setupThemeToggle() {
-            const themeToggle = document.getElementById('theme-toggle');
-            const html = document.documentElement;
-            
-            if (themeToggle) {
-                themeToggle.addEventListener('click', () => {
-                if (html.classList.contains('dark')) {
-                    html.classList.remove('dark');
-                    themeToggle.textContent = '🌞';
-                    document.body.className = 'font-sans bg-white text-gray-900 h-screen overflow-hidden';
-                    // Update Monaco editor themes for all tabs
-                    Object.values(tabs).forEach(tab => {
-                        if (tab.editor) {
-                            tab.editor.updateOptions({ theme: 'vs' });
-                        }
-                    });
-                } else {
-                    html.classList.add('dark');
-                    themeToggle.textContent = '🌙';
-                    document.body.className = 'font-sans bg-gray-950 text-white h-screen overflow-hidden';
-                    // Update Monaco editor themes for all tabs
-                    Object.values(tabs).forEach(tab => {
-                        if (tab.editor) {
-                            tab.editor.updateOptions({ theme: 'vs-dark' });
-                        }
-                    });
-                }
-                });
-            }
-        }
-        
-        // Category collapse/expand functionality
-        function toggleCategory(categoryId) {
-            const categorySection = document.querySelector(`[data-category="${categoryId}"]`);
-            if (!categorySection) return;
-            
-            const content = categorySection.querySelector('.category-content');
-            const chevron = categorySection.querySelector('.category-chevron');
-            
-            if (!content || !chevron) return;
-            
-            if (content.style.display === 'none' || content.style.display === '') {
-                content.style.display = 'block';
-                chevron.style.transform = 'rotate(0deg)';
-            } else {
-                content.style.display = 'none';
-                chevron.style.transform = 'rotate(-90deg)';
-            }
-        }
-        
-        // Search functionality
-        function setupSearchAndFilters() {
-            const searchInput = document.getElementById('query-search');
-            
-            // Search functionality
-            searchInput.addEventListener('input', (e) => {
-                const searchTerm = e.target.value.toLowerCase();
-                filterQueries(searchTerm, 'all');
-            });
-        }
-        
-        function filterQueries(searchTerm, category) {
-            const categorySections = document.querySelectorAll('.category-section');
-            
-            categorySections.forEach(section => {
-                const queries = section.querySelectorAll('.sample-query');
-                let hasVisibleQueries = false;
-                
-                queries.forEach(query => {
-                    const queryText = query.textContent.toLowerCase();
-                    const matchesSearch = !searchTerm || queryText.includes(searchTerm);
-                    
-                    if (matchesSearch) {
-                        query.style.display = 'block';
-                        hasVisibleQueries = true;
-                        
-                        // Highlight search terms
-                        if (searchTerm) {
-                            highlightSearchTerm(query, searchTerm);
-                        } else {
-                            removeHighlight(query);
-                        }
-                    } else {
-                        query.style.display = 'none';
-                    }
-                });
-                
-                // Show/hide entire section based on whether it has visible queries
-                section.style.display = hasVisibleQueries ? 'block' : 'none';
-                
-                // Auto-expand sections with matches
-                if (hasVisibleQueries && searchTerm) {
-                    const content = section.querySelector('.category-content');
-                    const chevron = section.querySelector('.category-chevron');
-                    if (content && chevron) {
-                        content.style.display = 'block';
-                        chevron.style.transform = 'rotate(0deg)';
-                    }
-                }
-            });
-        }
-        
-        function highlightSearchTerm(element, searchTerm) {
-            const text = element.textContent;
-            const regex = new RegExp(`(${searchTerm})`, 'gi');
-            const highlightedText = text.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>');
-            element.innerHTML = highlightedText;
-        }
-        
-        function removeHighlight(element) {
-            // Remove highlights and restore original text
-            const text = element.textContent;
-            element.innerHTML = text;
-        }
-
-        function resetAllFilters() {
-            // Clear search input
-            const searchInput = document.getElementById('query-search');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            
-            // Reset all queries and categories to be visible
-            const categorySections = document.querySelectorAll('.category-section');
-            categorySections.forEach(section => {
-                section.style.display = 'block';
-                
-                const queries = section.querySelectorAll('.sample-query');
-                queries.forEach(query => {
-                    query.style.display = 'block';
-                    removeHighlight(query);
-                });
-            });
-        }
-        
-        // Slug generation function
-        function createSlug(text) {
-            return text
-                .toLowerCase()
-                .replace(/[^\w\s-]/g, '') // Remove special chars except spaces and hyphens
-                .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
-                .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
-                .substring(0, 50); // Limit length
-        }
-        
-        // Query mapping system - maps slugged IDs to analysis queries and names
-        const analysisMap = {
-            'ver-primeiros-10-registros': {
-                name: '📄 Ver primeiros 10 registros',
-                query: 'SELECT * FROM despesas LIMIT 10'
-            },
-            'top-fornecedores-por-valor': {
-                name: '📊 Top fornecedores por valor',
-                query: 'SELECT fornecedor, COUNT(*) as total, SUM(valor_liquido) as value FROM despesas GROUP BY fornecedor ORDER BY value DESC LIMIT 15'
-            },
-            'top-categorias': {
-                name: '📈 Top categorias',
-                query: 'SELECT categoria_despesa, COUNT(*) as count, AVG(valor_liquido) as avg FROM despesas GROUP BY categoria_despesa ORDER BY count DESC LIMIT 10'
-            },
-            'top-deputados': {
-                name: '👥 Top deputados',
-                query: 'SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total DESC LIMIT 20'
-            },
-            'fornecedores-multi-deputados': {
-                name: '🏢 Fornecedores multi-deputados',
-                query: 'SELECT fornecedor, COUNT(DISTINCT nome_parlamentar) as deputies, SUM(valor_liquido) as total FROM despesas GROUP BY fornecedor HAVING deputies > 5 ORDER BY total DESC LIMIT 15'
-            },
-            'tendencias-mensais-2-anos': {
-                name: '📅 Tendências mensais (2 anos)',
-                query: 'SELECT EXTRACT(YEAR FROM data_emissao) as ano, EXTRACT(MONTH FROM data_emissao) as mes, SUM(valor_liquido) as total, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano, mes ORDER BY ano DESC, mes DESC LIMIT 24'
-            },
-            'padrao-por-dia-da-semana': {
-                name: '📊 Padrão por dia da semana',
-                query: 'SELECT CASE EXTRACT(DOW FROM data_emissao) WHEN 0 THEN \'Domingo\' WHEN 1 THEN \'Segunda\' WHEN 2 THEN \'Terça\' WHEN 3 THEN \'Quarta\' WHEN 4 THEN \'Quinta\' WHEN 5 THEN \'Sexta\' WHEN 6 THEN \'Sábado\' END as dia_semana, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE data_emissao IS NOT NULL GROUP BY EXTRACT(DOW FROM data_emissao) ORDER BY EXTRACT(DOW FROM data_emissao)'
-            },
-            'comparacao-ano-a-ano': {
-                name: '📈 Comparação ano a ano',
-                query: 'SELECT EXTRACT(YEAR FROM data_emissao) as ano, SUM(valor_liquido) as total_ano, COUNT(*) as transacoes FROM despesas WHERE data_emissao IS NOT NULL GROUP BY ano ORDER BY ano DESC'
-            },
-            'top-transacoes-mais-caras': {
-                name: '💰 Top transações mais caras',
-                query: 'SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas ORDER BY valor_liquido DESC LIMIT 20'
-            },
-            'categorias-e-subcategorias': {
-                name: '🏛️ Categorias e subcategorias',
-                query: 'SELECT categoria_despesa, subcategoria_despesa, COUNT(*) as total_transacoes, SUM(valor_liquido) as total_valor, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY categoria_despesa, subcategoria_despesa ORDER BY total_valor DESC LIMIT 30'
-            },
-            'estatisticas-por-categoria': {
-                name: '📊 Estatísticas por categoria',
-                query: 'SELECT categoria_despesa, MAX(valor_liquido) as maior_valor, AVG(valor_liquido) as valor_medio, MIN(valor_liquido) as menor_valor, COUNT(*) as total FROM despesas GROUP BY categoria_despesa ORDER BY maior_valor DESC'
-            },
-            'gastos-relacionados-a-viagens': {
-                name: '✈️ Gastos relacionados a viagens',
-                query: 'SELECT categoria_despesa, COUNT(*) as total, SUM(valor_liquido) as valor FROM despesas WHERE categoria_despesa ILIKE \'%PASSAGEM%\' OR categoria_despesa ILIKE \'%VEÍCULOS%\' OR categoria_despesa ILIKE \'%COMBUSTÍVEIS%\' OR categoria_despesa ILIKE \'%HOSPEDAGEM%\' OR categoria_despesa ILIKE \'%LOCAÇÃO%\' OR categoria_despesa ILIKE \'%TÁXI%\' GROUP BY categoria_despesa ORDER BY valor DESC'
-            },
-            'despesas-por-ano-de-competencia': {
-                name: '📅 Despesas por ano de competência',
-                query: 'SELECT ano_competencia, COUNT(*) as total_despesas, SUM(valor_liquido) as valor_total, AVG(valor_liquido) as valor_medio FROM despesas WHERE ano_competencia IS NOT NULL GROUP BY ano_competencia ORDER BY ano_competencia DESC'
-            },
-            'top-gastos-por-deputado': {
-                name: '📍 Top gastos por deputado',
-                query: 'SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gastos, COUNT(*) as num_despesas FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total_gastos DESC LIMIT 25'
-            },
-            'top-fornecedores-por-receita': {
-                name: '💼 Top fornecedores por receita',
-                query: 'SELECT fornecedor, SUM(valor_liquido) as receita_total, COUNT(*) as total_transacoes, COUNT(DISTINCT nome_parlamentar) as deputados_atendidos, AVG(valor_liquido) as valor_medio FROM despesas GROUP BY fornecedor ORDER BY receita_total DESC LIMIT 20'
-            },
-            'concentracao-do-mercado': {
-                name: '📈 Concentração do mercado (%)',
-                query: 'WITH market_share AS (SELECT fornecedor, SUM(valor_liquido) as receita, (SUM(valor_liquido) * 100.0 / (SELECT SUM(valor_liquido) FROM despesas)) as participacao FROM despesas GROUP BY fornecedor ORDER BY receita DESC) SELECT fornecedor, receita, ROUND(participacao, 2) as participacao_pct FROM market_share LIMIT 15'
-            },
-            'relacionamentos-de-alto-valor': {
-                name: '🤝 Relacionamentos de alto valor',
-                query: 'SELECT fornecedor, nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gasto, COUNT(*) as transacoes FROM despesas GROUP BY fornecedor, nome_parlamentar, sigla_partido HAVING SUM(valor_liquido) > 50000 ORDER BY total_gasto DESC LIMIT 30'
-            },
-            'principal-fornecedor-por-categoria': {
-                name: '👑 Principal fornecedor por categoria',
-                query: 'WITH fornecedor_categoria AS (SELECT categoria_despesa, fornecedor, COUNT(*) as num_transacoes, SUM(valor_liquido) as gasto_total, ROW_NUMBER() OVER (PARTITION BY categoria_despesa ORDER BY COUNT(*) DESC, SUM(valor_liquido) DESC) as rank_transacoes FROM despesas GROUP BY categoria_despesa, fornecedor) SELECT categoria_despesa, fornecedor as principal_fornecedor, num_transacoes, gasto_total FROM fornecedor_categoria WHERE rank_transacoes = 1 ORDER BY num_transacoes DESC'
-            },
-            'ranking-de-gastos-por-deputado': {
-                name: '📊 Ranking de gastos por deputado',
-                query: 'SELECT nome_parlamentar, sigla_partido, SUM(valor_liquido) as total_gasto, COUNT(*) as num_transacoes, AVG(valor_liquido) as gasto_medio FROM despesas GROUP BY nome_parlamentar, sigla_partido ORDER BY total_gasto DESC LIMIT 20'
-            },
-            'deputados-mais-menos-ativos': {
-                name: '🎯 Deputados mais/menos ativos',
-                query: 'WITH activity_stats AS (SELECT nome_parlamentar, sigla_partido, COUNT(*) as num_transacoes, SUM(valor_liquido) as total_gasto FROM despesas GROUP BY nome_parlamentar, sigla_partido), top_active AS (SELECT \'Mais ativos\' as tipo, nome_parlamentar, sigla_partido, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes DESC LIMIT 10), least_active AS (SELECT \'Menos ativos\' as tipo, nome_parlamentar, sigla_partido, num_transacoes, total_gasto FROM activity_stats ORDER BY num_transacoes ASC LIMIT 10) SELECT * FROM (SELECT * FROM top_active UNION ALL SELECT * FROM least_active) ORDER BY CASE WHEN tipo = \'Mais ativos\' THEN 1 ELSE 2 END, num_transacoes DESC'
-            },
-            'possiveis-despesas-duplicadas': {
-                name: '🔄 Possíveis despesas duplicadas',
-                query: 'SELECT nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao, COUNT(*) as duplicatas FROM despesas GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, fornecedor, valor_liquido, data_emissao HAVING COUNT(*) > 1 ORDER BY duplicatas DESC, valor_liquido DESC LIMIT 20'
-            },
-            'valores-redondos-suspeitos': {
-                name: '🎯 Valores redondos suspeitos',
-                query: 'SELECT valor_liquido, COUNT(*) as frequencia FROM despesas WHERE valor_liquido % 100 = 0 AND valor_liquido >= 1000 GROUP BY valor_liquido ORDER BY frequencia DESC LIMIT 20'
-            },
-            'gastos-altos-em-fins-de-semana': {
-                name: '🏖️ Gastos altos em fins de semana',
-                query: 'SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, data_emissao FROM despesas WHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) AND valor_liquido > 5000 ORDER BY valor_liquido DESC LIMIT 25'
-            },
-            'outliers-estatisticos': {
-                name: '📊 Outliers estatísticos (Z > 3)',
-                query: 'WITH outliers AS (SELECT *, (valor_liquido - AVG(valor_liquido) OVER (PARTITION BY categoria_despesa)) / STDDEV(valor_liquido) OVER (PARTITION BY categoria_despesa) as z_score FROM despesas WHERE valor_liquido IS NOT NULL) SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, ROUND(z_score, 2) as desvio_padrao FROM outliers WHERE ABS(z_score) > 3 ORDER BY ABS(z_score) DESC LIMIT 30'
-            },
-            'valores-altos-duplicados': {
-                name: '⚖️ Valores altos duplicados',
-                query: 'SELECT nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor, COUNT(*) as frequencia FROM despesas WHERE valor_liquido > 50000 GROUP BY nome_parlamentar, sigla_partido, categoria_despesa, valor_liquido, fornecedor HAVING COUNT(*) > 1 ORDER BY valor_liquido DESC LIMIT 20'
-            }
-        };
-        
-        // URL sharing functionality
-        function updateURLWithQuery(query, analysisName, analysisId = null) {
-            const url = new URL(window.location);
-            
-            // Clear old parameters
-            url.searchParams.delete('query');
-            url.searchParams.delete('name');
-            url.searchParams.delete('analise');
-            
-            if (analysisId && analysisMap[analysisId]) {
-                // Use slugged ID for predefined analyses
-                url.searchParams.set('analise', analysisId);
-            } else {
-                // Fall back to encoded query for custom queries
-                url.searchParams.set('query', btoa(encodeURIComponent(query)));
-                url.searchParams.set('name', encodeURIComponent(analysisName));
-            }
-            
-            // Update URL without page reload
-            window.history.pushState({query, analysisName, analysisId}, analysisName, url);
-        }
-        
-        function loadQueryFromURL() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const analysisId = urlParams.get('analise');
-            const encodedQuery = urlParams.get('query');
-            const analysisName = urlParams.get('name');
-            
-            let query = null;
-            let name = null;
-            
-            // Try slugged ID first (new format)
-            if (analysisId && analysisMap[analysisId]) {
-                query = analysisMap[analysisId].query;
-                name = analysisMap[analysisId].name;
-            }
-            // Fall back to encoded query (old format for backward compatibility)
-            else if (encodedQuery) {
-                try {
-                    query = decodeURIComponent(atob(encodedQuery));
-                    name = analysisName ? decodeURIComponent(analysisName) : 'Consulta Compartilhada';
-                } catch (error) {
-                    console.error('Error decoding query from URL:', error);
-                    return;
-                }
-            }
-            
-            if (query && name) {
-                // Wait for editor to be ready, then load the query
-                if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor) {
-                    tabs[activeTabId].editor.setValue(query);
-                    
-                    // Update tab name to reflect the shared query
-                    const tabButton = document.querySelector(`[data-tab-id="${activeTabId}"] .tab-name`);
-                    if (tabButton) {
-                        tabButton.textContent = name;
-                    }
-                    
-                    // Auto-execute the shared query
-                    setTimeout(() => executeQuery(), 500);
-                }
-            }
-        }
-        
-        // Handle browser back/forward buttons
-        window.addEventListener('popstate', (event) => {
-            if (event.state && event.state.query) {
-                if (activeTabId && tabs[activeTabId] && tabs[activeTabId].editor) {
-                    tabs[activeTabId].editor.setValue(event.state.query);
-                    executeQuery();
-                }
-            }
-        });
-        
-        // Share current query function
-        function shareCurrentQuery() {
-            if (!activeTabId || !tabs[activeTabId] || !tabs[activeTabId].editor) {
-                alert('Nenhuma consulta ativa para compartilhar');
-                return;
-            }
-            
-            const query = tabs[activeTabId].editor.getValue().trim();
-            if (!query) {
-                alert('Editor vazio - não há consulta para compartilhar');
-                return;
-            }
-            
-            const tabName = document.querySelector(`[data-tab-id="${activeTabId}"] .tab-name`)?.textContent || 'Consulta Personalizada';
-            
-            // Try to find matching analysis ID for this query
-            let matchingAnalysisId = null;
-            for (const [id, analysis] of Object.entries(analysisMap)) {
-                if (analysis.query.trim() === query) {
-                    matchingAnalysisId = id;
-                    break;
-                }
-            }
-            
-            // Update URL and copy to clipboard
-            updateURLWithQuery(query, tabName, matchingAnalysisId);
-            
-            // Copy URL to clipboard
-            navigator.clipboard.writeText(window.location.href).then(() => {
-                // Show success feedback
-                const shareBtn = document.getElementById('share-btn');
-                const originalText = shareBtn.innerHTML;
-                shareBtn.innerHTML = '✅ Copiado!';
-                shareBtn.classList.add('bg-green-200', 'dark:bg-green-800', 'text-green-900', 'dark:text-green-100');
-                shareBtn.classList.remove('bg-blue-200', 'dark:bg-blue-800', 'text-blue-900', 'dark:text-blue-100');
-                
-                setTimeout(() => {
-                    shareBtn.innerHTML = originalText;
-                    shareBtn.classList.remove('bg-green-200', 'dark:bg-green-800', 'text-green-900', 'dark:text-green-100');
-                    shareBtn.classList.add('bg-blue-200', 'dark:bg-blue-800', 'text-blue-900', 'dark:text-blue-100');
-                }, 2000);
-            }).catch(() => {
-                alert('Link copiado para a área de transferência:\n\n' + window.location.href);
-            });
-        }
-        
-        // Panel collapse/expand functionality
-        function setupPanelToggle() {
-            const panelToggle = document.getElementById('panel-toggle');
-            const rightPanel = document.getElementById('right-panel');
-            const panelContent = document.getElementById('panel-content');
-            const panelTitle = document.getElementById('panel-title');
-            let isCollapsed = false;
-            
-            if (panelToggle) {
-                panelToggle.addEventListener('click', () => {
-                    isCollapsed = !isCollapsed;
-                    
-                    if (isCollapsed) {
-                        // Collapse panel
-                        rightPanel.classList.remove('w-80');
-                        rightPanel.classList.add('w-12');
-                        panelContent.classList.add('hidden');
-                        panelTitle.classList.add('hidden');
-                        panelToggle.title = 'Expandir painel';
-                        panelToggle.querySelector('svg').style.transform = 'rotate(180deg)';
-                    } else {
-                        // Expand panel
-                        rightPanel.classList.remove('w-12');
-                        rightPanel.classList.add('w-80');
-                        panelContent.classList.remove('hidden');
-                        panelTitle.classList.remove('hidden');
-                        panelToggle.title = 'Recolher painel';
-                        panelToggle.querySelector('svg').style.transform = 'rotate(0deg)';
-                    }
-                });
-            }
-        }
-
-        // Initialize when page loads
-        window.addEventListener('load', () => {
-            initializeApp().then(() => {
-                // Load query from URL after app is initialized
-                setTimeout(() => loadQueryFromURL(), 1000);
-            });
-            initializeResize();
-            setupNavigation();
-            setupThemeToggle();
-            setupSearchAndFilters();
-            setupPanelToggle();
-        });
-    </script>
+    <script type="module" src="./src/db-app.js"></script>
 </body>
 </html>
