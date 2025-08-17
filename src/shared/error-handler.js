@@ -21,7 +21,6 @@ export class ErrorHandler {
       this.handleError(event.error, 'JavaScript Error', 'global');
     });
 
-    console.log('🛡️ Error handler initialized');
   }
 
   /**
@@ -67,10 +66,11 @@ export class ErrorHandler {
         console.warn(`⚠️ [${context}] ${errorInfo.message}`, errorInfo);
         break;
       case 'info':
-        console.info(`ℹ️ [${context}] ${errorInfo.message}`, errorInfo);
+        // Silently log info messages
         break;
       default:
-        console.log(`📝 [${context}] ${errorInfo.message}`, errorInfo);
+        // Silently log default messages
+        break;
     }
 
     // Trigger error callbacks
@@ -78,7 +78,7 @@ export class ErrorHandler {
       try {
         callback(errorInfo);
       } catch (callbackError) {
-        console.error('Error in error callback:', callbackError);
+        // Silently ignore callback errors to prevent error loops
       }
     });
 
@@ -313,7 +313,6 @@ export class ErrorHandler {
    */
   static clearErrorStats() {
     this.errorCounts.clear();
-    console.log('🧹 Error statistics cleared');
   }
 
   /**

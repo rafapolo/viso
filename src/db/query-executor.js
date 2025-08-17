@@ -21,33 +21,26 @@ export class QueryExecutor {
     }
 
     if (this.isExecuting) {
-      console.warn('Query already executing, skipping...');
       return null;
     }
 
     this.isExecuting = true;
-    console.log('🔍 Starting query execution:', `${sql.substring(0, 100)}...`);
     
     try {
       // Update UI to show loading state
       this.showLoadingState();
-      console.log('🔄 Loading state shown');
       
       if (onProgress) onProgress('Formatting query...');
-      console.log('📝 Formatting SQL...');
       
       // Format the SQL before execution
       const formattedSQL = APIUtils.formatSQL(sql);
       
       if (onProgress) onProgress('Executing query...');
-      console.log('⚡ Executing query via DuckDB API...');
       
       // Execute the query
       const result = await APIUtils.executeDuckDBQuery(formattedSQL);
-      console.log('✅ Query executed, rows:', result.rowCount);
       
       if (onProgress) onProgress('Processing results...');
-      console.log('🔄 Processing results...');
       
       // Store results
       this.currentResults = result;
@@ -91,15 +84,11 @@ export class QueryExecutor {
    * Hide loading state and reset UI
    */
   hideLoadingState() {
-    console.log('🔄 Hiding loading state...');
     const runBtn = DOMUtils.getElementById('run-query-btn');
     
     if (runBtn) {
       runBtn.disabled = false;
       DOMUtils.updateContent(runBtn, '▶️ Executar', true);
-      console.log('✅ Loading state hidden, button re-enabled');
-    } else {
-      console.warn('⚠️ Run button not found when hiding loading state');
     }
   }
 
@@ -180,7 +169,6 @@ export class QueryExecutor {
     const analysisId = buttonElement.dataset.id;
     
     if (!query) {
-      console.warn('No query found in button dataset');
       return;
     }
 
