@@ -4,6 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viso ↦ Despesas ↦ DB</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Advanced data visualization platform with OPFS storage and offline capabilities">
+    <meta name="theme-color" content="#1e40af">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Viso DB">
+    <meta name="msapplication-TileColor" content="#1e40af">
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMzIiIGZpbGw9IiMxZTQwYWYiLz4KPGVsbGlwc2UgY3g9Ijk2IiBjeT0iNjQiIHJ4PSI0OCIgcnk9IjE2IiBmaWxsPSJ3aGl0ZSIvPgo8cmVjdCB4PSI0OCIgeT0iNjQiIHdpZHRoPSI5NiIgaGVpZ2h0PSI2NCIgZmlsbD0id2hpdGUiLz4KPGVsbGlwc2UgY3g9Ijk2IiBjeT0iMTI4IiByeD0iNDgiIHJ5PSIxNiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cg==">
+    
     <link rel="stylesheet" href="src/styles/common.css">
     <link rel="stylesheet" href="src/styles/db.css">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,6 +34,51 @@
     <script src="/node_modules/monaco-editor/min/vs/editor/editor.main.js"></script>
     <script type="module" src="./src/db-api.js"></script>
     <script src="./src/db-config.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    console.log('SW registered: ', registration);
+                    
+                    // Handle install prompt
+                    let deferredPrompt;
+                    window.addEventListener('beforeinstallprompt', (e) => {
+                        e.preventDefault();
+                        deferredPrompt = e;
+                        showInstallButton();
+                    });
+                    
+                    function showInstallButton() {
+                        const installBtn = document.createElement('button');
+                        installBtn.innerHTML = '📱 Instalar App';
+                        installBtn.className = 'fixed top-4 left-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 z-50';
+                        installBtn.onclick = async () => {
+                            if (deferredPrompt) {
+                                deferredPrompt.prompt();
+                                const { outcome } = await deferredPrompt.userChoice;
+                                console.log(`User ${outcome} the install prompt`);
+                                deferredPrompt = null;
+                                installBtn.remove();
+                            }
+                        };
+                        document.body.appendChild(installBtn);
+                        
+                        // Auto-hide after 10 seconds
+                        setTimeout(() => {
+                            if (installBtn.parentNode) {
+                                installBtn.remove();
+                            }
+                        }, 10000);
+                    }
+                } catch (error) {
+                    console.log('SW registration failed: ', error);
+                }
+            });
+        }
+    </script>
 </head>
 <body class="font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen">
     <div class="flex h-screen">
