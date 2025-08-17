@@ -737,10 +737,8 @@ describe('PerformanceMonitor', () => {
       
       // Test efficiency calculation
       const testEfficiency = monitor.calculateWorkerEfficiency(rawMetrics);
-      // Debug the calculation to understand the issue
-      console.log('rawMetrics:', rawMetrics);
-      console.log('testEfficiency:', testEfficiency);
-      expect(testEfficiency).toBeGreaterThan(0); // More lenient test for now
+      // With 0 errors and 50ms response time, efficiency should be around 98
+      expect(testEfficiency).toBeGreaterThan(90);
     });
   });
 
