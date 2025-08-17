@@ -1,6 +1,7 @@
 {
   "name": "viso",
   "version": "1.0.0",
+  "type": "module",
   "description": "VISO - Parliamentary Expenses Visualization",
   "scripts": {
     "dev": "vite",
@@ -41,8 +42,11 @@
     "sql-formatter": "^15.3.2"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.3",
+    "@babel/preset-env": "^7.28.3",
     "@jest/globals": "^29.7.0",
     "@playwright/test": "^1.40.0",
+    "babel-jest": "^30.0.5",
     "cssnano": "^7.1.0",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
@@ -58,6 +62,26 @@
   },
   "jest": {
     "testEnvironment": "jsdom",
+    "globals": {
+      "NODE_OPTIONS": "--experimental-vm-modules"
+    },
+    "transform": {
+      "^.+\\.js$": [
+        "babel-jest",
+        {
+          "presets": [
+            [
+              "@babel/preset-env",
+              {
+                "targets": {
+                  "node": "current"
+                }
+              }
+            ]
+          ]
+        }
+      ]
+    },
     "setupFilesAfterEnv": [
       "<rootDir>/tests/setup.js"
     ],
@@ -79,6 +103,9 @@
       "text",
       "lcov",
       "html"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^../../src/(.*)$": "<rootDir>/src/$1"
+    }
   }
 }
