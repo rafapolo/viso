@@ -1,5 +1,4 @@
 // OPFS Storage Manager Tests
-import { jest } from '@jest/globals';
 
 describe('OPFSStorageManager', () => {
   let mockNavigator;
@@ -17,7 +16,12 @@ describe('OPFSStorageManager', () => {
     };
 
     mockFileHandle = {
-      getFile: jest.fn(),
+      kind: 'file',
+      getFile: jest.fn(() => Promise.resolve({
+        size: 100,
+        lastModified: Date.now(),
+        type: 'application/octet-stream'
+      })),
       createWritable: jest.fn(() => Promise.resolve(mockWritable))
     };
 
@@ -40,8 +44,12 @@ describe('OPFSStorageManager', () => {
       storage: mockStorageAPI
     };
 
-    // Mock global navigator
-    global.navigator = mockNavigator;
+    // Mock global navigator and ensure it's properly detected
+    Object.defineProperty(global, 'navigator', {
+      value: mockNavigator,
+      writable: true,
+      configurable: true
+    });
 
     // Mock the OPFSStorageManager class
     class MockOPFSStorageManager {
@@ -60,10 +68,16 @@ describe('OPFSStorageManager', () => {
       }
 
       async initialize() {
-        if (!this.isSupported) {
+        if (!this.checkSupport()) {
           throw new Error('OPFS is not supported in this browser');
         }
         this.root = await global.navigator.storage.getDirectory();
+        
+        // Create default directories
+        await this.root.getDirectoryHandle('datasets', { create: true });
+        await this.root.getDirectoryHandle('cache', { create: true });
+        await this.root.getDirectoryHandle('temp', { create: true });
+        
         return true;
       }
 
@@ -232,7 +246,7 @@ describe('OPFSStorageManager', () => {
 
     test('should throw error when OPFS is not supported', async () => {
       const manager = new OPFSStorageManager();
-      manager.isSupported = false;
+      manager.checkSupport = jest.fn(() => false);
       
       await expect(manager.initialize()).rejects.toThrow('OPFS is not supported in this browser');
     });
