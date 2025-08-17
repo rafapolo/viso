@@ -96,7 +96,7 @@ run_e2e_tests() {
     # Check if local server is running
     if ! curl -s http://localhost:8080 > /dev/null 2>&1; then
         print_color "YELLOW" "⚠️  Local server not detected. Starting server..."
-        python -m http.server 8080 > /dev/null 2>&1 &
+        /usr/bin/python3 -m http.server 8080 > /dev/null 2>&1 &
         SERVER_PID=$!
         sleep 3
         
