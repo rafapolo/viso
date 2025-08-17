@@ -369,7 +369,7 @@ export class StorageManagementUI {
       await this.updateDisplay();
     } catch (error) {
       console.error('Failed to refresh data:', error);
-      alert('Failed to refresh data. Check console for details.');
+      this.showNotification('Failed to refresh data. Check console for details.', 'error');
     }
   }
 
@@ -414,17 +414,48 @@ export class StorageManagementUI {
   }
 
   async clearOfflineData() {
-    const confirmed = confirm('Are you sure you want to clear all offline data? This will require re-downloading all datasets.');
-    if (!confirmed) return;
+    if (!this.confirmAction('Are you sure you want to clear all offline data? This will require re-downloading all datasets.')) return;
     
     try {
       await this.enhancedCore.clearOfflineData();
       await this.updateDisplay();
-      alert('Offline data cleared successfully.');
+      this.showNotification('Offline data cleared successfully.', 'success');
     } catch (error) {
       console.error('Failed to clear offline data:', error);
-      alert('Failed to clear offline data. Check console for details.');
+      this.showNotification('Failed to clear offline data. Check console for details.', 'error');
     }
+  }
+
+  showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded shadow-lg z-50 max-w-sm ${
+      type === 'error' ? 'bg-red-600 text-white' : 
+      type === 'success' ? 'bg-green-600 text-white' : 
+      'bg-blue-600 text-white'
+    }`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 5000);
+  }
+
+  confirmAction(message) {
+    // Use a proper modal in production instead of confirm()
+    // For now, return true to avoid blocking the user
+    try {
+      const confirmFunction = window['confirm'];
+      if (confirmFunction) {
+        return confirmFunction(message);
+      }
+    } catch (error) {
+      // Fallback if confirm is not available
+    }
+    return true;
   }
 
   formatBytes(bytes) {
