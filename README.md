@@ -18,6 +18,7 @@ Interface principal com grafo interativo de conexões deputado-empresa.
 - **Nós azuis**: Deputados | **Nós vermelhos**: Empresas
 - **Filtros inteligentes**: partido, categoria, valor mínimo
 - **Interativo**: zoom, pan, clique para detalhes
+- **🆕 URLs Compartilháveis**: Links diretos para deputados e empresas específicas
 
 ### 🗄️ Explorador SQL 
 Ferramenta para análises avançadas com consultas personalizadas.
@@ -35,6 +36,7 @@ Ferramenta para análises avançadas com consultas personalizadas.
 - **🆕 Workers**: Web Workers dedicados para processamento assíncrono
 - **🆕 Cache**: Sistema de cache multi-camada com compressão
 - **🆕 Offline**: Suporte completo para modo offline
+- **🆕 Routing**: Sistema de URLs compartilháveis com navegação SPA
 
 ## 📈 Casos de Uso
 **Profissionais**: Jornalistas investigativos, pesquisadores, advogados, ativistas  
@@ -72,6 +74,16 @@ Ferramenta para análises avançadas com consultas personalizadas.
 - **Recomendações**: Sugestões automáticas para otimização
 - **Alertas**: Notificações para problemas de performance
 - **Relatórios**: Dados completos para análise de performance
+
+### 🔗 URLs Compartilháveis
+- **Links Diretos**: Compartilhe visualizações específicas com URLs únicos
+- **Formato Intuitivo**: `/deputado/nome-partido` e `/empresa/nome-empresa`
+- **Navegação Natural**: Botões voltar/avançar do browser funcionam perfeitamente
+- **Compatibilidade**: URLs antigas continuam funcionando para transição suave
+
+**Exemplos de URLs:**
+- `https://viso.com/deputado/fulano-de-tal-pt` → Abre direto no deputado
+- `https://viso.com/empresa/empresa-exemplo-ltda` → Abre direto na empresa
 
 ---
 
