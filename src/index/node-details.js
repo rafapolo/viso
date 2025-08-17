@@ -107,7 +107,7 @@ export class NodeDetails {
         query = `
           SELECT 
             fornecedor,
-            data_emissao,
+            strftime(data_emissao, '%d/%m/%Y') as data_emissao,
             valor_liquido,
             categoria_despesa,
             subcategoria_despesa
@@ -121,7 +121,7 @@ export class NodeDetails {
           SELECT 
             nome_parlamentar,
             sigla_partido,
-            data_emissao,
+            strftime(data_emissao, '%d/%m/%Y') as data_emissao,
             valor_liquido,
             categoria_despesa,
             subcategoria_despesa
