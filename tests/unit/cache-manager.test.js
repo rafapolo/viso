@@ -352,7 +352,6 @@ describe('CacheManager', () => {
       }
 
       async cleanup() {
-        const now = Date.now();
         const keysToDelete = [];
         
         for (const [key, metadata] of this.cacheMetadata.entries()) {

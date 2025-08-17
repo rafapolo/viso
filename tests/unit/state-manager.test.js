@@ -1,4 +1,4 @@
-const { describe, test, expect, beforeEach, afterEach } = require('@jest/globals');
+const { describe, test, expect, beforeEach } = require('@jest/globals');
 
 // Testing the refactored StateManager structure
 describe('StateManager (Testing Refactored Structure)', () => {
@@ -38,7 +38,7 @@ describe('StateManager (Testing Refactored Structure)', () => {
         }
 
         getState(key, defaultValue = null) {
-            return this.state.hasOwnProperty(key) ? this.state[key] : defaultValue;
+            return Object.prototype.hasOwnProperty.call(this.state, key) ? this.state[key] : defaultValue;
         }
 
         getAllState() {

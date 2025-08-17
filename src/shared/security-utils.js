@@ -177,7 +177,6 @@ export class SecurityUtils {
   static validateSQLQuery(query, options = {}) {
     const {
       maxLength = appConfig.security.maxQueryLength,
-      allowedOperations = ['SELECT', 'WITH', 'ORDER BY', 'GROUP BY', 'HAVING', 'LIMIT', 'WHERE'],
       blockedOperations = ['DROP', 'DELETE', 'INSERT', 'UPDATE', 'CREATE', 'ALTER', 'EXEC', 'EXECUTE']
     } = options;
 
