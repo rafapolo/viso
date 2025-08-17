@@ -17,6 +17,7 @@ const STATIC_ASSETS = [
   '/src/shared/enhanced-storage.js',
   '/src/shared/enhanced-core.js',
   '/src/shared/enhanced-clients.js',
+  '/src/shared/enhanced-ui.js',
   '/src/shared/api-utils.js',
   '/src/shared/dom-utils.js',
   '/src/shared/state-manager.js',
@@ -24,13 +25,18 @@ const STATIC_ASSETS = [
   '/src/shared/data-utils.js',
   '/src/shared/color-utils.js',
   '/src/shared/formatters.js',
+  '/src/shared/app-config.js',
+  '/src/shared/error-handler.js',
   '/src/styles/common.css',
   '/src/styles/index.css',
   '/src/styles/db.css',
   '/src/features/visualization/sankey-tab.js',
   '/src/utils/query-builder.js',
   '/src/utils/query-utils.js',
-  '/vite.config.js'
+  '/src/db/editor-manager.js',
+  '/src/db/query-executor.js',
+  '/src/index/connection-monitor.js',
+  '/src/index/node-details.js'
 ];
 
 // External resources to cache
@@ -47,9 +53,30 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     Promise.all([
       // Cache static assets
-      caches.open(STATIC_CACHE).then((cache) => {
+      caches.open(STATIC_CACHE).then(async (cache) => {
         console.log('[SW] Caching static assets...');
-        return cache.addAll(STATIC_ASSETS.concat(EXTERNAL_ASSETS));
+        
+        // Cache static assets individually to handle failures gracefully
+        const staticPromises = STATIC_ASSETS.map(async (asset) => {
+          try {
+            await cache.add(asset);
+            console.log('[SW] Cached:', asset);
+          } catch (error) {
+            console.warn('[SW] Failed to cache static asset:', asset, error);
+          }
+        });
+        
+        // Cache external assets individually
+        const externalPromises = EXTERNAL_ASSETS.map(async (asset) => {
+          try {
+            await cache.add(asset);
+            console.log('[SW] Cached external:', asset);
+          } catch (error) {
+            console.warn('[SW] Failed to cache external asset:', asset, error);
+          }
+        });
+        
+        await Promise.allSettled([...staticPromises, ...externalPromises]);
       }),
       
       // Initialize OPFS if available
