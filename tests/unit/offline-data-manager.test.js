@@ -1,5 +1,4 @@
 // Offline Data Manager Tests
-import { jest } from '@jest/globals';
 
 describe('OfflineDataManager', () => {
   let MockOfflineDataManager;
@@ -33,7 +32,9 @@ describe('OfflineDataManager', () => {
 
     mockCacheManager = {
       get: jest.fn(() => Promise.resolve(null)),
-      set: jest.fn(() => Promise.resolve(true))
+      set: jest.fn(() => Promise.resolve(true)),
+      delete: jest.fn(() => Promise.resolve(true)),
+      clear: jest.fn(() => Promise.resolve(0))
     };
 
     // Mock navigator.onLine
@@ -214,14 +215,8 @@ describe('OfflineDataManager', () => {
       }
 
       async loadFromCache(name, cacheKey) {
-        let cachedData = await mockCacheManager.get(cacheKey);
-        
-        if (!cachedData) {
-          // Mock OPFS access
-          cachedData = new Uint8Array([1, 2, 3, 4, 5]); // Mock data
-        }
-        
-        return cachedData;
+        const cachedData = await mockCacheManager.get(cacheKey);
+        return cachedData; // Return null if not cached
       }
 
       async downloadDataset(name, dataset, onProgress = null) {

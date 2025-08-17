@@ -1,5 +1,4 @@
 // Cache Manager Tests
-import { jest } from '@jest/globals';
 
 describe('CacheManager', () => {
   let MockCacheManager;
@@ -118,7 +117,15 @@ describe('CacheManager', () => {
           return { data, compressed: false };
         }
 
-        const dataArray = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+        let dataArray;
+        if (typeof data === 'string') {
+          dataArray = new TextEncoder().encode(data);
+        } else if (typeof data === 'number' || (typeof data === 'object' && data !== null && !(data instanceof Uint8Array))) {
+          const jsonString = JSON.stringify(data);
+          dataArray = new TextEncoder().encode(jsonString);
+        } else {
+          dataArray = data;
+        }
         
         if (dataArray.byteLength < this.config.compressionThreshold) {
           return { data: dataArray, compressed: false };
@@ -165,6 +172,16 @@ describe('CacheManager', () => {
 
       async set(key, data, options = {}) {
         const metadata = this.createMetadata(key, options);
+        
+        // Detect data type and add tags automatically
+        if (typeof data === 'string' && !metadata.tags.includes('text')) {
+          metadata.tags.push('text');
+        } else if (typeof data === 'number' && !metadata.tags.includes('json')) {
+          metadata.tags.push('json'); // Numbers will be JSON stringified/parsed
+        } else if (typeof data === 'object' && data !== null && !(data instanceof Uint8Array) && !metadata.tags.includes('json')) {
+          metadata.tags.push('json');
+        }
+        
         const { data: processedData, compressed } = await this.compressData(data);
         
         metadata.compressed = compressed;
@@ -235,7 +252,7 @@ describe('CacheManager', () => {
 
       async has(key) {
         const metadata = this.cacheMetadata.get(key);
-        return metadata && this.isValid(metadata);
+        return !!(metadata && this.isValid(metadata));
       }
 
       async delete(key) {
