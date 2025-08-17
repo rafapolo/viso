@@ -21,7 +21,6 @@ export class OfflineDataManager {
     if (this.isInitialized) return true;
     
     try {
-      console.log('🚀 Initializing Offline Data Manager...');
       
       // Initialize all components
       await Promise.all([
@@ -32,13 +31,11 @@ export class OfflineDataManager {
       ]);
       
       this.isInitialized = true;
-      console.log('✅ Offline Data Manager initialized successfully');
       
       this.emit('initialized', { success: true });
       return true;
       
     } catch (error) {
-      console.error('❌ Failed to initialize Offline Data Manager:', error);
       this.emit('error', { type: 'initialization', error });
       return false;
     }
@@ -58,7 +55,6 @@ export class OfflineDataManager {
     };
     
     this.datasets.set(name, dataset);
-    console.log(`📊 Registered dataset: ${name}`);
     
     this.emit('datasetRegistered', { name, dataset });
     return dataset;
@@ -73,7 +69,6 @@ export class OfflineDataManager {
     const { forceRefresh = false, onProgress = null } = options;
     
     try {
-      console.log(`📥 Loading dataset: ${name}${forceRefresh ? ' (force refresh)' : ''}`);
       
       this.emit('loadStart', { name, dataset });
       
@@ -81,7 +76,6 @@ export class OfflineDataManager {
       if (!forceRefresh) {
         const cached = await this.getCachedDataset(name);
         if (cached) {
-          console.log(`💾 Dataset ${name} loaded from cache (${this.formatBytes(cached.data.byteLength)})`);
           
           this.emit('dataLoaded', {
             name,
@@ -100,7 +94,6 @@ export class OfflineDataManager {
       }
       
       // Download from remote
-      console.log(`🌐 Downloading dataset ${name} from ${dataset.url}`);
       
       const cachePath = `datasets/${name}`;
       const result = await this.fileSystemClient.downloadAndCache(
@@ -123,7 +116,6 @@ export class OfflineDataManager {
         dataPath: cachePath
       }, { ttl: 24 * 60 * 60 * 1000 }); // 24 hours
       
-      console.log(`✅ Dataset ${name} downloaded and cached (${this.formatBytes(result.size)})`);
       
       this.emit('dataLoaded', {
         name,
@@ -140,7 +132,6 @@ export class OfflineDataManager {
       };
       
     } catch (error) {
-      console.error(`❌ Failed to load dataset ${name}:`, error);
       
       this.emit('loadError', { name, dataset, error });
       
@@ -148,7 +139,6 @@ export class OfflineDataManager {
       if (!forceRefresh) {
         const cached = await this.getCachedDataset(name);
         if (cached) {
-          console.warn(`⚠️ Using cached version of ${name} due to download failure`);
           return {
             data: cached.data,
             fromCache: true,
@@ -175,7 +165,6 @@ export class OfflineDataManager {
       };
       
     } catch (error) {
-      console.warn(`Failed to get cached dataset ${name}:`, error);
       return null;
     }
   }
@@ -216,29 +205,20 @@ export class OfflineDataManager {
   }
 
   async clearAllData() {
-    try {
-      console.log('🗑️ Clearing all offline data...');
-      
-      // Clear cache
-      await this.cacheManager.clear();
-      
-      // Clear datasets metadata
-      this.datasets.forEach(dataset => {
-        dataset.cached = false;
-        dataset.lastModified = null;
-        dataset.size = 0;
-      });
-      
-      console.log('✅ All offline data cleared');
-      this.emit('dataCleared', {});
-      
-    } catch (error) {
-      console.error('❌ Failed to clear offline data:', error);
-      throw error;
-    }
+    // Clear cache
+    await this.cacheManager.clear();
+    
+    // Clear datasets metadata
+    this.datasets.forEach(dataset => {
+      dataset.cached = false;
+      dataset.lastModified = null;
+      dataset.size = 0;
+    });
+    
+    this.emit('dataCleared', {});
   }
 
-  createProgressiveLoader(datasets, options = {}) {
+  createProgressiveLoader(datasets) {
     return {
       async loadAll(onProgress) {
         const results = new Map();
@@ -272,7 +252,6 @@ export class OfflineDataManager {
             }
             
           } catch (error) {
-            console.error(`Failed to load dataset ${name}:`, error);
             results.set(name, { error });
           }
         }
@@ -285,13 +264,11 @@ export class OfflineDataManager {
   bindNetworkEvents() {
     const handleOnline = () => {
       this.isOnline = true;
-      console.log('🌐 Network: Back online');
       this.emit('online', { isOnline: true });
     };
     
     const handleOffline = () => {
       this.isOnline = false;
-      console.log('📡 Network: Gone offline');
       this.emit('offline', { isOnline: false });
     };
     
@@ -326,7 +303,7 @@ export class OfflineDataManager {
         try {
           listener(event, data);
         } catch (error) {
-          console.error(`Error in listener for event ${event}:`, error);
+          // Ignore errors during cleanup
         }
       }
     }
@@ -341,7 +318,6 @@ export class OfflineDataManager {
   }
 
   async shutdown() {
-    console.log('🔌 Shutting down Offline Data Manager...');
     
     try {
       // Cleanup network listeners
@@ -361,10 +337,9 @@ export class OfflineDataManager {
       this.listeners.clear();
       
       this.isInitialized = false;
-      console.log('✅ Offline Data Manager shut down successfully');
       
     } catch (error) {
-      console.error('❌ Error during shutdown:', error);
+      // Ignore errors during shutdown
     }
   }
 }

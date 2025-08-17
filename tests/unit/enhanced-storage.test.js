@@ -64,6 +64,14 @@ describe('OPFSStorageManager', () => {
   let storageManager;
 
   beforeEach(() => {
+    // Mock navigator.storage
+    Object.defineProperty(navigator, 'storage', {
+      value: {
+        getDirectory: jest.fn().mockResolvedValue(mockDirectoryHandle)
+      },
+      writable: true
+    });
+    
     storageManager = new OPFSStorageManager();
     jest.clearAllMocks();
     
