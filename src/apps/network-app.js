@@ -45,6 +45,11 @@ async function loadData() {
             }, 500);
         }
         
+        // Handle URL routing for direct node linking (supports both paths and fragments)
+        setTimeout(() => {
+            handleUrlRouting();
+        }, 1500);
+        
     } catch (error) {
         console.error('❌ Erro:', error);
         window.updateConnectionStatus('error', 'Erro de inicialização');
@@ -1187,10 +1192,140 @@ function updateEdgeAmounts(showAmounts) {
     }
 }
 
+// URL sharing functions
+function updateUrlForNode(nodeData) {
+    try {
+        let path = '';
+        
+        if (nodeData.type === 'deputado') {
+            // Extract name and party from label like "FULANO DE TAL (PT)"
+            const match = nodeData.label.match(/^(.+?)\s*\(([^)]+)\)$/);
+            if (match) {
+                const [, name, party] = match;
+                // Create URL-friendly slug: name-party
+                const slug = `${name.trim()}-${party.trim()}`
+                    .toLowerCase()
+                    .replace(/\s+/g, '-')
+                    .replace(/[^a-z0-9\-]/g, '')
+                    .replace(/--+/g, '-');
+                path = `/deputado/${slug}`;
+            } else {
+                // Fallback if format doesn't match
+                const slug = nodeData.label
+                    .toLowerCase()
+                    .replace(/\s+/g, '-')
+                    .replace(/[^a-z0-9\-]/g, '')
+                    .replace(/--+/g, '-');
+                path = `/deputado/${slug}`;
+            }
+        } else if (nodeData.type === 'fornecedor') {
+            // Create URL-friendly slug for company
+            const slug = nodeData.label
+                .toLowerCase()
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9\-]/g, '')
+                .replace(/--+/g, '-')
+                .substring(0, 50); // Limit length
+            path = `/empresa/${slug}`;
+        }
+        
+        if (path) {
+            // Update URL without page reload using path-based routing
+            const currentSearch = window.location.search;
+            history.pushState({ nodeData }, '', `${path}${currentSearch}`);
+        }
+    } catch (error) {
+        console.warn('Error updating URL for node:', error);
+    }
+}
+
+function handleUrlRouting() {
+    try {
+        let targetNode = null;
+        let slug = '';
+        let entityType = '';
+        
+        // First, check for path-based routes
+        const {pathname} = window.location;
+        if (pathname.startsWith('/deputado/')) {
+            entityType = 'deputado';
+            slug = pathname.replace('/deputado/', '');
+        } else if (pathname.startsWith('/empresa/')) {
+            entityType = 'fornecedor';
+            slug = pathname.replace('/empresa/', '');
+        } else {
+            // Fall back to fragment-based routing for backward compatibility
+            const fragment = window.location.hash.slice(1); // Remove #
+            if (fragment.startsWith('parlamentar-')) {
+                entityType = 'deputado';
+                slug = fragment.replace('parlamentar-', '');
+            } else if (fragment.startsWith('empresa-')) {
+                entityType = 'fornecedor';
+                slug = fragment.replace('empresa-', '');
+            }
+        }
+        
+        // If we have a slug and entity type, find the matching node
+        if (slug && entityType) {
+            if (entityType === 'deputado') {
+                // Find matching deputado node
+                targetNode = processedData.nodes.find(node => {
+                    if (node.type !== 'deputado') return false;
+                    
+                    // Create slug from node label and compare
+                    const match = node.label.match(/^(.+?)\s*\(([^)]+)\)$/);
+                    if (match) {
+                        const [, name, party] = match;
+                        const nodeSlug = `${name.trim()}-${party.trim()}`
+                            .toLowerCase()
+                            .replace(/\s+/g, '-')
+                            .replace(/[^a-z0-9\-]/g, '')
+                            .replace(/--+/g, '-');
+                        return nodeSlug === slug;
+                    }
+                    
+                    // Fallback comparison
+                    const nodeSlug = node.label
+                        .toLowerCase()
+                        .replace(/\s+/g, '-')
+                        .replace(/[^a-z0-9\-]/g, '')
+                        .replace(/--+/g, '-');
+                    return nodeSlug === slug;
+                });
+            } else if (entityType === 'fornecedor') {
+                // Find matching fornecedor node
+                targetNode = processedData.nodes.find(node => {
+                    if (node.type !== 'fornecedor') return false;
+                    
+                    const nodeSlug = node.label
+                        .toLowerCase()
+                        .replace(/\s+/g, '-')
+                        .replace(/[^a-z0-9\-]/g, '')
+                        .replace(/--+/g, '-')
+                        .substring(0, 50);
+                    return nodeSlug === slug;
+                });
+            }
+        }
+        
+        // If we found a matching node, select it
+        if (targetNode) {
+            setTimeout(() => {
+                showNodeInfo(targetNode);
+            }, 1000); // Wait for visualization to be ready
+        }
+    } catch (error) {
+        console.warn('Error handling URL routing:', error);
+    }
+}
+
 async function showNodeInfo(nodeData) {
     const content = document.getElementById('node-info-content');
     const closeBtn = document.getElementById('close-panel');
     const rightPanel = document.getElementById('right-panel');
+    
+    // Generate and update URL fragment for sharing
+    updateUrlForNode(nodeData);
     
     // Reset all nodes to normal appearance first
     const svg = d3.select('#network-svg');
@@ -1406,7 +1541,7 @@ async function getEntityDetails(nodeData) {
         query = `
             SELECT 
                 fornecedor,
-                data_emissao,
+                strftime(data_emissao, '%d/%m/%Y') as data_emissao,
                 valor_liquido,
                 categoria_despesa,
                 subcategoria_despesa
@@ -1420,7 +1555,7 @@ async function getEntityDetails(nodeData) {
             SELECT 
                 nome_parlamentar,
                 sigla_partido,
-                data_emissao,
+                strftime(data_emissao, '%d/%m/%Y') as data_emissao,
                 valor_liquido,
                 categoria_despesa,
                 subcategoria_despesa
@@ -1513,6 +1648,14 @@ function hideNodeInfo() {
     const content = document.getElementById('node-info-content');
     const closeBtn = document.getElementById('close-panel');
     
+    // Clear URL when closing panel - go back to home with search params preserved
+    try {
+        const searchParams = window.location.search;
+        history.pushState('', '', `/${searchParams}`);
+    } catch (error) {
+        console.warn('Error clearing URL:', error);
+    }
+    
     // Reset all nodes to normal appearance when hiding panel
     const svg = d3.select('#network-svg');
     const searchFilter = document.getElementById('searchBox').value.trim().toLowerCase();
@@ -1586,7 +1729,7 @@ function setupEventListeners() {
             
             // Update force simulation strength if it exists
             if (window.currentSimulation) {
-                // Convert slider value (1-15) to appropriate force strength (-50 to -750)
+                // Convert slider value (1-60) to appropriate force strength (-50 to -3000)
                 const strength = -forceValue * 50;
                 window.currentSimulation.force("charge", d3.forceManyBody().strength(strength));
                 // Restart the simulation to apply changes
@@ -1792,6 +1935,19 @@ function checkForSingleSearchResult(searchTerm) {
         }, 500);
     }
 }
+
+// Handle browser back/forward navigation
+window.addEventListener('popstate', (event) => {
+    // When user navigates back/forward, handle the URL routing again
+    if (processedData && processedData.nodes) {
+        // Close any open panel first
+        hideNodeInfo();
+        // Then handle the new URL
+        setTimeout(() => {
+            handleUrlRouting();
+        }, 100);
+    }
+});
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
