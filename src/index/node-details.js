@@ -131,7 +131,7 @@ export class NodeDetails {
         `;
       }
 
-      console.log('🔍 Executing entity details query:', query);
+      // Query logging removed for production
       const result = await window.duckdbAPI.query(query);
       return result.toArray();
 
@@ -428,7 +428,7 @@ export class NodeDetails {
     const {y} = targetNode;
 
     if (!isFinite(x) || !isFinite(y)) {
-      console.warn('Node has invalid coordinates, skipping pan');
+      // Coordinate warning removed for production
       return;
     }
 
@@ -441,7 +441,7 @@ export class NodeDetails {
     const translateY = centerY - scale * y;
 
     if (!isFinite(translateX) || !isFinite(translateY) || !isFinite(scale)) {
-      console.warn('Invalid transform values in highlight, skipping pan');
+      // Transform warning removed for production
       return;
     }
 

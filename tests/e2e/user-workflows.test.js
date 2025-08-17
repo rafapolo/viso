@@ -400,7 +400,7 @@ test.describe('Performance and Responsiveness', () => {
     await page.waitForTimeout(5000);
   });
 
-  test('should be responsive on different screen sizes', async ({ page, browserName }) => {
+  test('should be responsive on different screen sizes', async ({ page }) => {
     // Test mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');

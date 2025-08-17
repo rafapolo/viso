@@ -375,7 +375,7 @@ const mockQueryInterfaceFunctions = () => {
     
     const tab = global.tabs[global.activeTabId];
     if (!tab || !tab.results || !tab.results.data.length) {
-      alert('Nenhum resultado para exportar');
+      console.warn('Nenhum resultado para exportar');
       return;
     }
     
@@ -504,7 +504,7 @@ describe('SQL Query Interface Integration Tests', () => {
 
     test('should switch between tabs', () => {
       const tab1 = global.createNewTab('Tab 1');
-      const tab2 = global.createNewTab('Tab 2');
+      global.createNewTab('Tab 2');
       
       global.switchToTab(tab1);
       expect(global.activeTabId).toBe(tab1);

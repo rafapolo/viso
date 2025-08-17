@@ -17,14 +17,12 @@ export class PWAManager {
       try {
         const registration = await navigator.serviceWorker.register('/sw.js');
         this.serviceWorker = registration;
-        console.log('[PWA] Service worker registered:', registration);
         
         // Setup message channel for OPFS communication
         this.setupMessageChannel();
         
         return true;
       } catch (error) {
-        console.error('[PWA] Service worker registration failed:', error);
         return false;
       }
     }
@@ -53,7 +51,6 @@ export class PWAManager {
 
     // App installed
     window.addEventListener('appinstalled', () => {
-      console.log('[PWA] App installed successfully');
       this.installPrompt = null;
       this.hideInstallPrompt();
     });
@@ -110,26 +107,23 @@ export class PWAManager {
     
     switch (type) {
       case 'CACHE_UPDATED':
-        console.log('[PWA] Cache updated:', data);
         break;
       case 'BACKGROUND_SYNC':
         this.handleBackgroundSync(data);
         break;
       case 'OPFS_SYNC_COMPLETE':
-        console.log('[PWA] OPFS sync completed:', data);
         break;
       default:
-        console.log('[PWA] Unknown message from SW:', message);
     }
   }
 
-  async handleBackgroundSync(data) {
+  async handleBackgroundSync() {
     if (this.opfsManager && this.isOnline) {
       try {
         // Sync OPFS data with server
         await this.syncOPFSData();
       } catch (error) {
-        console.error('[PWA] Background sync failed:', error);
+        // Background sync errors are handled silently
       }
     }
   }
@@ -150,19 +144,18 @@ export class PWAManager {
         
         // Clear pending sync
         await this.opfsManager.deleteFile('_sync/pending.json');
-        console.log('[PWA] OPFS sync completed');
       }
     } catch (error) {
-      console.error('[PWA] OPFS sync failed:', error);
+      // OPFS sync errors are handled silently
     }
   }
 
   async syncDataItem(item) {
-    const { type, path, data, action } = item;
+    const { path, data, action } = item;
     
     try {
       switch (action) {
-        case 'upload':
+        case 'upload': {
           // Upload data to server
           const response = await fetch('/api/sync/upload', {
             method: 'POST',
@@ -176,8 +169,9 @@ export class PWAManager {
             throw new Error(`Upload failed: ${response.statusText}`);
           }
           break;
+        }
           
-        case 'download':
+        case 'download': {
           // Download data from server
           const downloadResponse = await fetch(`/api/sync/download?path=${encodeURIComponent(path)}`);
           
@@ -186,9 +180,9 @@ export class PWAManager {
             await this.opfsManager.storeFile(path, serverData);
           }
           break;
+        }
       }
     } catch (error) {
-      console.error('[PWA] Sync item failed:', item, error);
       // Re-add to pending sync
       await this.addToPendingSync(item);
     }
@@ -213,12 +207,11 @@ export class PWAManager {
         JSON.stringify(pendingSync)
       );
     } catch (error) {
-      console.error('[PWA] Failed to add to pending sync:', error);
+      // Pending sync storage errors are handled silently
     }
   }
 
   onConnectionChange(isOnline) {
-    console.log('[PWA] Connection status:', isOnline ? 'online' : 'offline');
     
     // Update UI to show connection status
     this.updateConnectionStatus(isOnline);
@@ -250,9 +243,7 @@ export class PWAManager {
       try {
         const registration = await navigator.serviceWorker.ready;
         await registration.sync.register('background-sync');
-        console.log('[PWA] Background sync registered');
       } catch (error) {
-        console.error('[PWA] Background sync registration failed:', error);
         // Fallback to manual sync
         await this.syncOPFSData();
       }
@@ -312,14 +303,13 @@ export class PWAManager {
     if (this.installPrompt) {
       try {
         const result = await this.installPrompt.prompt();
-        console.log('[PWA] Install prompt result:', result.outcome);
         
         if (result.outcome === 'accepted') {
           this.installPrompt = null;
           this.hideInstallPrompt();
         }
       } catch (error) {
-        console.error('[PWA] Install prompt failed:', error);
+        // Install prompt errors are handled silently
       }
     }
   }
@@ -329,7 +319,6 @@ export class PWAManager {
       const result = await this.sendToServiceWorker('CACHE_CLEAR', { cacheType: type });
       return result.success;
     } catch (error) {
-      console.error('[PWA] Cache clear failed:', error);
       return false;
     }
   }
@@ -348,7 +337,7 @@ export class PWAManager {
           });
         }
       } catch (error) {
-        console.error('[PWA] App update failed:', error);
+        // Update errors are handled silently
       }
     }
   }
