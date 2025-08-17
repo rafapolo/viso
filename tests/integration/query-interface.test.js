@@ -435,7 +435,7 @@ const mockQueryInterfaceFunctions = () => {
     
     const query = tab.editor.getValue();
     const encodedQuery = encodeURIComponent(query);
-    const shareUrl = `${window.location.origin}${window.location.pathname}?query=${encodedQuery}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?analise=${encodedQuery}`;
     
     // Mock clipboard API
     return Promise.resolve(shareUrl);
@@ -699,7 +699,7 @@ describe('SQL Query Interface Integration Tests', () => {
       
       const shareUrl = await global.shareCurrentQuery();
       
-      expect(shareUrl).toContain('query=');
+      expect(shareUrl).toContain('analise=');
       expect(shareUrl).toContain(encodeURIComponent('SELECT * FROM despesas WHERE valor > 1000'));
     });
 

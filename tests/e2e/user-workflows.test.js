@@ -265,7 +265,7 @@ test.describe('VISO DB Interface Workflows', () => {
     await page.locator('#share-btn').click();
     
     // URL should be updated with query parameter
-    await expect(page).toHaveURL(/query=/);
+    await expect(page).toHaveURL(/analise=/);
     
     // Reload page to test URL restoration
     await page.reload();
