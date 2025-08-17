@@ -302,7 +302,7 @@ test.describe('Enhanced Offline Features', () => {
       await expect(autoRefreshCheckbox).toBeChecked();
       
       // Get initial values
-      const initialStats = await page.locator('#storageStats .stat-value').first().textContent();
+      await page.locator('#storageStats .stat-value').first().textContent();
       
       // Wait for potential auto-refresh (shortened for testing)
       await page.waitForTimeout(6000);

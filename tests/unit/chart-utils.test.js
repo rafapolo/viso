@@ -20,8 +20,6 @@ describe('ChartUtils (Testing Refactored Structure)', () => {
         static createCategoryPieChart(canvas, data, options = {}) {
             const {
                 maxSlices = 10,
-                showLegend = true,
-                legendElementId = null,
                 colors = MockColorUtils.categoryColors
             } = options;
 
@@ -90,7 +88,6 @@ describe('ChartUtils (Testing Refactored Structure)', () => {
         static createHorizontalBarChart(canvas, data, options = {}) {
             const {
                 maxBars = 10,
-                showValues = true,
                 colors = MockColorUtils.categoryColors,
                 sortDescending = true
             } = options;
@@ -142,13 +139,7 @@ describe('ChartUtils (Testing Refactored Structure)', () => {
             };
         }
 
-        static createTimeSeriesChart(canvas, data, options = {}) {
-            const {
-                showGrid = true,
-                lineColor = '#3B82F6',
-                fillArea = false,
-                pointRadius = 3
-            } = options;
+        static createTimeSeriesChart(canvas, data) {
 
             const ctx = {
                 clearRect: jest.fn(),
