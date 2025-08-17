@@ -54,7 +54,7 @@ export class ThemeManager {
     // Update slider theme
     this.updateSliderTheme();
 
-    console.log(`🎨 Theme applied: ${theme}`);
+    // Theme application logging removed for production
   }
 
   /**
@@ -123,7 +123,7 @@ export class ThemeManager {
         return colors.supplierLabelColor;
       });
 
-    console.log('🎨 Visualization colors updated for theme:', this.currentTheme);
+    // Visualization color update logging removed for production
   }
 
   /**
@@ -191,7 +191,7 @@ export class ThemeManager {
       }, 100);
     });
 
-    console.log('✅ Theme manager initialized');
+    // Theme manager initialization logging removed for production
   }
 
   /**

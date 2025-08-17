@@ -155,7 +155,7 @@ describe('PerformanceMonitor', () => {
         }
       }
 
-      processMark(entry) {
+      processMark() {
         // Custom mark processing
       }
 
@@ -217,7 +217,7 @@ describe('PerformanceMonitor', () => {
         }
       }
 
-      recordStorageOperation(operation, duration, size = 0, compressionRatio = 0) {
+      recordStorageOperation(operation, duration, compressionRatio = 0) {
         const {storage} = this.metrics;
         
         storage.opfsOperations++;
@@ -324,7 +324,7 @@ describe('PerformanceMonitor', () => {
       }
 
       calculateWorkerEfficiency(metrics) {
-        const totalOps = metrics.tasks + (metrics.queries || 0);
+        const totalOps = (metrics.tasks || 0) + (metrics.queries || 0);
         if (totalOps === 0) return 0;
         
         const errorRate = (metrics.errors / totalOps) * 100;
@@ -737,7 +737,9 @@ describe('PerformanceMonitor', () => {
       
       // Test efficiency calculation
       const testEfficiency = monitor.calculateWorkerEfficiency(rawMetrics);
-      expect(testEfficiency).toBeGreaterThan(80);
+      // With 0 errors and 50ms response time, efficiency should be around 98
+      // errorScore = 100, timeScore = 95, efficiency = (100*0.6) + (95*0.4) = 98
+      expect(testEfficiency).toBeGreaterThan(90);
     });
   });
 

@@ -142,36 +142,31 @@ describe('Enhanced Core Integration', () => {
 
         const { useCache = true, cacheKey = null, cacheTTL = 300000 } = options;
 
-        try {
-          const key = cacheKey || this.generateQueryCacheKey(sql, options);
-          
-          if (useCache) {
-            const cached = await mockCacheManager.get(key, { format: 'json' });
-            if (cached) {
-              mockPerformanceMonitor.recordCacheOperation('hit', 'query', 5);
-              return cached;
-            }
-            mockPerformanceMonitor.recordCacheOperation('miss', 'query', 5);
+        const key = cacheKey || this.generateQueryCacheKey(sql, options);
+        
+        if (useCache) {
+          const cached = await mockCacheManager.get(key, { format: 'json' });
+          if (cached) {
+            mockPerformanceMonitor.recordCacheOperation('hit', 'query', 5);
+            return cached;
           }
-          
-          const startTime = performance.now();
-          const result = await mockDataProcessingClient.executeQuery(sql, options);
-          const duration = performance.now() - startTime;
-          
-          mockPerformanceMonitor.recordWorkerOperation('dataProcessing', 'query', duration);
-          
-          if (useCache && result.rowCount > 0) {
-            await mockCacheManager.set(key, JSON.stringify(result), {
-              tags: ['query-result', 'sql'],
-              ttl: cacheTTL
-            });
-          }
-          
-          return result;
-          
-        } catch (error) {
-          throw error;
+          mockPerformanceMonitor.recordCacheOperation('miss', 'query', 5);
         }
+        
+        const startTime = performance.now();
+        const result = await mockDataProcessingClient.executeQuery(sql, options);
+        const duration = performance.now() - startTime;
+        
+        mockPerformanceMonitor.recordWorkerOperation('dataProcessing', 'query', duration);
+        
+        if (useCache && result.rowCount > 0) {
+          await mockCacheManager.set(key, JSON.stringify(result), {
+            tags: ['query-result', 'sql'],
+            ttl: cacheTTL
+          });
+        }
+        
+        return result;
       }
 
       async queryAggregatedData(minValue = 0, partyFilter = '', categoryFilter = '', searchFilter = '') {
@@ -179,30 +174,25 @@ describe('Enhanced Core Integration', () => {
           await this.initDuckDB();
         }
 
-        try {
-          const result = await mockDataProcessingClient.aggregateData('despesas', {
-            groupBy: ['nome_parlamentar', 'sigla_partido', 'fornecedor', 'categoria_despesa'],
-            aggregates: {
-              valor_total: 'SUM(valor_liquido)',
-              num_transacoes: 'COUNT(*)'
-            },
-            filters: this.buildFilters(minValue, partyFilter, categoryFilter, searchFilter),
-            orderBy: 'valor_total DESC',
-            limit: 10000
-          });
-          
-          return result.rows.map(row => ({
-            nome_parlamentar: row.nome_parlamentar,
-            sigla_partido: row.sigla_partido,
-            fornecedor: row.fornecedor,
-            categoria_despesa: row.categoria_despesa,
-            valor_total: Number(row.valor_total),
-            num_transacoes: Number(row.num_transacoes)
-          }));
-          
-        } catch (error) {
-          throw error;
-        }
+        const result = await mockDataProcessingClient.aggregateData('despesas', {
+          groupBy: ['nome_parlamentar', 'sigla_partido', 'fornecedor', 'categoria_despesa'],
+          aggregates: {
+            valor_total: 'SUM(valor_liquido)',
+            num_transacoes: 'COUNT(*)'
+          },
+          filters: this.buildFilters(minValue, partyFilter, categoryFilter, searchFilter),
+          orderBy: 'valor_total DESC',
+          limit: 10000
+        });
+        
+        return result.rows.map(row => ({
+          nome_parlamentar: row.nome_parlamentar,
+          sigla_partido: row.sigla_partido,
+          fornecedor: row.fornecedor,
+          categoria_despesa: row.categoria_despesa,
+          valor_total: Number(row.valor_total),
+          num_transacoes: Number(row.num_transacoes)
+        }));
       }
 
       buildFilters(minValue, partyFilter, categoryFilter, searchFilter) {
@@ -570,7 +560,7 @@ describe('Enhanced Core Integration', () => {
     test('should refresh data', async () => {
       const manager = new EnhancedDuckDBManager();
       
-      const result = await manager.refreshData();
+      await manager.refreshData();
       
       expect(mockOfflineDataManager.loadDataset).toHaveBeenCalledWith('despesas', {
         forceRefresh: true,

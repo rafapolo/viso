@@ -1206,7 +1206,7 @@ function updateUrlForNode(nodeData) {
                 const slug = `${name.trim()}-${party.trim()}`
                     .toLowerCase()
                     .replace(/\s+/g, '-')
-                    .replace(/[^a-z0-9\-]/g, '')
+                    .replace(/[^a-z0-9-]/g, '')
                     .replace(/--+/g, '-');
                 path = `/deputado/${slug}`;
             } else {
@@ -1214,7 +1214,7 @@ function updateUrlForNode(nodeData) {
                 const slug = nodeData.label
                     .toLowerCase()
                     .replace(/\s+/g, '-')
-                    .replace(/[^a-z0-9\-]/g, '')
+                    .replace(/[^a-z0-9-]/g, '')
                     .replace(/--+/g, '-');
                 path = `/deputado/${slug}`;
             }
@@ -1223,7 +1223,7 @@ function updateUrlForNode(nodeData) {
             const slug = nodeData.label
                 .toLowerCase()
                 .replace(/\s+/g, '-')
-                .replace(/[^a-z0-9\-]/g, '')
+                .replace(/[^a-z0-9-]/g, '')
                 .replace(/--+/g, '-')
                 .substring(0, 50); // Limit length
             path = `/empresa/${slug}`;
@@ -1279,7 +1279,7 @@ function handleUrlRouting() {
                         const nodeSlug = `${name.trim()}-${party.trim()}`
                             .toLowerCase()
                             .replace(/\s+/g, '-')
-                            .replace(/[^a-z0-9\-]/g, '')
+                            .replace(/[^a-z0-9-]/g, '')
                             .replace(/--+/g, '-');
                         return nodeSlug === slug;
                     }
@@ -1288,7 +1288,7 @@ function handleUrlRouting() {
                     const nodeSlug = node.label
                         .toLowerCase()
                         .replace(/\s+/g, '-')
-                        .replace(/[^a-z0-9\-]/g, '')
+                        .replace(/[^a-z0-9-]/g, '')
                         .replace(/--+/g, '-');
                     return nodeSlug === slug;
                 });
@@ -1300,7 +1300,7 @@ function handleUrlRouting() {
                     const nodeSlug = node.label
                         .toLowerCase()
                         .replace(/\s+/g, '-')
-                        .replace(/[^a-z0-9\-]/g, '')
+                        .replace(/[^a-z0-9-]/g, '')
                         .replace(/--+/g, '-')
                         .substring(0, 50);
                     return nodeSlug === slug;
@@ -1937,7 +1937,7 @@ function checkForSingleSearchResult(searchTerm) {
 }
 
 // Handle browser back/forward navigation
-window.addEventListener('popstate', (event) => {
+window.addEventListener('popstate', () => {
     // When user navigates back/forward, handle the URL routing again
     if (processedData && processedData.nodes) {
         // Close any open panel first
