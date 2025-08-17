@@ -11,7 +11,7 @@ export const APP_CONFIG = {
       fornecedor,
       categoria_despesa,
       valor_liquido,
-      data_emissao
+      strftime(data_emissao, '%d/%m/%Y') as data_emissao
     FROM despesas 
     WHERE valor_liquido > 1000
     ORDER BY valor_liquido DESC 
