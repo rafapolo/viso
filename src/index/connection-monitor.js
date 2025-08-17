@@ -18,13 +18,11 @@ export class ConnectionMonitor {
       if (window.getConnectionStatus() === 'connected') {
         const isHealthy = await this.checkConnectionHealth();
         if (!isHealthy) {
-          console.warn('🔴 Connection lost during health check');
           window.updateConnectionStatus('error', 'Conexão perdida');
         }
       }
     }, this.checkIntervalMs);
 
-    console.log('🔍 Connection monitoring started');
   }
 
   /**
@@ -34,7 +32,6 @@ export class ConnectionMonitor {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
       this.healthCheckInterval = null;
-      console.log('⏹️ Connection monitoring stopped');
     }
   }
 
@@ -158,8 +155,6 @@ export class ConnectionMonitor {
     }
 
     // Also log to console
-    const emoji = status === 'connected' ? '✅' : status === 'error' ? '❌' : '⏳';
-    console.log(`${emoji} Connection status: ${message}`);
   }
 
   /**
@@ -174,7 +169,6 @@ export class ConnectionMonitor {
     // Consider restarting monitoring after a delay
     setTimeout(() => {
       if (!this.healthCheckInterval) {
-        console.log('🔄 Attempting to restart connection monitoring...');
         this.startMonitoring();
       }
     }, 10000); // Wait 10 seconds before restart attempt
@@ -214,7 +208,6 @@ export class ConnectionMonitor {
    */
   dispose() {
     this.stopMonitoring();
-    console.log('🧹 Connection monitor disposed');
   }
 }
 
