@@ -24,7 +24,7 @@ function startServer(port = 3000) {
 
         fs.readFile(filePath, (error, content) => {
             if (error) {
-                if(error.code == 'ENOENT') {
+                if(error.code === 'ENOENT') {
                     res.writeHead(404);
                     res.end('404 Not Found');
                 } else {
