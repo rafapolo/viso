@@ -272,7 +272,7 @@ describe('PWAManager', () => {
     });
 
     it('should handle cache clear failure', async () => {
-      const sendToServiceWorkerSpy = jest.spyOn(pwaManager, 'sendToServiceWorker')
+      jest.spyOn(pwaManager, 'sendToServiceWorker')
         .mockRejectedValue(new Error('Cache clear failed'));
       
       const result = await pwaManager.clearCache('all');
@@ -316,7 +316,7 @@ describe('PWAManager', () => {
         handler({ data: { id: expect.any(Number), ...expectedResponse } });
       }, 10);
       
-      const promise = pwaManager.sendToServiceWorker('TEST_MESSAGE', testData);
+      pwaManager.sendToServiceWorker('TEST_MESSAGE', testData);
       
       expect(navigator.serviceWorker.controller.postMessage).toHaveBeenCalledWith({
         id: expect.any(Number),

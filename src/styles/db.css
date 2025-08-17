@@ -341,3 +341,33 @@ table td {
     font-weight: 500;
     color: #ffffff;
 }
+
+/* Layout improvements to ensure full width utilization */
+.flex-1 {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* Ensure tables and content containers stretch properly */
+#results-container, #results, #sankey-container {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+/* Fix any potential overflow issues */
+.editor-container {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+/* Ensure proper table layout */
+table {
+    width: 100% !important;
+    table-layout: auto;
+}
+
+/* Monaco editor container fix */
+#editor {
+    width: 100% !important;
+    max-width: none !important;
+}

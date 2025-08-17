@@ -107,7 +107,7 @@ export class PerformanceUtils {
         const duration = endTime - startTime;
 
         if (appConfig.development.enablePerformanceMonitoring) {
-          console.log(`⏱️ ${label}: ${duration.toFixed(2)}ms`);
+          // Performance monitoring code removed
         }
 
         // Log slow operations
@@ -115,8 +115,6 @@ export class PerformanceUtils {
 
         return result;
       } catch (error) {
-        const endTime = performance.now();
-        const duration = endTime - startTime;
         
         ErrorHandler.handleError(
           new Error(`Performance measurement failed for ${label}: ${error.message}`),
@@ -352,7 +350,6 @@ export class PerformanceUtils {
     // Disconnect all intersection observers
     this.observedElements = new WeakMap();
 
-    console.log('🧹 Performance utilities cleaned up');
   }
 }
 
