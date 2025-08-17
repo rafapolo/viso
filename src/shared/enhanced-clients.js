@@ -119,7 +119,7 @@ export class FileSystemWorkerClient {
   }
 
   handleError(error) {
-    for (const [id, { reject }] of this.pendingMessages.entries()) {
+    for (const [, { reject }] of this.pendingMessages.entries()) {
       reject(error);
     }
     this.pendingMessages.clear();
@@ -240,7 +240,7 @@ export class DataProcessingWorkerClient {
   }
 
   handleError(error) {
-    for (const [id, { reject }] of this.pendingMessages.entries()) {
+    for (const [, { reject }] of this.pendingMessages.entries()) {
       reject(error);
     }
     this.pendingMessages.clear();

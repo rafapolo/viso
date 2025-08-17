@@ -58,7 +58,7 @@ export class OPFSStorageManager {
     }
   }
 
-  async getFile(path, options = {}) {
+  async getFile(path, _options = {}) {
     if (!this.isSupported) throw new Error('OPFS not supported');
     
     try {
