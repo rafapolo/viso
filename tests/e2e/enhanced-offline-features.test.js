@@ -6,9 +6,9 @@ test.describe('Enhanced Offline Features', () => {
     // Navigate to the application
     await page.goto('/');
     
-    // Wait for enhanced core to initialize
+    // Wait for core DuckDB API to initialize
     await page.waitForFunction(() => {
-      return window.enhancedDuckDBManager && window.storageUI;
+      return window.duckdbAPI && window.d3;
     }, { timeout: 10000 });
   });
 
