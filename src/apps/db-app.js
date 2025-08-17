@@ -111,7 +111,7 @@ class DatabaseApp {
       
       // Only execute default query if no URL query was loaded
       const urlParams = new URLSearchParams(window.location.search);
-      if (!urlParams.get('query')) {
+      if (!urlParams.get('query') && !urlParams.get('analise')) {
         
         // Mark Sankey button as selected for default load
         const sankeyButton = document.querySelector('[data-id="sankey-fluxos"]');
@@ -234,7 +234,7 @@ class DatabaseApp {
       'top-transacoes-mais-caras': {
         title: 'Top transações mais caras',
         category: 'category',
-        query: `SELECT \n    nome_parlamentar,\n    sigla_partido,\n    categoria_despesa,\n    valor_liquido,\n    fornecedor,\n    data_emissao\nFROM despesas \nORDER BY valor_liquido DESC \nLIMIT 20`
+        query: `SELECT \n    nome_parlamentar,\n    sigla_partido,\n    categoria_despesa,\n    valor_liquido,\n    fornecedor,\n    strftime(data_emissao, '%d/%m/%Y') as data_emissao\nFROM despesas \nORDER BY valor_liquido DESC \nLIMIT 20`
       },
       'categorias-e-subcategorias': {
         title: 'Categorias e subcategorias',
@@ -294,7 +294,7 @@ class DatabaseApp {
       'possiveis-despesas-duplicadas': {
         title: 'Possíveis despesas duplicadas',
         category: 'audit',
-        query: `SELECT \n    nome_parlamentar,\n    sigla_partido,\n    categoria_despesa,\n    fornecedor,\n    valor_liquido,\n    data_emissao,\n    COUNT(*) AS duplicatas\nFROM despesas \nGROUP BY \n    nome_parlamentar,\n    sigla_partido,\n    categoria_despesa,\n    fornecedor,\n    valor_liquido,\n    data_emissao \nHAVING COUNT(*) > 1 \nORDER BY duplicatas DESC, valor_liquido DESC \nLIMIT 20`
+        query: `SELECT \n    nome_parlamentar,\n    sigla_partido,\n    categoria_despesa,\n    fornecedor,\n    valor_liquido,\n    strftime(data_emissao, '%d/%m/%Y') as data_emissao,\n    COUNT(*) AS duplicatas\nFROM despesas \nGROUP BY \n    nome_parlamentar,\n    sigla_partido,\n    categoria_despesa,\n    fornecedor,\n    valor_liquido,\n    data_emissao \nHAVING COUNT(*) > 1 \nORDER BY duplicatas DESC, valor_liquido DESC \nLIMIT 20`
       },
       'valores-redondos-suspeitos': {
         title: 'Valores redondos suspeitos',
@@ -304,7 +304,7 @@ class DatabaseApp {
       'gastos-altos-em-fins-de-semana': {
         title: 'Gastos altos em fins de semana',
         category: 'audit',
-        query: `SELECT \n    nome_parlamentar,\n    sigla_partido,\n    categoria_despesa,\n    valor_liquido,\n    fornecedor,\n    data_emissao\nFROM despesas \nWHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) \n  AND valor_liquido > 5000 \nORDER BY valor_liquido DESC \nLIMIT 25`
+        query: `SELECT \n    nome_parlamentar,\n    sigla_partido,\n    categoria_despesa,\n    valor_liquido,\n    fornecedor,\n    strftime(data_emissao, '%d/%m/%Y') as data_emissao\nFROM despesas \nWHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) \n  AND valor_liquido > 5000 \nORDER BY valor_liquido DESC \nLIMIT 25`
       },
       'outliers-estatisticos': {
         title: 'Outliers estatísticos (Z > 3)',
@@ -386,7 +386,7 @@ LIMIT 500`;
     if (!queryId) return;
     
     const url = new URL(window.location);
-    url.searchParams.set('query', queryId);
+    url.searchParams.set('analise', queryId);
     window.history.pushState({ queryId }, '', url);
   }
 
@@ -396,7 +396,7 @@ LIMIT 500`;
    */
   async loadQueryFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
-    const queryId = urlParams.get('query');
+    const queryId = urlParams.get('query') || urlParams.get('analise');
     
     if (queryId) {
       const registry = this.getQueryRegistry();
@@ -927,7 +927,7 @@ LIMIT 500`;
 
       // Create shareable URL
       const url = new URL(window.location);
-      url.searchParams.set('query', currentQueryId);
+      url.searchParams.set('analise', currentQueryId);
       const shareUrl = url.toString();
 
       // Copy to clipboard
