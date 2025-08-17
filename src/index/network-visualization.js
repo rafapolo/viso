@@ -27,7 +27,7 @@ export class NetworkVisualization {
       this.createSimulation();
       this.renderNetwork();
 
-      console.log(`🎨 Network visualization initialized with ${data.nodes.length} nodes and ${data.links.length} links`);
+      // Initialization logging removed for production
     } catch (error) {
       ErrorHandler.handleError(error, 'Network Visualization Initialization');
       this.showErrorState('Failed to initialize network visualization');

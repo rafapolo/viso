@@ -219,10 +219,10 @@ describe('OfflineDataManager', () => {
         return cachedData; // Return null if not cached
       }
 
-      async downloadDataset(name, dataset, onProgress = null) {
+      async downloadDataset(name, dataset) {
         const filename = `${name}.${dataset.format}`;
         
-        const taskId = await mockBackgroundSyncClient.addDownloadTask(
+        await mockBackgroundSyncClient.addDownloadTask(
           dataset.url, 
           filename,
           { 
