@@ -15,7 +15,6 @@ export class EditorManager {
     return new Promise((resolve) => {
       const editorContainer = document.getElementById('editor');
       if (!editorContainer) {
-        console.warn('Editor container not found');
         resolve();
         return;
       }
@@ -38,7 +37,6 @@ export class EditorManager {
         this.setupKeyboardShortcuts();
         
         this.isInitialized = true;
-        console.log('✅ Monaco Editor initialized');
         resolve();
       } catch (error) {
         ErrorHandler.handleError(error, 'Editor Initialization');
@@ -136,11 +134,9 @@ export class EditorManager {
           linesBetweenQueries: 2
         });
       } else {
-        console.warn('SQL formatter not available, returning unformatted SQL');
         return sql.trim();
       }
     } catch (error) {
-      console.warn('SQL formatting error:', error);
       return sql.trim();
     }
   }
