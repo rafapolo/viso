@@ -40,10 +40,8 @@ export default defineConfig({
       },
       output: {
         manualChunks: {
-          // Vendor libraries
-          vendor: ['d3', 'd3-sankey'],
-          monaco: ['monaco-editor', 'sql-formatter'],
-          duckdb: ['@duckdb/duckdb-wasm'],
+          // Vendor libraries (now bundled from vendor/ directory)
+          monaco: ['monaco-editor'],
           
           // Application modules
           shared: [
@@ -150,10 +148,11 @@ export default defineConfig({
   
   // Optimization
   optimizeDeps: {
-    include: [
+    exclude: [
       'd3',
-      'd3-sankey',
-      '@duckdb/duckdb-wasm'
+      'd3-sankey', 
+      '@duckdb/duckdb-wasm',
+      'sql-formatter'
     ]
   },
   
@@ -161,5 +160,8 @@ export default defineConfig({
   envPrefix: 'VISO_',
   
   // Asset handling
-  assetsInclude: ['**/*.parquet']
+  assetsInclude: ['**/*.parquet'],
+  
+  // Public directory for static assets
+  publicDir: 'public',
 })
