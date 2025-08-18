@@ -17,8 +17,16 @@ global.console = {
   error: jest.fn()
 };
 
+// Mock HTMLCanvasElement first
+global.HTMLCanvasElement = global.HTMLCanvasElement || class HTMLCanvasElement {
+  constructor() {
+    this.width = 300;
+    this.height = 150;
+  }
+};
+
 // Mock canvas for D3.js tests
-HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+global.HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
   fillRect: jest.fn(),
   clearRect: jest.fn(),
   getImageData: jest.fn(() => ({ data: new Array(4) })),
@@ -97,9 +105,11 @@ global.TextEncoder = class {
   }
 };
 
-global.TextDecoder = jest.fn(() => ({
-  decode: jest.fn((data) => String.fromCharCode(...data))
-}));
+global.TextDecoder = class {
+  decode(data) {
+    return String.fromCharCode(...data);
+  }
+};
 
 // Mock Worker for web workers
 global.Worker = jest.fn(() => ({
@@ -131,30 +141,22 @@ global.window = global.window || {};
 global.window.addEventListener = jest.fn();
 global.window.removeEventListener = jest.fn();
 
-// Mock DOM methods
-global.document.getElementById = jest.fn();
-global.document.querySelectorAll = jest.fn(() => []);
-global.document.querySelector = jest.fn();
-global.document.createElement = jest.fn((tag) => {
-  const element = {
-    tagName: tag.toUpperCase(),
-    id: '',
-    className: '',
-    textContent: '',
-    innerHTML: '',
-    style: {},
-    children: [],
-    appendChild: jest.fn(),
-    setAttribute: jest.fn((attr, value) => {
-      element[attr] = value;
-    }),
-    getAttribute: jest.fn((attr) => element[attr]),
-    getBoundingClientRect: jest.fn(() => ({ width: 100, height: 100, x: 0, y: 0, top: 0, left: 0, bottom: 100, right: 100 })),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn()
-  };
-  return element;
-});
+// Add minimal DOM method mocks for tests that specifically need them
+// These are only added if they don't already exist (let JSDOM handle most cases)
+if (!global.document.getElementById.mock) {
+  const originalGetElementById = global.document.getElementById;
+  global.document.getElementById = jest.fn((...args) => originalGetElementById.apply(global.document, args));
+}
+
+if (!global.document.querySelectorAll.mock) {
+  const originalQuerySelectorAll = global.document.querySelectorAll;
+  global.document.querySelectorAll = jest.fn((...args) => originalQuerySelectorAll.apply(global.document, args));
+}
+
+if (!global.document.querySelector.mock) {
+  const originalQuerySelector = global.document.querySelector;
+  global.document.querySelector = jest.fn((...args) => originalQuerySelector.apply(global.document, args));
+}
 
 // Mock ServiceWorkerRegistration
 global.ServiceWorkerRegistration = {
@@ -186,13 +188,10 @@ global.MessageChannel = jest.fn(() => ({
 // Mock window.matchMedia
 global.window.matchMedia = jest.fn();
 
-// Mock document.body
-global.document.body = {
-  innerHTML: '',
-  appendChild: jest.fn(),
-  removeChild: jest.fn(),
-  children: []
-};
+// Mock document.body properly for JSDOM
+if (!global.document.body) {
+  global.document.body = global.document.createElement('body');
+}
 
 // Setup DOM elements that are expected to exist
 beforeEach(() => {
