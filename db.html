@@ -23,12 +23,9 @@
     
     <link rel="stylesheet" href="src/styles/common.css">
     <link rel="stylesheet" href="src/styles/db.css">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="vendor/js/tailwindcss.js"></script>
     <link rel="stylesheet" data-name="vs/editor/editor.main" href="/node_modules/monaco-editor/min/vs/editor/editor.main.css">
-    <script>
-        // Set up Monaco Editor base URL
-        var require = { paths: { 'vs': '/node_modules/monaco-editor/min/vs' } };
-    </script>
+    <script src="./src/js/monaco-setup.js"></script>
     <script src="/node_modules/monaco-editor/min/vs/loader.js"></script>
     <script src="/node_modules/monaco-editor/min/vs/editor/editor.main.nls.js"></script>
     <script src="/node_modules/monaco-editor/min/vs/editor/editor.main.js"></script>
@@ -36,49 +33,7 @@
     <script src="./src/db-config.js"></script>
     
     <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', async () => {
-                try {
-                    const registration = await navigator.serviceWorker.register('/sw.js');
-                    console.log('SW registered: ', registration);
-                    
-                    // Handle install prompt
-                    let deferredPrompt;
-                    window.addEventListener('beforeinstallprompt', (e) => {
-                        e.preventDefault();
-                        deferredPrompt = e;
-                        showInstallButton();
-                    });
-                    
-                    function showInstallButton() {
-                        const installBtn = document.createElement('button');
-                        installBtn.innerHTML = '📱 Instalar App';
-                        installBtn.className = 'fixed top-4 left-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 z-50';
-                        installBtn.onclick = async () => {
-                            if (deferredPrompt) {
-                                deferredPrompt.prompt();
-                                const { outcome } = await deferredPrompt.userChoice;
-                                console.log(`User ${outcome} the install prompt`);
-                                deferredPrompt = null;
-                                installBtn.remove();
-                            }
-                        };
-                        document.body.appendChild(installBtn);
-                        
-                        // Auto-hide after 10 seconds
-                        setTimeout(() => {
-                            if (installBtn.parentNode) {
-                                installBtn.remove();
-                            }
-                        }, 10000);
-                    }
-                } catch (error) {
-                    console.log('SW registration failed: ', error);
-                }
-            });
-        }
-    </script>
+    <script src="./src/js/service-worker.js"></script>
 </head>
 <body class="font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen">
     <div class="flex h-screen">
@@ -116,49 +71,49 @@
                 <div id="sample-queries-list" class="space-y-1">
                     <!-- Exemplos -->
                     <div class="category-section" data-category="exemplos">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mb-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors" onclick="toggleCategory('exemplos')">
-                            <span class="text-xs font-medium text-green-700 dark:text-green-300 uppercase tracking-wide">📚 Exemplos</span>
-                            <svg class="category-chevron w-4 h-4 text-green-500 transition-transform" style="transform: rotate(0deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mb-1 bg-slate-50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-md hover:bg-slate-100 dark:hover:bg-slate-900/30 transition-colors" onclick="toggleCategory('exemplos')">
+                            <span class="text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wide">📚 Exemplos</span>
+                            <svg class="category-chevron w-4 h-4 text-slate-500 transition-transform" style="transform: rotate(0deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
-                        <div class="sample-query" data-id="sankey-fluxos">
-                            📊 Fluxos para top 100 Empresas
-                        </div>
                         <div class="category-content category-exemplos space-y-1" style="display: block;">
-                    <div class="sample-query" data-query="SELECT *
+                            <div class="sample-query" data-id="sankey-fluxos">
+                                📊 Fluxos para top 100 Empresas
+                            </div>
+                            <div class="sample-query" data-query="SELECT *
 FROM despesas
 LIMIT 10" data-id="ver-primeiros-10-registros">
-                        📄 Ver primeiros 10 registros
-                    </div>
-                    <div class="sample-query" data-query="SELECT fornecedor,
+                                📄 Ver primeiros 10 registros
+                            </div>
+                            <div class="sample-query" data-query="SELECT fornecedor,
     COUNT(*) AS total,
     SUM(valor_liquido) AS value
 FROM despesas
 GROUP BY fornecedor
 ORDER BY value DESC
 LIMIT 15" data-id="top-fornecedores-por-valor">
-                        📊 Top fornecedores por valor
-                    </div>
-                    <div class="sample-query" data-query="SELECT categoria_despesa,
+                                📊 Top fornecedores por valor
+                            </div>
+                            <div class="sample-query" data-query="SELECT categoria_despesa,
     COUNT(*) AS count,
     AVG(valor_liquido) AS avg
 FROM despesas
 GROUP BY categoria_despesa
 ORDER BY count DESC
 LIMIT 10" data-id="top-categorias">
-                        📈 Top categorias
-                    </div>
-                    <div class="sample-query" data-query="SELECT nome_parlamentar,
+                                📈 Top categorias
+                            </div>
+                            <div class="sample-query" data-query="SELECT nome_parlamentar,
     sigla_partido,
     SUM(valor_liquido) AS total
 FROM despesas
 GROUP BY nome_parlamentar, sigla_partido
 ORDER BY total DESC
 LIMIT 20" data-id="top-deputados">
-                        👥 Top deputados
-                    </div>
-                    <div class="sample-query" data-query="SELECT fornecedor,
+                                👥 Top deputados
+                            </div>
+                            <div class="sample-query" data-query="SELECT fornecedor,
     COUNT(DISTINCT nome_parlamentar) AS deputies,
     SUM(valor_liquido) AS total
 FROM despesas
@@ -166,8 +121,8 @@ GROUP BY fornecedor
 HAVING deputies > 5
 ORDER BY total DESC
 LIMIT 15" data-id="fornecedores-multi-deputados">
-                        🏢 Fornecedores multi-deputados
-                    </div>
+                                🏢 Fornecedores multi-deputados
+                            </div>
                         </div>
                     </div>
                     
@@ -225,9 +180,9 @@ ORDER BY ano DESC" data-id="comparacao-ano-a-ano">
                     
                     <!-- Advanced Category Analysis -->
                     <div class="category-section" data-category="category">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors" onclick="toggleCategory('category')">
-                            <span class="text-xs font-medium text-green-700 dark:text-green-300 uppercase tracking-wide">🔍 Análise de Categorias</span>
-                            <svg class="category-chevron w-4 h-4 text-green-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-md hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors" onclick="toggleCategory('category')">
+                            <span class="text-xs font-medium text-teal-700 dark:text-teal-300 uppercase tracking-wide">🔍 Análise de Categorias</span>
+                            <svg class="category-chevron w-4 h-4 text-teal-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
@@ -272,9 +227,9 @@ ORDER BY maior_valor DESC" data-id="estatisticas-por-categoria">
                     
                     <!-- Travel & Expense Analysis -->
                     <div class="category-section" data-category="travel">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors" onclick="toggleCategory('travel')">
-                            <span class="text-xs font-medium text-purple-700 dark:text-purple-300 uppercase tracking-wide">✈️ Análise de Viagens</span>
-                            <svg class="category-chevron w-4 h-4 text-purple-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-md hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors" onclick="toggleCategory('travel')">
+                            <span class="text-xs font-medium text-sky-700 dark:text-sky-300 uppercase tracking-wide">✈️ Análise de Viagens</span>
+                            <svg class="category-chevron w-4 h-4 text-sky-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
@@ -321,9 +276,9 @@ LIMIT 25" data-id="top-gastos-por-deputado">
                     
                     <!-- Vendor Intelligence -->
                     <div class="category-section" data-category="vendor">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors" onclick="toggleCategory('vendor')">
-                            <span class="text-xs font-medium text-orange-700 dark:text-orange-300 uppercase tracking-wide">🏪 Inteligência de Fornecedores</span>
-                            <svg class="category-chevron w-4 h-4 text-orange-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-md hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors" onclick="toggleCategory('vendor')">
+                            <span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">🏪 Inteligência de Fornecedores</span>
+                            <svg class="category-chevron w-4 h-4 text-emerald-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
@@ -400,9 +355,9 @@ ORDER BY num_transacoes DESC" data-id="principal-fornecedor-por-categoria">
                     
                     <!-- Parliamentary Insights -->
                     <div class="category-section" data-category="parliamentary">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors" onclick="toggleCategory('parliamentary')">
-                            <span class="text-xs font-medium text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">🏛️ Insights Parlamentares</span>
-                            <svg class="category-chevron w-4 h-4 text-indigo-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-md hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors" onclick="toggleCategory('parliamentary')">
+                            <span class="text-xs font-medium text-violet-700 dark:text-violet-300 uppercase tracking-wide">🏛️ Insights Parlamentares</span>
+                            <svg class="category-chevron w-4 h-4 text-violet-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
@@ -466,9 +421,9 @@ ORDER BY
                     
                     <!-- Data Quality & Audit -->
                     <div class="category-section" data-category="audit">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors" onclick="toggleCategory('audit')">
-                            <span class="text-xs font-medium text-red-700 dark:text-red-300 uppercase tracking-wide">🔍 Qualidade & Auditoria</span>
-                            <svg class="category-chevron w-4 h-4 text-red-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors" onclick="toggleCategory('audit')">
+                            <span class="text-xs font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wide">🔍 Qualidade & Auditoria</span>
+                            <svg class="category-chevron w-4 h-4 text-amber-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </div>
@@ -1142,6 +1097,7 @@ LIMIT 50" data-id="concentracao-fornecedores">
         </div>
     </div>
 
+    <script src="./src/js/category-toggle.js"></script>
     <script type="module" src="./src/apps/db-app.js"></script>
 </body>
 </html>
