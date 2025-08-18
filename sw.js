@@ -36,14 +36,24 @@ const STATIC_ASSETS = [
   '/src/db/editor-manager.js',
   '/src/db/query-executor.js',
   '/src/index/connection-monitor.js',
-  '/src/index/node-details.js'
+  '/src/index/node-details.js',
+  ...VENDOR_ASSETS
 ];
 
-// External resources to cache
-const EXTERNAL_ASSETS = [
-  'https://cdn.tailwindcss.com/tailwindcss.js',
-  'https://d3js.org/d3.v7.min.js',
-  'https://fonts.googleapis.com/css2?family=Monda:wght@400;700&display=swap'
+// Vendor assets to cache (now local)
+const VENDOR_ASSETS = [
+  '/vendor/js/tailwindcss.js',
+  '/vendor/js/d3.v7.min.js',
+  '/vendor/js/d3-sankey.min.js',
+  '/vendor/js/duckdb-wasm.js',
+  '/vendor/js/duckdb-wasm.wasm',
+  '/vendor/js/sql-formatter.js',
+  '/vendor/js/d3-module.js',
+  '/vendor/js/duckdb-module.js',
+  '/vendor/js/sql-formatter-module.js',
+  '/vendor/css/google-fonts.css',
+  '/vendor/fonts/monda-regular.ttf',
+  '/vendor/fonts/monda-bold.ttf'
 ];
 
 // Install event - cache static assets
@@ -66,17 +76,8 @@ self.addEventListener('install', (event) => {
           }
         });
         
-        // Cache external assets individually
-        const externalPromises = EXTERNAL_ASSETS.map(async (asset) => {
-          try {
-            await cache.add(asset);
-            console.log('[SW] Cached external:', asset);
-          } catch (error) {
-            console.warn('[SW] Failed to cache external asset:', asset, error);
-          }
-        });
-        
-        await Promise.allSettled([...staticPromises, ...externalPromises]);
+        // All assets are now local, so just wait for static assets
+        await Promise.allSettled(staticPromises);
       }),
       
       // Initialize OPFS if available

@@ -1,5 +1,5 @@
-import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm';
-import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import * as duckdb from '../vendor/js/duckdb-module.js';
+import * as d3 from '../vendor/js/d3-module.js';
 
 // Import utilities from new locations
 import { FormatUtils } from './shared/formatters.js';
