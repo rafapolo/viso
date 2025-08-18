@@ -17,8 +17,16 @@ global.console = {
   error: jest.fn()
 };
 
+// Mock HTMLCanvasElement first
+global.HTMLCanvasElement = global.HTMLCanvasElement || class HTMLCanvasElement {
+  constructor() {
+    this.width = 300;
+    this.height = 150;
+  }
+};
+
 // Mock canvas for D3.js tests
-HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+global.HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
   fillRect: jest.fn(),
   clearRect: jest.fn(),
   getImageData: jest.fn(() => ({ data: new Array(4) })),
@@ -91,13 +99,17 @@ global.crypto = {
 };
 
 // Mock TextEncoder/TextDecoder
-global.TextEncoder = jest.fn(() => ({
-  encode: jest.fn((str) => new Uint8Array(str.split('').map(c => c.charCodeAt(0))))
-}));
+global.TextEncoder = class {
+  encode(str) {
+    return new Uint8Array(str.split('').map(c => c.charCodeAt(0)));
+  }
+};
 
-global.TextDecoder = jest.fn(() => ({
-  decode: jest.fn((data) => String.fromCharCode(...data))
-}));
+global.TextDecoder = class {
+  decode(data) {
+    return String.fromCharCode(...data);
+  }
+};
 
 // Mock Worker for web workers
 global.Worker = jest.fn(() => ({
@@ -123,6 +135,63 @@ global.performance = {
     jsHeapSizeLimit: 1024 * 1024 * 1024
   }
 };
+
+// Mock window event listeners
+global.window = global.window || {};
+global.window.addEventListener = jest.fn();
+global.window.removeEventListener = jest.fn();
+
+// Add minimal DOM method mocks for tests that specifically need them
+// These are only added if they don't already exist (let JSDOM handle most cases)
+if (!global.document.getElementById.mock) {
+  const originalGetElementById = global.document.getElementById;
+  global.document.getElementById = jest.fn((...args) => originalGetElementById.apply(global.document, args));
+}
+
+if (!global.document.querySelectorAll.mock) {
+  const originalQuerySelectorAll = global.document.querySelectorAll;
+  global.document.querySelectorAll = jest.fn((...args) => originalQuerySelectorAll.apply(global.document, args));
+}
+
+if (!global.document.querySelector.mock) {
+  const originalQuerySelector = global.document.querySelector;
+  global.document.querySelector = jest.fn((...args) => originalQuerySelector.apply(global.document, args));
+}
+
+// Mock ServiceWorkerRegistration
+global.ServiceWorkerRegistration = {
+  prototype: {
+    sync: {
+      register: jest.fn()
+    }
+  }
+};
+
+// Mock navigator.serviceWorker
+global.navigator.serviceWorker = {
+  ready: Promise.resolve({
+    sync: {
+      register: jest.fn()
+    }
+  }),
+  controller: {
+    postMessage: jest.fn()
+  }
+};
+
+// Mock MessageChannel
+global.MessageChannel = jest.fn(() => ({
+  port1: { onmessage: null, postMessage: jest.fn() },
+  port2: { onmessage: null, postMessage: jest.fn() }
+}));
+
+// Mock window.matchMedia
+global.window.matchMedia = jest.fn();
+
+// Mock document.body properly for JSDOM
+if (!global.document.body) {
+  global.document.body = global.document.createElement('body');
+}
 
 // Setup DOM elements that are expected to exist
 beforeEach(() => {
