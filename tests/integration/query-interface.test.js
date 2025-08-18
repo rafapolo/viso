@@ -375,7 +375,7 @@ const mockQueryInterfaceFunctions = () => {
     
     const tab = global.tabs[global.activeTabId];
     if (!tab || !tab.results || !tab.results.data.length) {
-      console.warn('Nenhum resultado para exportar');
+      global.alert('Nenhum resultado para exportar');
       return;
     }
     
