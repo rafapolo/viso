@@ -23,7 +23,7 @@
     position: relative;
     background: #ffffff;
     border: 1px solid #e5e7eb;
-    border-left: 3px solid #10b981; /* default green */
+    border-left: 3px solid #64748b; /* default slate */
     transition: background-color 0.15s ease;
     cursor: pointer;
     font-family: 'Inter', sans-serif;
@@ -42,15 +42,19 @@
 .dark .sample-query {
     background: #1f2937;
     border: 1px solid #374151;
-    border-left: 3px solid #10b981; /* default green */
+    border-left: 3px solid #64748b; /* default slate */
 }
 
 /* Category-specific left border colors */
 
-/* Green - Exemplos & Análise de Categorias */
-.category-exemplos .sample-query,
+/* Slate - Exemplos */
+.category-exemplos .sample-query {
+    border-left-color: #64748b; /* slate-500 */
+}
+
+/* Teal - Análise de Categorias */
 .category-category .sample-query {
-    border-left-color: #10b981; /* green-500 */
+    border-left-color: #14b8a6; /* teal-500 */
 }
 
 /* Blue - Análise Temporal */
@@ -58,30 +62,38 @@
     border-left-color: #3b82f6; /* blue-500 */
 }
 
-/* Purple - Análise de Viagens */
+/* Sky - Análise de Viagens */
 .category-travel .sample-query {
-    border-left-color: #8b5cf6; /* purple-500 */
+    border-left-color: #0ea5e9; /* sky-500 */
 }
 
-/* Orange - Inteligência de Fornecedores */
+/* Emerald - Inteligência de Fornecedores */
 .category-vendor .sample-query {
+    border-left-color: #10b981; /* emerald-500 */
+}
+
+/* Violet - Insights Parlamentares */
+.category-parliamentary .sample-query {
+    border-left-color: #8b5cf6; /* violet-500 */
+}
+
+/* Amber - Qualidade & Auditoria */
+.category-audit .sample-query {
     border-left-color: #f59e0b; /* amber-500 */
 }
 
-/* Indigo - Insights Parlamentares */
-.category-parliamentary .sample-query {
-    border-left-color: #6366f1; /* indigo-500 */
-}
-
-/* Red - Qualidade & Auditoria */
-.category-audit .sample-query {
+/* Red - Detecção de Riscos */
+.category-risk .sample-query {
     border-left-color: #ef4444; /* red-500 */
 }
 
 /* Dark mode - same colors work well in dark mode */
-.dark .category-exemplos .sample-query,
+.dark .category-exemplos .sample-query {
+    border-left-color: #64748b;
+}
+
 .dark .category-category .sample-query {
-    border-left-color: #10b981;
+    border-left-color: #14b8a6;
 }
 
 .dark .category-temporal .sample-query {
@@ -89,18 +101,22 @@
 }
 
 .dark .category-travel .sample-query {
-    border-left-color: #8b5cf6;
+    border-left-color: #0ea5e9;
 }
 
 .dark .category-vendor .sample-query {
-    border-left-color: #f59e0b;
+    border-left-color: #10b981;
 }
 
 .dark .category-parliamentary .sample-query {
-    border-left-color: #6366f1;
+    border-left-color: #8b5cf6;
 }
 
 .dark .category-audit .sample-query {
+    border-left-color: #f59e0b;
+}
+
+.dark .category-risk .sample-query {
     border-left-color: #ef4444;
 }
 
