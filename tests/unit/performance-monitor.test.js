@@ -217,7 +217,7 @@ describe('PerformanceMonitor', () => {
         }
       }
 
-      recordStorageOperation(operation, duration, compressionRatio = 0) {
+      recordStorageOperation(operation, duration, dataSize, compressionRatio = 0) {
         const {storage} = this.metrics;
         
         storage.opfsOperations++;
