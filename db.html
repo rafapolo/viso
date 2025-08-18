@@ -564,6 +564,456 @@ LIMIT 20" data-id="valores-altos-duplicados">
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Risk Detection Analysis -->
+                    <div class="category-section" data-category="risk">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors" onclick="toggleCategory('risk')">
+                            <span class="text-xs font-medium text-red-700 dark:text-red-300 uppercase tracking-wide">🚨 Detecção de Riscos</span>
+                            <svg class="category-chevron w-4 h-4 text-red-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div class="category-content category-risk space-y-1" style="display: none;">
+                            <div class="sample-query" data-query="-- Análise de Padrões de Restituição
+-- Detecta restituições/retidos acima do normal que podem indicar inflação ou erro sistemático
+
+WITH monthly_stats AS (
+    SELECT 
+        nome_parlamentar as deputado,
+        fornecedor,
+        categoria_despesa,
+        date_part('year', data_emissao) * 100 + date_part('month', data_emissao) AS ano_mes,
+        COUNT(*) AS total_transacoes,
+        SUM(valor_liquido) AS valor_total,
+        AVG(valor_liquido) AS valor_medio
+    FROM despesas 
+    WHERE data_emissao IS NOT NULL 
+    AND valor_liquido IS NOT NULL
+    GROUP BY nome_parlamentar, fornecedor, categoria_despesa, ano_mes
+),
+percentiles AS (
+    SELECT 
+        categoria_despesa,
+        PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY valor_medio) AS p90_valor_medio
+    FROM monthly_stats 
+    GROUP BY categoria_despesa
+)
+SELECT 
+    ms.deputado,
+    ms.fornecedor,
+    ms.categoria_despesa,
+    ms.ano_mes,
+    ms.total_transacoes,
+    ms.valor_total,
+    ms.valor_medio,
+    p.p90_valor_medio,
+    CASE WHEN ms.valor_medio > p.p90_valor_medio THEN 1 ELSE 0 END AS flag_valor_alto
+FROM monthly_stats ms
+JOIN percentiles p ON ms.categoria_despesa = p.categoria_despesa
+WHERE ms.valor_medio > p.p90_valor_medio
+ORDER BY ms.valor_medio DESC
+LIMIT 50" data-id="padroes-restituicao">
+                                🔄 Padrões de Restituição
+                            </div>
+                            <div class="sample-query" data-query="-- Análise de Parcelamento Artificial
+-- Identifica notas fracionadas em muitas parcelas para disfarçar grandes despesas
+
+WITH fornecedor_mensal AS (
+    SELECT 
+        nome_parlamentar as deputado,
+        fornecedor,
+        date_part('year', data_emissao) * 100 + date_part('month', data_emissao) AS ano_mes,
+        COUNT(*) AS num_transacoes,
+        SUM(valor_liquido) AS valor_total,
+        AVG(valor_liquido) AS valor_medio,
+        STDDEV(valor_liquido) AS desvio_padrao,
+        MIN(data_emissao) AS primeira_data,
+        MAX(data_emissao) AS ultima_data
+    FROM despesas 
+    WHERE data_emissao IS NOT NULL 
+    AND valor_liquido IS NOT NULL
+    GROUP BY nome_parlamentar, fornecedor, ano_mes
+),
+suspeitos AS (
+    SELECT *,
+        CASE WHEN desvio_padrao > 0 THEN desvio_padrao / NULLIF(valor_medio, 0) ELSE 0 END AS coef_variacao,
+        date_diff('day', primeira_data, ultima_data) AS span_dias,
+        DENSE_RANK() OVER (ORDER BY deputado, fornecedor, ano_mes) AS serie_id
+    FROM fornecedor_mensal
+    WHERE num_transacoes >= 3
+)
+SELECT 
+    deputado,
+    fornecedor,
+    ano_mes,
+    serie_id,
+    num_transacoes,
+    valor_total,
+    valor_medio,
+    ROUND(coef_variacao, 3) AS variacao_relativa,
+    span_dias,
+    CASE WHEN num_transacoes >= 3 AND coef_variacao <= 0.1 THEN 1 ELSE 0 END AS flag_parcelamento
+FROM suspeitos
+WHERE num_transacoes >= 3 AND coef_variacao <= 0.1
+ORDER BY valor_total DESC
+LIMIT 50" data-id="parcelamento-artificial">
+                                📑 Parcelamento Artificial
+                            </div>
+                            <div class="sample-query" data-query="-- Análise One-Hit Wonder
+-- Localiza fornecedores que aparecem só uma vez ou em um único mês com valor alto
+
+WITH fornecedor_stats AS (
+    SELECT 
+        fornecedor,
+        COUNT(*) AS total_transacoes,
+        COUNT(DISTINCT date_part('year', data_emissao) * 100 + date_part('month', data_emissao)) AS meses_distintos,
+        SUM(valor_liquido) AS valor_total,
+        MAX(valor_liquido) AS valor_maximo,
+        categoria_despesa
+    FROM despesas 
+    WHERE data_emissao IS NOT NULL 
+    AND valor_liquido IS NOT NULL
+    AND fornecedor IS NOT NULL
+    GROUP BY fornecedor, categoria_despesa
+),
+categoria_percentiles AS (
+    SELECT 
+        categoria_despesa,
+        PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY valor_maximo) AS p90_categoria
+    FROM fornecedor_stats 
+    GROUP BY categoria_despesa
+),
+one_hit_candidates AS (
+    SELECT 
+        fs.*,
+        cp.p90_categoria,
+        CASE 
+            WHEN fs.total_transacoes = 1 THEN 'strict'
+            WHEN fs.meses_distintos = 1 AND fs.total_transacoes <= 2 THEN 'temporal'
+            ELSE 'normal'
+        END AS tipo_one_hit,
+        CASE WHEN fs.valor_maximo >= cp.p90_categoria THEN 1 ELSE 0 END AS flag_valor_suspeito
+    FROM fornecedor_stats fs
+    JOIN categoria_percentiles cp ON fs.categoria_despesa = cp.categoria_despesa
+)
+SELECT 
+    fornecedor,
+    categoria_despesa,
+    total_transacoes,
+    meses_distintos,
+    valor_total,
+    valor_maximo,
+    tipo_one_hit,
+    flag_valor_suspeito
+FROM one_hit_candidates
+WHERE (tipo_one_hit IN ('strict', 'temporal')) 
+AND flag_valor_suspeito = 1
+ORDER BY valor_maximo DESC
+LIMIT 50" data-id="one-hit-wonder">
+                                🎯 One-Hit Wonder
+                            </div>
+                            <div class="sample-query" data-query="-- Análise Fornecedor Multiuso
+-- Encontra empresas ligadas a várias categorias de despesa fora do esperado
+
+WITH fornecedor_diversidade AS (
+    SELECT 
+        fornecedor,
+        COUNT(DISTINCT categoria_despesa) AS num_categorias,
+        COUNT(DISTINCT subcategoria_despesa) AS num_subcategorias,
+        SUM(valor_liquido) AS valor_total,
+        STRING_AGG(DISTINCT categoria_despesa, ', ' ORDER BY categoria_despesa) AS categorias_atendidas
+    FROM despesas 
+    WHERE fornecedor IS NOT NULL 
+    AND categoria_despesa IS NOT NULL
+    AND valor_liquido IS NOT NULL
+    GROUP BY fornecedor
+),
+categoria_shares AS (
+    SELECT 
+        fd.fornecedor,
+        fd.num_categorias,
+        fd.num_subcategorias,
+        fd.valor_total,
+        fd.categorias_atendidas,
+        SUM(POWER(d.share_categoria, 2)) AS hhi_categorias
+    FROM fornecedor_diversidade fd
+    JOIN (
+        SELECT 
+            fornecedor,
+            categoria_despesa,
+            SUM(valor_liquido) / SUM(SUM(valor_liquido)) OVER (PARTITION BY fornecedor) AS share_categoria
+        FROM despesas 
+        WHERE fornecedor IS NOT NULL AND categoria_despesa IS NOT NULL
+        GROUP BY fornecedor, categoria_despesa
+    ) d ON fd.fornecedor = d.fornecedor
+    GROUP BY fd.fornecedor, fd.num_categorias, fd.num_subcategorias, fd.valor_total, fd.categorias_atendidas
+)
+SELECT 
+    fornecedor,
+    num_categorias,
+    num_subcategorias,
+    valor_total,
+    categorias_atendidas,
+    ROUND(1 - hhi_categorias, 3) AS indice_diversidade,
+    CASE 
+        WHEN num_categorias >= 3 OR (num_categorias >= 2 AND num_subcategorias >= 4) THEN 1 
+        ELSE 0 
+    END AS flag_multiuso
+FROM categoria_shares
+WHERE num_categorias >= 3 OR (num_categorias >= 2 AND num_subcategorias >= 4)
+ORDER BY num_categorias DESC, valor_total DESC
+LIMIT 50" data-id="fornecedor-multiuso">
+                                🛠️ Fornecedor Multiuso
+                            </div>
+                            <div class="sample-query" data-query="-- Análise de Preferência Política
+-- Verifica se fornecedores são usados de forma desproporcional por um partido específico
+
+WITH fornecedor_partido AS (
+    SELECT 
+        fornecedor,
+        sigla_partido,
+        SUM(valor_liquido) AS valor_partido_fornecedor,
+        COUNT(*) AS transacoes_partido_fornecedor
+    FROM despesas 
+    WHERE fornecedor IS NOT NULL 
+    AND sigla_partido IS NOT NULL 
+    AND valor_liquido IS NOT NULL
+    GROUP BY fornecedor, sigla_partido
+),
+fornecedor_totals AS (
+    SELECT 
+        fornecedor,
+        SUM(valor_partido_fornecedor) AS valor_total_fornecedor,
+        SUM(transacoes_partido_fornecedor) AS transacoes_total_fornecedor
+    FROM fornecedor_partido
+    GROUP BY fornecedor
+),
+partido_totals AS (
+    SELECT 
+        sigla_partido,
+        SUM(valor_liquido) AS valor_total_partido
+    FROM despesas 
+    WHERE sigla_partido IS NOT NULL AND valor_liquido IS NOT NULL
+    GROUP BY sigla_partido
+),
+global_total AS (
+    SELECT SUM(valor_liquido) AS valor_total_geral
+    FROM despesas 
+    WHERE valor_liquido IS NOT NULL
+),
+preferencia_analysis AS (
+    SELECT 
+        fp.fornecedor,
+        fp.sigla_partido,
+        fp.valor_partido_fornecedor,
+        ft.valor_total_fornecedor,
+        pt.valor_total_partido,
+        gt.valor_total_geral,
+        fp.valor_partido_fornecedor / NULLIF(ft.valor_total_fornecedor, 0) AS share_partido_fornecedor,
+        pt.valor_total_partido / gt.valor_total_geral AS base_rate_partido,
+        (fp.valor_partido_fornecedor / NULLIF(ft.valor_total_fornecedor, 0)) / 
+        NULLIF(pt.valor_total_partido / gt.valor_total_geral, 0) AS lift_ratio
+    FROM fornecedor_partido fp
+    JOIN fornecedor_totals ft ON fp.fornecedor = ft.fornecedor  
+    JOIN partido_totals pt ON fp.sigla_partido = pt.sigla_partido
+    CROSS JOIN global_total gt
+),
+percentile_75 AS (
+    SELECT PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY valor_total_fornecedor) AS p75_fornecedor
+    FROM fornecedor_totals
+)
+SELECT 
+    pa.fornecedor,
+    pa.sigla_partido,
+    pa.valor_partido_fornecedor,
+    pa.valor_total_fornecedor,
+    ROUND(pa.share_partido_fornecedor, 3) AS share_partido,
+    ROUND(pa.base_rate_partido, 3) AS base_rate,
+    ROUND(pa.lift_ratio, 2) AS lift,
+    CASE WHEN pa.lift_ratio >= 2 AND pa.valor_total_fornecedor >= p75.p75_fornecedor THEN 1 ELSE 0 END AS flag_preferencia
+FROM preferencia_analysis pa
+CROSS JOIN percentile_75 p75
+WHERE pa.lift_ratio >= 2 AND pa.valor_total_fornecedor >= p75.p75_fornecedor
+ORDER BY pa.lift_ratio DESC
+LIMIT 50" data-id="preferencia-politica">
+                                🏛️ Preferência Política
+                            </div>
+                            <div class="sample-query" data-query="-- Análise de Evolução Líquido vs Retido
+-- Analisa evolução de valores para detectar padrões de uso indevido (simulação)
+
+WITH monthly_ratios AS (
+    SELECT 
+        nome_parlamentar as deputado,
+        date_part('year', data_emissao) * 100 + date_part('month', data_emissao) AS ano_mes,
+        SUM(valor_liquido) AS valor_total_mes,
+        COUNT(*) AS transacoes_mes,
+        AVG(valor_liquido) AS valor_medio_mes
+    FROM despesas 
+    WHERE data_emissao IS NOT NULL 
+    AND valor_liquido IS NOT NULL
+    AND nome_parlamentar IS NOT NULL
+    GROUP BY nome_parlamentar, ano_mes
+),
+deputado_stats AS (
+    SELECT 
+        deputado,
+        AVG(valor_medio_mes) AS media_deputado,
+        STDDEV(valor_medio_mes) AS desvio_deputado,
+        COUNT(*) AS meses_atividade
+    FROM monthly_ratios
+    GROUP BY deputado
+    HAVING COUNT(*) >= 6  -- Pelo menos 6 meses de atividade
+),
+z_scores AS (
+    SELECT 
+        mr.deputado,
+        mr.ano_mes,
+        mr.valor_total_mes,
+        mr.valor_medio_mes,
+        ds.media_deputado,
+        ds.desvio_deputado,
+        CASE 
+            WHEN ds.desvio_deputado > 0 THEN 
+                (mr.valor_medio_mes - ds.media_deputado) / ds.desvio_deputado
+            ELSE 0 
+        END AS z_score
+    FROM monthly_ratios mr
+    JOIN deputado_stats ds ON mr.deputado = ds.deputado
+)
+SELECT 
+    deputado,
+    ano_mes,
+    valor_total_mes,
+    valor_medio_mes,
+    ROUND(z_score, 2) AS z_score,
+    CASE WHEN ABS(z_score) >= 2 THEN 1 ELSE 0 END AS flag_outlier
+FROM z_scores
+WHERE ABS(z_score) >= 2
+ORDER BY ABS(z_score) DESC
+LIMIT 50" data-id="evolucao-liquido-retido">
+                                📉 Evolução Líquido vs Retido
+                            </div>
+                            <div class="sample-query" data-query="-- Análise de Duplicação Indireta
+-- Checa notas semelhantes entre deputados diferentes que podem ser replicadas
+
+WITH duplicatas_candidatas AS (
+    SELECT 
+        d1.fornecedor,
+        d1.valor_liquido,
+        d1.data_emissao,
+        d1.nome_parlamentar as deputado1,
+        d2.nome_parlamentar as deputado2,
+        d1.categoria_despesa,
+        ABS(date_diff('day', d1.data_emissao::DATE, d2.data_emissao::DATE)) AS diferenca_dias
+    FROM despesas d1
+    JOIN despesas d2 ON d1.fornecedor = d2.fornecedor
+        AND ABS(d1.valor_liquido - d2.valor_liquido) / GREATEST(d1.valor_liquido, d2.valor_liquido) <= 0.01  -- Diferença <= 1%
+        AND d1.nome_parlamentar != d2.nome_parlamentar
+        AND d1.data_emissao IS NOT NULL 
+        AND d2.data_emissao IS NOT NULL
+    WHERE d1.fornecedor IS NOT NULL 
+    AND d1.valor_liquido IS NOT NULL
+    AND d2.valor_liquido IS NOT NULL
+),
+duplicatas_filtradas AS (
+    SELECT *
+    FROM duplicatas_candidatas
+    WHERE diferenca_dias <= 3  -- Mesmo dia ou ±3 dias
+),
+agrupadas AS (
+    SELECT 
+        fornecedor,
+        valor_liquido,
+        data_emissao,
+        categoria_despesa,
+        COUNT(DISTINCT deputado1) + COUNT(DISTINCT deputado2) AS num_deputados_envolvidos,
+        STRING_AGG(DISTINCT deputado1, ', ') AS deputados1,
+        STRING_AGG(DISTINCT deputado2, ', ') AS deputados2,
+        MIN(diferenca_dias) AS min_diferenca_dias
+    FROM duplicatas_filtradas
+    GROUP BY fornecedor, valor_liquido, data_emissao, categoria_despesa
+)
+SELECT 
+    fornecedor,
+    valor_liquido,
+    strftime(data_emissao, '%d/%m/%Y') as data_emissao,
+    categoria_despesa,
+    num_deputados_envolvidos,
+    deputados1,
+    deputados2,
+    min_diferenca_dias,
+    1 AS flag_duplicacao
+FROM agrupadas
+WHERE num_deputados_envolvidos >= 2
+ORDER BY valor_liquido DESC, num_deputados_envolvidos DESC
+LIMIT 50" data-id="duplicacao-indireta">
+                                🧾 Duplicação Indireta
+                            </div>
+                            <div class="sample-query" data-query="-- Análise de Concentração de Fornecedores (HHI)
+-- Mede dependência de poucos fornecedores por deputado via índice de concentração
+
+WITH deputado_fornecedor AS (
+    SELECT 
+        nome_parlamentar as deputado,
+        fornecedor,
+        SUM(valor_liquido) AS valor_fornecedor
+    FROM despesas 
+    WHERE nome_parlamentar IS NOT NULL 
+    AND fornecedor IS NOT NULL 
+    AND valor_liquido IS NOT NULL
+    GROUP BY nome_parlamentar, fornecedor
+),
+deputado_totals AS (
+    SELECT 
+        deputado,
+        SUM(valor_fornecedor) AS valor_total_deputado
+    FROM deputado_fornecedor
+    GROUP BY deputado
+),
+shares_calculadas AS (
+    SELECT 
+        df.deputado,
+        df.fornecedor,
+        df.valor_fornecedor,
+        dt.valor_total_deputado,
+        df.valor_fornecedor / dt.valor_total_deputado AS share_fornecedor
+    FROM deputado_fornecedor df
+    JOIN deputado_totals dt ON df.deputado = dt.deputado
+),
+concentracao_metrics AS (
+    SELECT 
+        deputado,
+        valor_total_deputado,
+        COUNT(*) AS num_fornecedores,
+        MAX(share_fornecedor) AS top1_share,
+        SUM(POWER(share_fornecedor, 2)) AS hhi,
+        STRING_AGG(
+            fornecedor || ' (' || ROUND(share_fornecedor * 100, 1) || '%)', 
+            ', ' 
+            ORDER BY share_fornecedor DESC
+        ) AS top_fornecedores
+    FROM shares_calculadas
+    GROUP BY deputado, valor_total_deputado
+)
+SELECT 
+    deputado,
+    valor_total_deputado,
+    num_fornecedores,
+    ROUND(top1_share, 3) AS participacao_top1,
+    ROUND(hhi, 3) AS indice_hhi,
+    CASE 
+        WHEN hhi >= 0.25 OR top1_share >= 0.6 THEN 1 
+        ELSE 0 
+    END AS flag_concentracao,
+    SUBSTR(top_fornecedores, 1, 200) AS principais_fornecedores
+FROM concentracao_metrics
+WHERE hhi >= 0.25 OR top1_share >= 0.6
+ORDER BY hhi DESC
+LIMIT 50" data-id="concentracao-fornecedores">
+                                📊 Concentração de Fornecedores
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             

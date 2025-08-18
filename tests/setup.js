@@ -91,9 +91,11 @@ global.crypto = {
 };
 
 // Mock TextEncoder/TextDecoder
-global.TextEncoder = jest.fn(() => ({
-  encode: jest.fn((str) => new Uint8Array(str.split('').map(c => c.charCodeAt(0))))
-}));
+global.TextEncoder = class {
+  encode(str) {
+    return new Uint8Array(str.split('').map(c => c.charCodeAt(0)));
+  }
+};
 
 global.TextDecoder = jest.fn(() => ({
   decode: jest.fn((data) => String.fromCharCode(...data))
@@ -122,6 +124,74 @@ global.performance = {
     totalJSHeapSize: 100 * 1024 * 1024,
     jsHeapSizeLimit: 1024 * 1024 * 1024
   }
+};
+
+// Mock window event listeners
+global.window = global.window || {};
+global.window.addEventListener = jest.fn();
+global.window.removeEventListener = jest.fn();
+
+// Mock DOM methods
+global.document.getElementById = jest.fn();
+global.document.querySelectorAll = jest.fn(() => []);
+global.document.querySelector = jest.fn();
+global.document.createElement = jest.fn((tag) => {
+  const element = {
+    tagName: tag.toUpperCase(),
+    id: '',
+    className: '',
+    textContent: '',
+    innerHTML: '',
+    style: {},
+    children: [],
+    appendChild: jest.fn(),
+    setAttribute: jest.fn((attr, value) => {
+      element[attr] = value;
+    }),
+    getAttribute: jest.fn((attr) => element[attr]),
+    getBoundingClientRect: jest.fn(() => ({ width: 100, height: 100, x: 0, y: 0, top: 0, left: 0, bottom: 100, right: 100 })),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn()
+  };
+  return element;
+});
+
+// Mock ServiceWorkerRegistration
+global.ServiceWorkerRegistration = {
+  prototype: {
+    sync: {
+      register: jest.fn()
+    }
+  }
+};
+
+// Mock navigator.serviceWorker
+global.navigator.serviceWorker = {
+  ready: Promise.resolve({
+    sync: {
+      register: jest.fn()
+    }
+  }),
+  controller: {
+    postMessage: jest.fn()
+  }
+};
+
+// Mock MessageChannel
+global.MessageChannel = jest.fn(() => ({
+  port1: { onmessage: null, postMessage: jest.fn() },
+  port2: { onmessage: null, postMessage: jest.fn() }
+}));
+
+// Mock window.matchMedia
+global.window.matchMedia = jest.fn();
+
+// Mock document.body
+global.document.body = {
+  innerHTML: '',
+  appendChild: jest.fn(),
+  removeChild: jest.fn(),
+  children: []
 };
 
 // Setup DOM elements that are expected to exist
