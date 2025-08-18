@@ -1,11 +1,14 @@
 // Database API setup for db.html
-import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
-import { sankey as d3Sankey, sankeyLinkHorizontal } from 'https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/+esm';
-import { format } from 'https://cdn.jsdelivr.net/npm/sql-formatter@15/+esm';
+import * as d3 from '../vendor/js/d3-module.js';
+// Load D3 Sankey from global window (loaded via script tag)
+import { format } from '../vendor/js/sql-formatter-module.js';
 import { duckDBManager } from './core.js';
 
 // Make libraries available globally
 window.d3 = d3;
+// D3 Sankey functions will be available from global d3 object loaded via script tag
+const d3Sankey = window.d3?.sankey;
+const sankeyLinkHorizontal = window.d3?.sankeyLinkHorizontal;
 window.d3Sankey = d3Sankey;
 window.d3SankeyLinkHorizontal = sankeyLinkHorizontal;
 window.sqlFormatter = { format };
