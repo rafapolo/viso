@@ -37,11 +37,11 @@ jobs:
         echo "📦 Bundle Analysis:"
         ls -lah dist/
         echo ""
-        echo "🗂️ Main bundle size:"
-        du -h dist/js/main-*.js || echo "Main bundle not found"
+        echo "🗂️ Apps bundle size:"
+        du -h dist/js/apps-*.js || echo "Apps bundle not found"
         echo ""
-        echo "🗂️ DB bundle size:"
-        du -h dist/js/db-*.js || echo "DB bundle not found"
+        echo "🗂️ Core bundle size:"
+        du -h dist/js/core-*.js || echo "Core bundle not found"
         echo ""
         echo "🎨 CSS size:"
         du -h dist/css/main-*.css || echo "CSS file not found"
@@ -66,8 +66,8 @@ jobs:
       run: |
         echo "🧪 Basic Tests:"
         echo "Checking if main bundles exist..."
-        ls dist/js/main-*.js > /dev/null 2>&1 && echo "✅ main.js exists" || echo "❌ main.js missing"
-        ls dist/js/db-*.js > /dev/null 2>&1 && echo "✅ db.js exists" || echo "❌ db.js missing"
+        ls dist/js/apps-*.js > /dev/null 2>&1 && echo "✅ apps.js exists" || echo "❌ apps.js missing"
+        ls dist/js/core-*.js > /dev/null 2>&1 && echo "✅ core.js exists" || echo "❌ core.js missing"
         test -f dist/index.html && echo "✅ index.html exists" || echo "❌ index.html missing"
         test -f dist/db.html && echo "✅ db.html exists" || echo "❌ db.html missing"
         ls dist/css/main-*.css > /dev/null 2>&1 && echo "✅ main.css exists" || echo "❌ main.css missing"
@@ -146,20 +146,20 @@ jobs:
         echo "BUILD_TIME=${BUILD_TIME}" >> $GITHUB_ENV
         
         # Bundle analysis
-        MAIN_SIZE=$(stat --format=%s dist/main.js 2>/dev/null || echo "0")
-        DB_SIZE=$(stat --format=%s dist/db.js 2>/dev/null || echo "0")
-        CSS_SIZE=$(stat --format=%s dist/main.css 2>/dev/null || echo "0")
-        TOTAL_SIZE=$((MAIN_SIZE + DB_SIZE + CSS_SIZE))
+        APPS_SIZE=$(stat --format=%s dist/js/apps-*.js 2>/dev/null | head -n1 || echo "0")
+        CORE_SIZE=$(stat --format=%s dist/js/core-*.js 2>/dev/null | head -n1 || echo "0")
+        CSS_SIZE=$(stat --format=%s dist/css/main-*.css 2>/dev/null | head -n1 || echo "0")
+        TOTAL_SIZE=$((APPS_SIZE + CORE_SIZE + CSS_SIZE))
         
         echo "📊 Bundle Sizes:"
-        echo "  - Main: $(numfmt --to=iec ${MAIN_SIZE})"
-        echo "  - DB: $(numfmt --to=iec ${DB_SIZE})"
+        echo "  - Apps: $(numfmt --to=iec ${APPS_SIZE})"
+        echo "  - Core: $(numfmt --to=iec ${CORE_SIZE})"
         echo "  - CSS: $(numfmt --to=iec ${CSS_SIZE})"
         echo "  - Total JS+CSS: $(numfmt --to=iec ${TOTAL_SIZE})"
         
         # Store metrics
-        echo "MAIN_SIZE=${MAIN_SIZE}" >> $GITHUB_ENV
-        echo "DB_SIZE=${DB_SIZE}" >> $GITHUB_ENV
+        echo "APPS_SIZE=${APPS_SIZE}" >> $GITHUB_ENV
+        echo "CORE_SIZE=${CORE_SIZE}" >> $GITHUB_ENV
         echo "CSS_SIZE=${CSS_SIZE}" >> $GITHUB_ENV
         echo "TOTAL_SIZE=${TOTAL_SIZE}" >> $GITHUB_ENV
 
@@ -169,8 +169,8 @@ jobs:
       with:
         script: |
           const buildTime = process.env.BUILD_TIME;
-          const mainSize = parseInt(process.env.MAIN_SIZE);
-          const dbSize = parseInt(process.env.DB_SIZE);
+          const appsSize = parseInt(process.env.APPS_SIZE);
+          const coreSize = parseInt(process.env.CORE_SIZE);
           const cssSize = parseInt(process.env.CSS_SIZE);
           const totalSize = parseInt(process.env.TOTAL_SIZE);
           
@@ -191,8 +191,8 @@ jobs:
           ### 📦 Bundle Breakdown
           | Bundle | Size | 
           |--------|------|
-          | main.js | ${formatBytes(mainSize)} |
-          | db.js | ${formatBytes(dbSize)} |
+          | apps.js | ${formatBytes(appsSize)} |
+          | core.js | ${formatBytes(coreSize)} |
           | main.css | ${formatBytes(cssSize)} |
           
           ### 🚀 Performance Benefits
