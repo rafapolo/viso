@@ -47,6 +47,26 @@ class DuckDBManager {
 
     async initDuckDB() {
         try {
+            // Wait for Apache Arrow to be available
+            if (typeof window.Arrow === 'undefined') {
+                this.updateConnectionStatus('connecting', 'Aguardando Apache Arrow...');
+                await new Promise((resolve, reject) => {
+                    let attempts = 0;
+                    const maxAttempts = 50; // 5 seconds max wait
+                    const checkArrow = () => {
+                        attempts++;
+                        if (typeof window.Arrow !== 'undefined') {
+                            resolve();
+                        } else if (attempts >= maxAttempts) {
+                            reject(new Error('Apache Arrow failed to load within timeout'));
+                        } else {
+                            setTimeout(checkArrow, 100);
+                        }
+                    };
+                    checkArrow();
+                });
+            }
+            
             this.updateConnectionStatus('connecting', 'Inicializando DuckDB...');
             // Initializing DuckDB
             
