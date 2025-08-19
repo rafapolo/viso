@@ -14,8 +14,8 @@ test.describe('Basic Application Functionality', () => {
 
   test.describe('Page Load and Basic UI', () => {
     test('should load the main page successfully', async ({ page }) => {
-      // Check for main application elements
-      await expect(page.locator('.w-80')).toBeVisible(); // Sidebar
+      // Check for main application elements  
+      await expect(page.locator('.w-80.bg-gray-100').first()).toBeVisible(); // Sidebar specifically
       await expect(page.locator('#visualization')).toBeVisible(); // Main visualization area
       await expect(page.locator('#network-svg')).toBeVisible(); // Network SVG
     });
@@ -32,8 +32,8 @@ test.describe('Basic Application Functionality', () => {
     test('should show legend with deputy and company indicators', async ({ page }) => {
       // Check legend items
       await expect(page.locator('.legend-items')).toBeVisible();
-      await expect(page.locator('text=Deputados')).toBeVisible();
-      await expect(page.locator('text=Empresas')).toBeVisible();
+      await expect(page.locator('.legend-items >> text=Deputados')).toBeVisible();
+      await expect(page.locator('.legend-items >> text=Empresas')).toBeVisible();
     });
   });
 
@@ -216,15 +216,28 @@ test.describe('Basic Application Functionality', () => {
       await expect(page.locator('.flex.h-screen')).toBeVisible();
     });
 
-    test('should not have JavaScript errors', async ({ page }) => {
+    test('should not have any console errors after loading', async ({ page }) => {
       const errors = [];
+      const consoleErrors = [];
+      
+      // Listen for JavaScript errors
       page.on('pageerror', error => errors.push(error));
+      
+      // Listen for console errors
+      page.on('console', msg => {
+        if (msg.type() === 'error') {
+          consoleErrors.push(msg.text());
+        }
+      });
       
       await page.goto('/');
       await page.waitForTimeout(3000);
       
-      // Should have minimal or no JavaScript errors
-      expect(errors.length).toBeLessThan(5);
+      // Should have no JavaScript errors
+      expect(errors).toEqual([]);
+      
+      // Should have no console errors
+      expect(consoleErrors).toEqual([]);
     });
   });
 });

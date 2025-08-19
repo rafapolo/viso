@@ -1,7 +1,7 @@
 // Risk Analysis Tests
 // Tests for the 8 new risk detection analyses
 
-const { describe, it, expect } = require('@jest/globals');
+import { describe, it, expect } from '@jest/globals';
 
 describe('Risk Detection Analyses', () => {
   describe('Query Registry', () => {

@@ -6,6 +6,7 @@ import { ResultsDisplay } from '../db/results-display.js';
 import { APIUtils } from '../shared/api-utils.js';
 import { ErrorHandler } from '../shared/error-handler.js';
 import { DOMUtils } from '../shared/dom-utils.js';
+import { UIComponents } from '../shared/ui-utils.js';
 // import { APP_CONSTANTS } from './shared/constants.js';
 import { SankeyTab } from '../features/visualization/sankey-tab.js';
 
@@ -41,6 +42,12 @@ class DatabaseApp {
 
       // Setup event listeners
       this.setupEventListeners();
+
+      // Setup category toggles
+      UIComponents.setupCategoryToggles();
+
+      // Register service worker for PWA functionality
+      UIComponents.registerServiceWorker('/sw.js', false);
 
       // Mark as initialized
       this.isInitialized = true;
@@ -260,6 +267,11 @@ class DatabaseApp {
         title: 'Top gastos por deputado',
         category: 'travel',
         query: `SELECT \n    nome_parlamentar,\n    sigla_partido,\n    SUM(valor_liquido) AS total_gastos,\n    COUNT(*) AS num_despesas\nFROM despesas \nGROUP BY nome_parlamentar, sigla_partido \nORDER BY total_gastos DESC \nLIMIT 25`
+      },
+      'gasto-hospedagem-por-partido': {
+        title: 'Gasto mínimo, médio e máximo em hospedagem por partido',
+        category: 'travel',
+        query: `SELECT \n    sigla_partido,\n    MIN(valor_liquido) AS gasto_minimo,\n    AVG(valor_liquido) AS gasto_medio,\n    MAX(valor_liquido) AS gasto_maximo,\n    COUNT(*) AS total_despesas,\n    SUM(valor_liquido) AS valor_total\nFROM despesas \nWHERE categoria_despesa ILIKE '%HOSPEDAGEM%'\nGROUP BY sigla_partido \nORDER BY gasto_medio DESC`
       },
       'top-fornecedores-por-receita': {
         title: 'Top fornecedores por receita',
@@ -481,6 +493,8 @@ LIMIT 500`;
     this.setupEditorEventListeners();
     this.setupSampleQueries();
     this.setupResizeHandle();
+    this.setupSearchFunctionality();
+    this.setupPanelToggles();
 
   }
 
@@ -716,6 +730,183 @@ LIMIT 500`;
       
     });
 
+  }
+
+  /**
+   * Setup search functionality for filtering analysis buttons
+   */
+  setupSearchFunctionality() {
+    const searchInput = DOMUtils.getElementById('query-search');
+    if (!searchInput) return;
+
+    // Add input event listener for real-time filtering
+    DOMUtils.addEventListener(searchInput, 'input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      this.filterAnalysisButtons(searchTerm);
+    });
+
+    // Add clear functionality on Escape key
+    DOMUtils.addEventListener(searchInput, 'keydown', (e) => {
+      if (e.key === 'Escape') {
+        searchInput.value = '';
+        this.filterAnalysisButtons('');
+      }
+    });
+  }
+
+  /**
+   * Setup panel toggle functionality for both right panel and query panel
+   */
+  setupPanelToggles() {
+    // Right panel (schema) toggle
+    const rightPanelToggle = DOMUtils.getElementById('panel-toggle');
+    const rightPanel = DOMUtils.getElementById('right-panel');
+    const rightPanelContent = DOMUtils.getElementById('panel-content');
+    const panelTitle = DOMUtils.getElementById('panel-title');
+    const panelHeader = rightPanel?.querySelector('.p-4.border-b');
+    
+    if (rightPanelToggle && rightPanel) {
+      DOMUtils.addEventListener(rightPanelToggle, 'click', () => {
+        const isCollapsed = rightPanel.classList.contains('w-8');
+        
+        if (isCollapsed) {
+          // Expand panel
+          rightPanel.classList.remove('w-8');
+          rightPanel.classList.add('w-80');
+          if (rightPanelContent) rightPanelContent.classList.remove('hidden');
+          if (panelTitle) panelTitle.classList.remove('hidden');
+          if (panelHeader) {
+            panelHeader.classList.remove('px-1', 'justify-center');
+            panelHeader.classList.add('px-4');
+          }
+          rightPanelToggle.title = 'Recolher painel';
+          // Rotate arrow to point right
+          const arrow = rightPanelToggle.querySelector('svg');
+          if (arrow) arrow.style.transform = 'rotate(0deg)';
+          // Show the database icon
+          const dbIcon = panelHeader?.querySelector('span:first-child');
+          if (dbIcon) dbIcon.classList.remove('hidden');
+        } else {
+          // Collapse panel
+          rightPanel.classList.remove('w-80');
+          rightPanel.classList.add('w-8');
+          if (rightPanelContent) rightPanelContent.classList.add('hidden');
+          if (panelTitle) panelTitle.classList.add('hidden');
+          if (panelHeader) {
+            panelHeader.classList.remove('px-4');
+            panelHeader.classList.add('px-1', 'justify-center');
+          }
+          rightPanelToggle.title = 'Expandir painel';
+          // Rotate arrow to point left
+          const arrow = rightPanelToggle.querySelector('svg');
+          if (arrow) arrow.style.transform = 'rotate(180deg)';
+          // Hide the database icon
+          const dbIcon = panelHeader?.querySelector('span:first-child');
+          if (dbIcon) dbIcon.classList.add('hidden');
+        }
+        
+        // Trigger Sankey resize after panel animation
+        this.triggerSankeyResize();
+      });
+    }
+
+    // Query panel toggle
+    const queryPanelToggle = DOMUtils.getElementById('query-panel-toggle');
+    const editorContainer = document.querySelector('.editor-container');
+    
+    if (queryPanelToggle && editorContainer) {
+      DOMUtils.addEventListener(queryPanelToggle, 'click', () => {
+        const isCollapsed = editorContainer.classList.contains('h-10');
+        
+        if (isCollapsed) {
+          // Expand panel
+          editorContainer.classList.remove('h-10');
+          editorContainer.classList.add('h-80');
+          queryPanelToggle.title = 'Recolher painel de consulta';
+          // Rotate arrow to point down
+          const arrow = queryPanelToggle.querySelector('svg');
+          if (arrow) arrow.style.transform = 'rotate(0deg)';
+          // Show editor
+          const editor = DOMUtils.getElementById('editor');
+          if (editor) editor.classList.remove('hidden');
+        } else {
+          // Collapse panel
+          editorContainer.classList.remove('h-80');
+          editorContainer.classList.add('h-10');
+          queryPanelToggle.title = 'Expandir painel de consulta';
+          // Rotate arrow to point up
+          const arrow = queryPanelToggle.querySelector('svg');
+          if (arrow) arrow.style.transform = 'rotate(180deg)';
+          // Hide editor
+          const editor = DOMUtils.getElementById('editor');
+          if (editor) editor.classList.add('hidden');
+        }
+        
+        // Trigger Monaco editor resize if available
+        if (this.editorManager && this.editorManager.editor) {
+          setTimeout(() => {
+            this.editorManager.editor.layout();
+          }, 300); // Wait for animation to complete
+        }
+        
+        // Trigger Sankey resize after panel animation
+        this.triggerSankeyResize();
+      });
+    }
+  }
+
+  /**
+   * Trigger Sankey diagram resize when panels are toggled
+   */
+  triggerSankeyResize() {
+    if (this.sankeyTab && this.sankeyTab.resizeHandler) {
+      // Use setTimeout to allow panel animation to complete
+      setTimeout(() => {
+        this.sankeyTab.resizeHandler();
+      }, 350); // Slightly longer than panel animation
+    }
+  }
+
+  /**
+   * Filter analysis buttons based on search term
+   * @param {string} searchTerm - Search term to filter by
+   */
+  filterAnalysisButtons(searchTerm) {
+    const allSampleQueries = document.querySelectorAll('.sample-query');
+    const allCategories = document.querySelectorAll('.category-section');
+    
+    if (!searchTerm.trim()) {
+      // Show all buttons and categories when search is empty
+      allSampleQueries.forEach(button => {
+        button.style.display = 'block';
+      });
+      allCategories.forEach(category => {
+        category.style.display = 'block';
+      });
+      return;
+    }
+
+    // Filter buttons by search term
+    allSampleQueries.forEach(button => {
+      const buttonText = button.textContent.toLowerCase();
+      const buttonId = button.getAttribute('data-id') || '';
+      
+      // Check if button text or ID matches search term
+      const matches = buttonText.includes(searchTerm) || 
+                     buttonId.toLowerCase().includes(searchTerm);
+      
+      button.style.display = matches ? 'block' : 'none';
+    });
+
+    // Hide categories that have no visible buttons
+    allCategories.forEach(category => {
+      const visibleButtons = category.querySelectorAll('.sample-query[style*="display: block"], .sample-query:not([style*="display: none"])');
+      const hasVisibleButtons = Array.from(visibleButtons).some(button => {
+        return !button.style.display || button.style.display === 'block';
+      });
+      
+      category.style.display = hasVisibleButtons ? 'block' : 'none';
+    });
   }
 
   /**
