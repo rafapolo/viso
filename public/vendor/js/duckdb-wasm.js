@@ -1,1 +1,1 @@
-Couldn't find the requested file /dist/duckdb-eh.js in @duckdb/duckdb-wasm.
+export * from './duckdb-browser.mjs';

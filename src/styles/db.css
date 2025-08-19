@@ -9,13 +9,11 @@
 
 .resize-handle:hover {
     background-color: #FFC000 !important;
-    height: 8px;
 }
 
 .resize-handle:active,
 .resize-handle.active {
     background-color: #FFC000 !important;
-    height: 8px;
 }
 
 /* Modern card-based query button types */
@@ -26,7 +24,6 @@
     border-left: 3px solid #64748b; /* default slate */
     transition: background-color 0.15s ease;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
     font-weight: 500;
     font-size: 13px;
     line-height: 1.5;
@@ -230,7 +227,7 @@
 
 /* Enhanced results table styling */
 table {
-    font-family: 'Inter', sans-serif;
+    /* font-family: 'Inter', sans-serif; */
 }
 
 table th {
