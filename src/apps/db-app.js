@@ -7,8 +7,8 @@ import { APIUtils } from '../shared/api-utils.js';
 import { ErrorHandler } from '../shared/error-handler.js';
 import { DOMUtils } from '../shared/dom-utils.js';
 import { UIComponents } from '../shared/ui-utils.js';
-// import { APP_CONSTANTS } from './shared/constants.js';
 import { SankeyTab } from '../features/visualization/sankey-tab.js';
+import { getGlobalDatabaseService } from '../services/database-service.js';
 
 /**
  * Main Database Application Controller
@@ -16,6 +16,7 @@ import { SankeyTab } from '../features/visualization/sankey-tab.js';
  */
 class DatabaseApp {
   constructor() {
+    this.databaseService = getGlobalDatabaseService();
     this.editorManager = null;
     this.queryExecutor = null;
     this.paginationHandler = null;
@@ -104,11 +105,11 @@ class DatabaseApp {
   async loadInitialData() {
     try {
       
-      // Initialize DuckDB first
-      await APIUtils.initializeDuckDB();
+      // Initialize unified database service
+      await this.databaseService.initialize();
       
       // Load parquet data to create the despesas table
-      await APIUtils.loadParquetData('./despesas.parquet');
+      await this.databaseService.loadData();
 
       // Load database schema
       await this.loadSchema();
@@ -144,12 +145,10 @@ class DatabaseApp {
    */
   async loadSchema() {
     try {
-      const schema = await APIUtils.executeDuckDBQuery(
-        "DESCRIBE SELECT * FROM despesas LIMIT 1"
-      );
+      const schema = await this.databaseService.getSchema();
 
-      if (schema && schema.data) {
-        this.currentSchema = schema.data;
+      if (schema && schema.length > 0) {
+        this.currentSchema = schema;
         this.resultsDisplay.displaySchema(this.currentSchema);
         this.resultsDisplay.updateConnectionStatus('Conectado', false);
       }

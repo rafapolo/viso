@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting...</title>
+    <script>
+        // GitHub Pages SPA redirect script
+        (function() {
+            const path = window.location.pathname;
+            const search = window.location.search;
+            const hash = window.location.hash;
+            
+            // Check if this is a route that should go to db.html
+            if (path.includes('db.html') || search.includes('analise=')) {
+                window.location.replace('/viso/db.html' + search + hash);
+            }
+            // Check if this is a deputado or empresa route that should go to index.html
+            else if (path.includes('deputado-') || path.includes('empresa-')) {
+                window.location.replace('/viso/index.html' + search + hash);
+            }
+            // Default fallback to index.html
+            else {
+                window.location.replace('/viso/index.html' + search + hash);
+            }
+        })();
+    </script>
+</head>
+<body>
+    <p>Redirecting...</p>
+</body>
+</html>
