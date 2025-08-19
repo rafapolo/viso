@@ -221,16 +221,34 @@ export class StatisticsCharts {
       // Sort and filter data
       const sortedData = detailsData
         .filter(item => item.data_emissao && Number(item.valor_liquido) > 0)
-        .sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
+        .sort((a, b) => {
+          // Handle DD/MM/YYYY format for sorting
+          const parseDate = (dateStr) => {
+            if (dateStr.includes('/')) {
+              const [day, month, year] = dateStr.split('/');
+              return new Date(year, month - 1, day);
+            }
+            return new Date(dateStr);
+          };
+          return parseDate(a.data_emissao) - parseDate(b.data_emissao);
+        });
 
       if (sortedData.length === 0) {
         this.showChartEmptyState(canvas);
         return;
       }
 
-      // Calculate data ranges
-      const firstDate = new Date(sortedData[0].data_emissao);
-      const lastDate = new Date(sortedData[sortedData.length - 1].data_emissao);
+      // Calculate data ranges  
+      const parseDate = (dateStr) => {
+        if (dateStr.includes('/')) {
+          const [day, month, year] = dateStr.split('/');
+          return new Date(year, month - 1, day);
+        }
+        return new Date(dateStr);
+      };
+      
+      const firstDate = parseDate(sortedData[0].data_emissao);
+      const lastDate = parseDate(sortedData[sortedData.length - 1].data_emissao);
       const dateRange = lastDate - firstDate || 86400000; // 1 day minimum
 
       const values = sortedData.map(item => Number(item.valor_liquido));
@@ -324,7 +342,14 @@ export class StatisticsCharts {
     const barPositions = [];
 
     sortedData.forEach((item, _index) => {
-      const date = new Date(item.data_emissao);
+      // Parse date properly for DD/MM/YYYY format
+      let date;
+      if (item.data_emissao.includes('/')) {
+        const [day, month, year] = item.data_emissao.split('/');
+        date = new Date(year, month - 1, day);
+      } else {
+        date = new Date(item.data_emissao);
+      }
       const value = Number(item.valor_liquido);
 
       // Calculate positions
@@ -478,11 +503,25 @@ export class StatisticsCharts {
       minimumFractionDigits: 2 
     }).format(value);
     
-    const formatDate = (dateStr) => new Intl.DateTimeFormat('pt-BR', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric' 
-    }).format(new Date(dateStr));
+    const formatDate = (dateStr) => {
+      try {
+        let date;
+        // Handle DD/MM/YYYY format from SQL strftime
+        if (dateStr.includes('/')) {
+          const [day, month, year] = dateStr.split('/');
+          date = new Date(year, month - 1, day); // month is 0-indexed
+        } else {
+          date = new Date(dateStr);
+        }
+        return new Intl.DateTimeFormat('pt-BR', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric' 
+        }).format(date);
+      } catch {
+        return dateStr || 'N/A';
+      }
+    };
 
     const transaction = data.transactions[0];
     const tooltipHTML = `
@@ -628,3 +667,6 @@ export class StatisticsCharts {
     this.chartData = null;
   }
 }
+
+// Export the class as default export
+export default StatisticsCharts;
