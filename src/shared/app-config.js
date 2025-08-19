@@ -136,6 +136,13 @@ export const APP_CONFIG = {
   }
 };
 
+// Get base path for navigation (handles GitHub Pages vs localhost)
+export const getBasePath = () => {
+  const isDevelopment = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1';
+  return isDevelopment ? '/' : '/viso/';
+};
+
 // Environment-specific configurations
 export const getEnvironmentConfig = () => {
   const isDevelopment = window.location.hostname === 'localhost' || 
