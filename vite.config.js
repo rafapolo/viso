@@ -2,9 +2,9 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { createHtmlPlugin } from 'vite-plugin-html';
 
-export default defineConfig({
-  // Base configuration
-  base: '/viso/',
+export default defineConfig(({ command, mode }) => ({
+  // Base configuration - use different base for production vs development
+  base: mode === 'production' ? '/viso/' : '/',
   
   // Plugins
   plugins: [
@@ -184,4 +184,4 @@ export default defineConfig({
   
   // Public directory for static assets
   publicDir: 'public',
-})
+}))
