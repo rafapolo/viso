@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { createHtmlPlugin } from 'vite-plugin-html';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig(({ command, mode }) => ({
   // Base configuration - use different base for production vs development
@@ -18,6 +19,15 @@ export default defineConfig(({ command, mode }) => ({
         minifyJS: true
       } : false
     }),
+    // Copy vendor directory to build output
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'vendor/**/*',
+          dest: 'vendor'
+        }
+      ]
+    }),
     // SPA routing plugin
     {
       name: 'spa-fallback',
@@ -26,6 +36,10 @@ export default defineConfig(({ command, mode }) => ({
           if (req.url && (req.url.startsWith('/deputado-') || req.url.startsWith('/empresa-'))) {
             req.url = '/index.html';
           }
+          // Handle db.html with query parameters
+          if (req.url && req.url.startsWith('/db.html?')) {
+            req.url = '/db.html';
+          }
           next();
         });
       },
@@ -33,6 +47,10 @@ export default defineConfig(({ command, mode }) => ({
         server.middlewares.use((req, res, next) => {
           if (req.url && (req.url.startsWith('/deputado-') || req.url.startsWith('/empresa-'))) {
             req.url = '/index.html';
+          }
+          // Handle db.html with query parameters
+          if (req.url && req.url.startsWith('/db.html?')) {
+            req.url = '/db.html';
           }
           next();
         });
