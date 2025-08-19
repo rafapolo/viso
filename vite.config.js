@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { createHtmlPlugin } from 'vite-plugin-html';
+// import { createHtmlPlugin } from 'vite-plugin-html';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import monacoEditorPlugin from 'vite-plugin-monaco-editor';
 
@@ -10,16 +10,7 @@ export default defineConfig(({ command, mode }) => ({
   
   // Plugins
   plugins: [
-    createHtmlPlugin({
-      minify: process.env.NODE_ENV === 'production' ? {
-        collapseWhitespace: true,
-        removeComments: true,
-        removeRedundantAttributes: true,
-        removeEmptyAttributes: true,
-        minifyCSS: true,
-        minifyJS: true
-      } : false
-    }),
+    // HTML minification handled by Vite natively
     // Copy vendor directory to build output
     viteStaticCopy({
       targets: [

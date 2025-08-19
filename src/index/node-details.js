@@ -242,6 +242,13 @@ export class NodeDetails {
     const formatDate = (dateStr) => {
       if (!dateStr) return 'N/A';
       try {
+        // Handle DD/MM/YYYY format from SQL strftime
+        if (dateStr.includes('/')) {
+          const [day, month, year] = dateStr.split('/');
+          const date = new Date(year, month - 1, day); // month is 0-indexed
+          return date.toLocaleDateString('pt-BR');
+        }
+        // Fallback for other formats
         return new Date(dateStr).toLocaleDateString('pt-BR');
       } catch {
         return dateStr;
