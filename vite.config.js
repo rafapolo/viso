@@ -168,7 +168,8 @@ export default defineConfig(({ command, mode }) => ({
       '@index': resolve(__dirname, 'src/index'),
       '@features': resolve(__dirname, 'src/features'),
       '@utils': resolve(__dirname, 'src/utils'),
-      '@tests': resolve(__dirname, 'tests')
+      '@tests': resolve(__dirname, 'tests'),
+      'apache-arrow': resolve(__dirname, 'node_modules/apache-arrow')
     }
   },
   
