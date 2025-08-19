@@ -1254,7 +1254,7 @@ async function waitForDependencies() {
   const maxRetries = 50; // 5 seconds max wait
   
   while (retries < maxRetries) {
-    if (typeof window.monaco !== 'undefined' && typeof window.duckdbAPI !== 'undefined') {
+    if (typeof window.duckdbAPI !== 'undefined') {
       return true;
     }
     
