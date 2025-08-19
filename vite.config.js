@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import monacoEditorPlugin from 'vite-plugin-monaco-editor';
 
 export default defineConfig(({ command, mode }) => ({
   // Base configuration - use different base for production vs development
@@ -28,6 +29,8 @@ export default defineConfig(({ command, mode }) => ({
         }
       ]
     }),
+    // Monaco Editor plugin
+    monacoEditorPlugin.default({}),
     // SPA routing plugin
     {
       name: 'spa-fallback',
@@ -78,8 +81,7 @@ export default defineConfig(({ command, mode }) => ({
       },
       output: {
         manualChunks: {
-          // Vendor libraries (now bundled from vendor/ directory)
-          monaco: ['monaco-editor'],
+          // Vendor libraries (now bundled from vendor/ directory) - Monaco handled by plugin
           
           // Application modules
           shared: [

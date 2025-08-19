@@ -29,14 +29,12 @@
     <link rel="stylesheet" href="src/styles/common.css">
     <link rel="stylesheet" href="src/styles/db.css">
     <link rel="stylesheet" href="vendor/css/tailwindcss.min.css">
-    <link rel="stylesheet" data-name="vs/editor/editor.main" href="/node_modules/monaco-editor/min/vs/editor/editor.main.css">
+    <!-- Monaco Editor CSS will be loaded by Vite -->
     <script>
         // Set up Monaco Editor base URL
-        window.require = { paths: { 'vs': '/node_modules/monaco-editor/min/vs' } };
+        // Monaco Editor paths will be handled by build process
     </script>
-    <script src="/node_modules/monaco-editor/min/vs/loader.js"></script>
-    <script src="/node_modules/monaco-editor/min/vs/editor/editor.main.nls.js"></script>
-    <script src="/node_modules/monaco-editor/min/vs/editor/editor.main.js"></script>
+    <!-- Monaco Editor will be loaded by Vite build process -->
     <script src="vendor/js/sql-formatter.js"></script>
     <script>
         // Clear AMD define to avoid conflicts with D3
@@ -54,7 +52,7 @@
         }
     </script>
     <script type="module" src="./src/db-api.js"></script>
-    <script src="./src/db-config.js"></script>
+    <!-- db-config.js will be loaded by Vite build process -->
     
 </head>
 <body class="font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen">
