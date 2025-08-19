@@ -17,45 +17,85 @@ export class SankeyTab {
     }
 
     async render(container) {
+        // Calculate available space for proper sizing
+        const containerRect = container.getBoundingClientRect();
+        this.width = Math.max(800, containerRect.width - 40); // Leave some margin
+        this.height = Math.max(400, containerRect.height - 200); // Account for panels
+
         container.innerHTML = `
             <div class="sankey-tab flex flex-col h-full">
-                <div class="p-4 border-b border-gray-700">
-                    <p class="text-sm text-gray-400">Visualização dos fornecedores com mais de 100 registros</p>
-                </div>                
                 
-                <div class="flex-1 flex flex-col bg-gray-900">
-                    <div class="flex-1 flex items-center justify-center">
-                        <div id="sankey-loading" class="text-center">
+                <div class="flex-1 flex bg-gray-900 overflow-hidden">
+                    <div id="sankey-loading" class="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
+                        <div class="text-center">
                             <div class="loading-spinner mb-4 w-8 h-8 border-4"></div>
                             <div class="text-gray-400">Carregando dados Sankey...</div>
                         </div>
-                        <svg id="sankey-svg" width="${this.width}" height="${this.height}" style="display: none;"></svg>
                     </div>
-                    
-                    <!-- Hover Info Panel -->
-                    <div id="sankey-hover-panel" class="hidden border-t border-gray-700 bg-gray-800 p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 class="text-sm font-semibold text-gray-200">Informações do Elemento</h3>
-                            <button id="close-hover-panel" class="text-gray-400 hover:text-gray-200 text-xs">✕</button>
+                    <svg id="sankey-svg" width="100%" height="100%" style="display: none;"></svg>
+                </div>
+                
+                <!-- Info Panel - Below D3.js visualization -->
+                <div id="sankey-hover-panel" class="border-t border-gray-700 bg-gray-800 p-3">
+                    <div class="stats-grid text-sm" id="hover-panel-content">
+                        <div class="bg-gray-200 dark:bg-gray-700 rounded p-2 border-l-2 border-blue-500">
+                            <div class="text-xs font-semibold text-blue-400" id="hover-element-name">Passe o mouse sobre elementos</div>
+                            <div class="text-gray-400 text-2xs" id="hover-element-type">Tipo</div>
                         </div>
-                        <div id="hover-panel-content" class="text-sm text-gray-300">
-                            <div class="text-gray-500">Passe o mouse sobre um elemento no diagrama para ver os detalhes</div>
+                        <div class="bg-gray-200 dark:bg-gray-700 rounded p-2 border-l-2 border-green-500">
+                            <div class="text-xs font-semibold text-green-400" id="hover-element-value">-</div>
+                            <div class="text-gray-400 text-2xs">Valor</div>
+                        </div>
+                        <div class="bg-gray-200 dark:bg-gray-700 rounded p-2 border-l-2 border-yellow-500">
+                            <div class="text-xs font-semibold text-yellow-400" id="hover-element-transactions">-</div>
+                            <div class="text-gray-400 text-2xs">Transações</div>
+                        </div>
+                        <div class="bg-gray-200 dark:bg-gray-700 rounded p-2 border-l-2 border-purple-500">
+                            <div class="text-xs font-semibold text-purple-400" id="hover-element-extra">-</div>
+                            <div class="text-gray-400 text-2xs" id="hover-element-extra-label">Info</div>
                         </div>
                     </div>
                 </div>
             </div>
         `;
 
-        // Setup close button
-        const closeBtn = document.getElementById('close-hover-panel');
-        const hoverPanel = document.getElementById('sankey-hover-panel');
-        if (closeBtn && hoverPanel) {
-            closeBtn.addEventListener('click', () => {
-                hoverPanel.classList.add('hidden');
-            });
-        }
+        // Setup CSS for stats grid
+        const style = document.createElement('style');
+        style.textContent = `
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            .text-2xs {
+                font-size: 0.65rem;
+                line-height: 0.75rem;
+            }
+        `;
+        document.head.appendChild(style);
 
         await this.loadSankeyData();
+        
+        // Add resize handler
+        this.setupResizeHandler();
+    }
+
+    setupResizeHandler() {
+        // Debounce resize to avoid excessive re-renders
+        let resizeTimeout;
+        const handleResize = () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (this.currentFlowData && document.getElementById('sankey-svg').style.display !== 'none') {
+                    this.renderSankey(this.currentFlowData);
+                }
+            }, 300);
+        };
+
+        window.addEventListener('resize', handleResize);
+        
+        // Store reference for cleanup if needed
+        this.resizeHandler = handleResize;
     }
 
     async loadSankeyData() {
@@ -109,6 +149,9 @@ export class SankeyTab {
 
             loadingEl.innerHTML = '<div class="loading-spinner mb-4 w-8 h-8 border-4"></div><div class="text-gray-400">Renderizando diagrama...</div>';
 
+            // Store data for resize handling
+            this.currentFlowData = flowData;
+            
             await this.renderSankey(flowData);
 
             document.getElementById('sankey-loading').style.display = 'none';
@@ -130,20 +173,28 @@ export class SankeyTab {
             throw new Error('D3 library not loaded');
         }
 
-        if (!window.d3Sankey) {
-            throw new Error('D3 Sankey library not loaded');
+        if (!window.d3.sankey) {
+            throw new Error('D3 Sankey extension not loaded');
         }
 
-        const svg = d3.select("#sankey-svg");
+        const svg = window.d3.select("#sankey-svg");
         svg.selectAll("*").remove();
+
+        // Get actual container dimensions
+        const container = document.querySelector('.sankey-tab .flex-1');
+        if (container) {
+            const rect = container.getBoundingClientRect();
+            this.width = rect.width - 20; // Small margin
+            this.height = rect.height - 20; // Small margin
+        }
 
         const nodes = new Map();
         const links = [];
         const nodeStats = new Map();
 
-        const partyColors = d3.scaleOrdinal(d3.schemeCategory10);
-        const categoryColors = d3.scaleOrdinal(d3.schemeSet3);
-        const supplierColors = d3.scaleOrdinal(d3.schemeDark2);
+        const partyColors = window.d3.scaleOrdinal(window.d3.schemeCategory10);
+        const categoryColors = window.d3.scaleOrdinal(window.d3.schemeSet3);
+        const supplierColors = window.d3.scaleOrdinal(window.d3.schemeDark2);
 
         // Build nodes and collect statistics
         flowData.forEach(d => {
@@ -243,7 +294,7 @@ export class SankeyTab {
             links: Array.from(linkMap.values())
         };
 
-        const sankey = window.d3Sankey()
+        const sankey = window.d3.sankey()
             .nodeId(d => d.id)
             .nodeWidth(20)
             .nodePadding(15)
@@ -259,8 +310,8 @@ export class SankeyTab {
             .data(sankeyGraph.links)
             .enter().append("path")
             .attr("class", "link")
-            .attr("d", window.d3SankeyLinkHorizontal())
-            .attr("stroke", "#999")
+            .attr("d", window.d3.sankeyLinkHorizontal())
+            .attr("stroke", d => d.source.color)
             .attr("stroke-width", d => Math.max(1, d.width))
             .attr("stroke-opacity", 0.5)
             .attr("fill", "none")
@@ -314,33 +365,21 @@ export class SankeyTab {
         const sourceNode = linkData.source;
         const targetNode = linkData.target;
 
-        const panelContent = `
-            <div class="mb-3">
-                <div class="font-semibold text-duckdb-500 mb-1">Fluxo: ${sourceNode.name} → ${targetNode.name}</div>
-                <div class="text-xs text-gray-400">Conexão entre elementos</div>
-            </div>
-            <div class="grid grid-cols-1 gap-2">
-                <div class="flex justify-between items-center py-1 border-b border-gray-700">
-                    <span class="text-gray-400">Valor Total:</span>
-                    <span class="font-mono text-green-400">${this.tooltipManager.formatCurrency(totalValue)}</span>
-                </div>
-                <div class="flex justify-between items-center py-1 border-b border-gray-700">
-                    <span class="text-gray-400">Transações:</span>
-                    <span class="font-mono text-blue-400">${this.tooltipManager.formatNumber(totalTransactions)}</span>
-                </div>
-                <div class="flex justify-between items-center py-1">
-                    <span class="text-gray-400">Valor Médio:</span>
-                    <span class="font-mono text-yellow-400">${this.tooltipManager.formatCurrency(totalValue / totalTransactions)}</span>
-                </div>
-            </div>
-        `;
+        this.updateCompactPanel({
+            name: `${sourceNode.name} → ${targetNode.name}`,
+            type: 'Fluxo',
+            value: this.tooltipManager.formatCurrency(totalValue),
+            transactions: this.tooltipManager.formatNumber(totalTransactions),
+            extra: this.tooltipManager.formatCurrency(totalValue / totalTransactions),
+            extraLabel: 'Média'
+        });
 
-        this.showHoverPanel(panelContent);
         this.highlightElement(linkData, 'link');
     }
 
     handleLinkOut() {
         this.hoveredElement = null;
+        this.hideHoverPanel();
         this.removeHighlight();
     }
 
@@ -361,39 +400,21 @@ export class SankeyTab {
             'supplier': 'Fornecedor'
         };
 
-        const typeColors = {
-            'party': 'text-purple-400',
-            'category': 'text-blue-400',
-            'supplier': 'text-orange-400'
-        };
+        this.updateCompactPanel({
+            name: nodeData.name,
+            type: typeLabels[nodeData.type],
+            value: this.tooltipManager.formatCurrency(stats.totalValue),
+            transactions: this.tooltipManager.formatNumber(stats.transactionCount),
+            extra: stats.connections.size,
+            extraLabel: 'Conexões'
+        });
 
-        const panelContent = `
-            <div class="mb-3">
-                <div class="font-semibold ${typeColors[nodeData.type]} mb-1">${typeLabels[nodeData.type]}: ${nodeData.name}</div>
-                <div class="text-xs text-gray-400">Elemento do diagrama</div>
-            </div>
-            <div class="grid grid-cols-1 gap-2">
-                <div class="flex justify-between items-center py-1 border-b border-gray-700">
-                    <span class="text-gray-400">Valor Total:</span>
-                    <span class="font-mono text-green-400">${this.tooltipManager.formatCurrency(stats.totalValue)}</span>
-                </div>
-                <div class="flex justify-between items-center py-1 border-b border-gray-700">
-                    <span class="text-gray-400">Transações:</span>
-                    <span class="font-mono text-blue-400">${this.tooltipManager.formatNumber(stats.transactionCount)}</span>
-                </div>
-                <div class="flex justify-between items-center py-1">
-                    <span class="text-gray-400">Conexões:</span>
-                    <span class="font-mono text-yellow-400">${stats.connections.size}</span>
-                </div>
-            </div>
-        `;
-
-        this.showHoverPanel(panelContent);
         this.highlightElement(nodeData, 'node');
     }
 
     handleNodeOut() {
         this.hoveredElement = null;
+        this.hideHoverPanel();
         this.removeHighlight();
     }
 
@@ -404,14 +425,35 @@ export class SankeyTab {
         }
     }
 
-    showHoverPanel(content) {
+    updateCompactPanel(data) {
         const panel = document.getElementById('sankey-hover-panel');
-        const panelContent = document.getElementById('hover-panel-content');
+        const nameEl = document.getElementById('hover-element-name');
+        const typeEl = document.getElementById('hover-element-type');
+        const valueEl = document.getElementById('hover-element-value');
+        const transactionsEl = document.getElementById('hover-element-transactions');
+        const extraEl = document.getElementById('hover-element-extra');
+        const extraLabelEl = document.getElementById('hover-element-extra-label');
         
-        if (panel && panelContent) {
-            panelContent.innerHTML = content;
-            panel.classList.remove('hidden');
+        if (panel && nameEl && typeEl && valueEl && transactionsEl && extraEl && extraLabelEl) {
+            nameEl.textContent = data.name;
+            typeEl.textContent = data.type;
+            valueEl.textContent = data.value;
+            transactionsEl.textContent = data.transactions;
+            extraEl.textContent = data.extra;
+            extraLabelEl.textContent = data.extraLabel;
+            
+            // Panel is always visible now, so no need to show/hide
         }
+    }
+
+    hideHoverPanel() {
+        // Panel is always visible, just reset to default values
+        document.getElementById('hover-element-name').textContent = 'Passe o mouse sobre elementos';
+        document.getElementById('hover-element-type').textContent = 'Tipo';
+        document.getElementById('hover-element-value').textContent = '-';
+        document.getElementById('hover-element-transactions').textContent = '-';
+        document.getElementById('hover-element-extra').textContent = '-';
+        document.getElementById('hover-element-extra-label').textContent = 'Info';
     }
 
     highlightElement(elementData, type) {
@@ -447,5 +489,13 @@ export class SankeyTab {
         linkGroup.selectAll('path').classed('highlighted', false);
         nodeGroup.selectAll('rect').classed('highlighted', false);
         svg.classed('highlighting', false);
+    }
+
+    // Cleanup method to remove event listeners
+    cleanup() {
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+            this.resizeHandler = null;
+        }
     }
 }
