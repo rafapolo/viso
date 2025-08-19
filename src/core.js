@@ -1,13 +1,11 @@
 import * as duckdb from '../vendor/js/duckdb-module.js';
-import * as d3 from '../vendor/js/d3-module.js';
 
 // Import utilities from new locations
 import { FormatUtils } from './shared/formatters.js';
 import { ColorUtils } from './shared/color-utils.js';
 import { DataUtils } from './shared/data-utils.js';
 
-// Make d3 available globally
-window.d3 = d3;
+// d3 should already be available globally from script tag in HTML
 
 // Re-export utilities for backward compatibility
 export { FormatUtils, ColorUtils, DataUtils };

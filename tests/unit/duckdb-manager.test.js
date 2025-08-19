@@ -1,4 +1,4 @@
-const { describe, test, expect, beforeEach, afterEach } = require('@jest/globals');
+import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
 // Since DuckDB Manager uses browser-specific imports, we'll test the logical parts
 // and mock the DuckDB WASM dependency

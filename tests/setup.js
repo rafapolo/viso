@@ -1,5 +1,8 @@
 // Global test setup
-require('jest-environment-jsdom');
+// jest-environment-jsdom is configured in jest.config.js
+
+// Import jest for proper mock setup
+import { jest } from '@jest/globals';
 
 // Mock fetch for testing
 global.fetch = jest.fn();
@@ -193,15 +196,38 @@ if (!global.document.body) {
   global.document.body = global.document.createElement('body');
 }
 
-// Setup DOM elements that are expected to exist
+// Global test hooks for proper isolation
 beforeEach(() => {
+  // Clear DOM
   document.body.innerHTML = '';
   
-  // Clear all mocks
+  // Reset all mocks and modules for isolation
   jest.clearAllMocks();
+  jest.resetModules();
+  
+  // Reset global state
+  global.fetch?.mockClear?.();
+  global.performance.now?.mockClear?.();
+  
+  // Reset any global variables that might be set by modules
+  if (typeof window !== 'undefined') {
+    // Reset any window properties that tests might modify
+    try {
+      window.location = { href: 'http://localhost' };
+    } catch (e) {
+      // Ignore location reset errors in jsdom
+    }
+  }
 });
 
 afterEach(() => {
-  // Clean up DOM
+  // Clean up DOM completely
   document.body.innerHTML = '';
+  document.head.innerHTML = '';
+  
+  // Clear any remaining timers
+  jest.clearAllTimers();
+  
+  // Reset any modified global objects
+  jest.restoreAllMocks();
 });

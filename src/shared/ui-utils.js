@@ -128,6 +128,114 @@ export class UIComponents {
         };
     }
 
+    /**
+     * Setup accordion-style category toggles
+     * @param {Object} options - Configuration options
+     * @param {string} options.categorySelector - Selector for category sections (default: '.category-section')
+     * @param {string} options.contentSelector - Selector for category content (default: '.category-content')
+     * @param {string} options.chevronSelector - Selector for chevron icons (default: '.category-chevron')
+     * @param {boolean} options.allowMultiple - Allow multiple categories open (default: false)
+     */
+    static setupCategoryToggles(options = {}) {
+        const {
+            categorySelector = '.category-section',
+            contentSelector = '.category-content',
+            chevronSelector = '.category-chevron',
+            allowMultiple = false
+        } = options;
+
+        // Create the toggle function
+        const toggleCategory = (categoryId) => {
+            const categorySection = document.querySelector(`[data-category="${categoryId}"]`);
+            if (!categorySection) return;
+            
+            const content = categorySection.querySelector(contentSelector);
+            const chevron = categorySection.querySelector(chevronSelector);
+            
+            if (!content || !chevron) return;
+            
+            // Check if currently open
+            const isCurrentlyOpen = content.style.display === 'block' || 
+                                    window.getComputedStyle(content).display === 'block';
+            
+            // If not allowing multiple, close all categories first
+            if (!allowMultiple) {
+                document.querySelectorAll(categorySelector).forEach(section => {
+                    const otherContent = section.querySelector(contentSelector);
+                    const otherChevron = section.querySelector(chevronSelector);
+                    
+                    if (otherContent && otherChevron) {
+                        otherContent.style.display = 'none';
+                        otherChevron.style.transform = 'rotate(-90deg)';
+                    }
+                });
+            }
+            
+            // If the clicked category was closed, open it
+            if (!isCurrentlyOpen) {
+                content.style.display = 'block';
+                chevron.style.transform = 'rotate(0deg)';
+            } else if (allowMultiple) {
+                // If allowing multiple and it was open, close it
+                content.style.display = 'none';
+                chevron.style.transform = 'rotate(-90deg)';
+            }
+            // If not allowing multiple and it was already open, it stays closed (true accordion behavior)
+        };
+
+        // Make function globally available
+        window.toggleCategory = toggleCategory;
+        
+        return toggleCategory;
+    }
+
+    /**
+     * Register service worker for PWA functionality
+     * @param {string} swPath - Path to service worker file (default: '/sw.js')
+     * @param {boolean} enableLogging - Enable console logging (default: false in production)
+     */
+    static async registerServiceWorker(swPath = '/sw.js', enableLogging = false) {
+        if (!('serviceWorker' in navigator)) {
+            if (enableLogging) console.warn('Service workers not supported');
+            return false;
+        }
+
+        try {
+            const registration = await navigator.serviceWorker.register(swPath);
+            
+            if (enableLogging) {
+                // eslint-disable-next-line no-console
+                console.log('SW registered: ', registration);
+            }
+            
+            // Listen for updates
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (newWorker) {
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New version available
+                            UIComponents.createNotification(
+                                'Nova versão disponível. Recarregue a página para atualizar.',
+                                'info',
+                                10000
+                            );
+                        }
+                    });
+                }
+            });
+            
+            return registration;
+            
+        } catch (error) {
+            if (enableLogging) {
+                // eslint-disable-next-line no-console
+                console.log('SW registration failed: ', error);
+            }
+            return false;
+        }
+    }
+
     static createPagination(containerId, options = {}) {
         const {
             currentPage = 1,
