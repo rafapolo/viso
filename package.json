@@ -5,7 +5,8 @@
   "description": "VISO - Parliamentary Expenses Visualization",
   "scripts": {
     "dev": "vite",
-    "build": "npm run lint && vite build",
+    "build": "npm run lint && npm run build:css && vite build",
+    "build:css": "tailwindcss -i ./src/styles/tailwind.css -o ./vendor/css/tailwindcss.min.css --minify",
     "build:ci": "npm run lint && npm run test && vite build",
     "build:prod": "NODE_ENV=production npm run build",
     "build:staging": "NODE_ENV=staging npm run build",
@@ -18,10 +19,10 @@
     "format": "prettier --write 'src/**/*.js' 'tests/**/*.js' '*.json' '*.md'",
     "format:check": "prettier --check 'src/**/*.js' 'tests/**/*.js' '*.json' '*.md'",
     "type-check": "jsdoc -t templates/haruki src/**/*.js --dry-run",
-    "test": "jest",
-    "test:safe": "jest --testPathIgnorePatterns='tests/integration/pwa-opfs-integration.test.js' --testPathIgnorePatterns='tests/integration/query-interface.test.js' --testPathIgnorePatterns='tests/unit/pwa-manager.test.js' --testPathIgnorePatterns='tests/unit/enhanced-storage.test.js'",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest",
+    "test:safe": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --testPathIgnorePatterns='tests/integration/pwa-opfs-integration.test.js' --testPathIgnorePatterns='tests/integration/query-interface.test.js' --testPathIgnorePatterns='tests/unit/pwa-manager.test.js' --testPathIgnorePatterns='tests/unit/enhanced-storage.test.js'",
+    "test:watch": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --watch",
+    "test:coverage": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --coverage",
     "test:debug": "node test-runner.js debug",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
@@ -57,57 +58,10 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "prettier": "^3.1.1",
+    "tailwindcss": "^3.4.17",
     "terser": "^5.43.1",
     "vite": "^7.1.2",
     "vite-bundle-analyzer": "^0.7.0",
     "vite-plugin-html": "^3.2.2"
-  },
-  "jest": {
-    "testEnvironment": "jsdom",
-    "globals": {
-      "NODE_OPTIONS": "--experimental-vm-modules"
-    },
-    "transform": {
-      "^.+\\.js$": [
-        "babel-jest",
-        {
-          "presets": [
-            [
-              "@babel/preset-env",
-              {
-                "targets": {
-                  "node": "current"
-                }
-              }
-            ]
-          ]
-        }
-      ]
-    },
-    "setupFilesAfterEnv": [
-      "<rootDir>/tests/setup.js"
-    ],
-    "testMatch": [
-      "<rootDir>/tests/unit/**/*.test.js",
-      "<rootDir>/tests/integration/**/*.test.js"
-    ],
-    "collectCoverageFrom": [
-      "src/**/*.js",
-      "tests/**/*.js",
-      "!tests/**/*.test.js",
-      "!tests/setup.js",
-      "!tests/mocks/**",
-      "!tests/fixtures/**",
-      "!tests/debug/**"
-    ],
-    "coverageDirectory": "coverage",
-    "coverageReporters": [
-      "text",
-      "lcov",
-      "html"
-    ],
-    "moduleNameMapper": {
-      "^../../src/(.*)$": "<rootDir>/src/$1"
-    }
   }
 }
