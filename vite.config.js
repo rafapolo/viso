@@ -4,7 +4,7 @@ import { createHtmlPlugin } from 'vite-plugin-html';
 
 export default defineConfig({
   // Base configuration
-  base: '/',
+  base: '/viso/',
   
   // Plugins
   plugins: [
