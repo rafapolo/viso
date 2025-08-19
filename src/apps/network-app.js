@@ -5,6 +5,12 @@ const networkFilters = {
     topExpensesMode: false
 };
 
+// Import StatisticsCharts class
+import StatisticsCharts from '../index/statistics-charts.js';
+
+// Global statistics charts instance
+let statisticsCharts = null;
+
 // Initialize DuckDB and load data
 async function loadData() {
     try {
@@ -29,6 +35,16 @@ async function loadData() {
         
         setupEventListeners();
         startConnectionMonitoring();
+        
+        // Initialize statistics charts
+        statisticsCharts = new StatisticsCharts();
+        
+        // Setup event listener for time series chart creation
+        document.addEventListener('createTimeSeriesChart', (event) => {
+            if (statisticsCharts && event.detail && event.detail.detailsData) {
+                statisticsCharts.createTimeSeriesChart(event.detail.detailsData);
+            }
+        });
         
         // Handle URL search parameter after data is loaded
         const urlParams = new URLSearchParams(window.location.search);
@@ -321,8 +337,10 @@ async function processData() {
     document.getElementById('totalValue').textContent = `${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     document.getElementById('totalTransactions').textContent = totalTransactions.toLocaleString();
     
-    // Update category pie chart
-    createCategoryPieChart(aggregatedData);
+    // Update category pie chart using StatisticsCharts
+    if (statisticsCharts) {
+        statisticsCharts.createCategoryPieChart(aggregatedData);
+    }
     
     // Store aggregatedData for network filtering stats
     window.currentAggregatedData = aggregatedData;
@@ -415,463 +433,11 @@ function applyNetworkFilters() {
     return { nodes: filteredNodes, links: filteredLinks };
 }
 
-function updateStatisticsForFilteredData(filteredData) {
-    if (!window.currentAggregatedData || !filteredData) {
-        // Missing data for statistics update
-        return;
-    }
-    
-    // Updating statistics for filtered data
-    
-    // Get the labels of filtered nodes for easier matching
-    const filteredDeputados = new Set(
-        filteredData.nodes
-            .filter(n => n.type === 'deputado')
-            .map(n => n.label)
-    );
-    const filteredFornecedores = new Set(
-        filteredData.nodes
-            .filter(n => n.type === 'fornecedor')
-            .map(n => n.label)
-    );
-    
-    // Filter aggregated data to only include records where BOTH deputado and fornecedor are in filtered nodes
-    const filteredAggregatedData = window.currentAggregatedData.filter(record => {
-        const deputadoLabel = `${record.nome_parlamentar} (${record.sigla_partido})`;
-        const fornecedorLabel = record.fornecedor;
-        return filteredDeputados.has(deputadoLabel) && filteredFornecedores.has(fornecedorLabel);
-    });
-    
-    // Filtered aggregated data processed
-    
-    // Calculate filtered statistics
-    const deputados = new Set(filteredAggregatedData.map(r => `${r.nome_parlamentar} (${r.sigla_partido})`));
-    const fornecedores = new Set(filteredAggregatedData.map(r => r.fornecedor));
-    const totalValue = filteredAggregatedData.reduce((sum, r) => sum + Number(r.valor_total), 0);
-    const totalTransactions = filteredAggregatedData.reduce((sum, r) => sum + Number(r.num_transacoes), 0);
-    
-    // Update statistics display
-    document.getElementById('totalDeputados').textContent = deputados.size;
-    document.getElementById('totalFornecedores').textContent = fornecedores.size;
-    document.getElementById('totalValue').textContent = `${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-    document.getElementById('totalTransactions').textContent = totalTransactions.toLocaleString();
-    
-    // Statistics updated
-    
-    // Update category pie chart with filtered data
-    createCategoryPieChart(filteredAggregatedData);
-}
+// Removed duplicate updateStatisticsForFilteredData function - using StatisticsCharts class instead
 
-function createCategoryPieChart(data) {
-    const canvas = document.getElementById('categoryPieChart');
-    const legend = document.getElementById('categoryLegend');
-    
-    if (!canvas || !data || data.length === 0) {
-        legend.innerHTML = '<div class="text-gray-500 text-center">Nenhum dado disponível</div>';
-        return;
-    }
-    
-    const ctx = canvas.getContext('2d');
-    const size = 180;
-    canvas.width = size;
-    canvas.height = size;
-    
-    const centerX = size / 2;
-    const centerY = size / 2;
-    const radius = size / 2 - 10;
-    
-    // Calculate category totals
-    const categoryTotals = new Map();
-    data.forEach(record => {
-        const category = record.categoria_despesa || 'Outros';
-        const value = Number(record.valor_total) || 0;
-        categoryTotals.set(category, (categoryTotals.get(category) || 0) + value);
-    });
-    
-    // Convert to array and sort by value
-    const categoryData = Array.from(categoryTotals.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8); // Show top 8 categories
-    
-    const total = categoryData.reduce((sum, [, value]) => sum + value, 0);
-    if (total === 0) {
-        legend.innerHTML = '<div class="text-gray-500 text-center">Nenhum dado disponível</div>';
-        return;
-    }
-    
-    // Colors for categories (same as badges)
-    const colors = [
-        '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899',
-        '#6366F1', '#EF4444', '#F97316', '#14B8A6', '#06B6D4'
-    ];
-    
-    // Clear canvas
-    ctx.clearRect(0, 0, size, size);
-    
-    // Draw pie slices
-    let currentAngle = -Math.PI / 2; // Start from top
-    categoryData.forEach(([_category, value], index) => {
-        const sliceAngle = (value / total) * 2 * Math.PI;
-        const color = colors[index % colors.length];
-        
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
-        ctx.closePath();
-        ctx.fillStyle = color;
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        currentAngle += sliceAngle;
-    });
-    
-    // Create legend
-    const formatCurrency = (value) => `R$ ${value.toLocaleString('pt-BR')}`;
-    legend.innerHTML = categoryData.map(([category, value], index) => {
-        const percentage = ((value / total) * 100).toFixed(1);
-        const color = colors[index % colors.length];
-        const shortCategory = category;
-        
-        return `
-            <div class="flex items-center gap-2 py-1" title="${category}">
-                <div class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${color}"></div>
-                <div class="flex-1 min-w-0">
-                    <div class="text-xs font-medium truncate">${shortCategory}</div>
-                    <div class="text-xs text-gray-500">${formatCurrency(value)} (${percentage}%)</div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
+// Removed duplicate createCategoryPieChart - using StatisticsCharts class instead
 
-// Global variables for chart interactivity
-let chartData = null;
-let chartTooltip = null;
-
-function createTimeSeriesChart(detailsData) {
-    const canvas = document.getElementById('timeSeriesChart');
-    if (!canvas || !detailsData || detailsData.length === 0) {
-        showChartEmptyState(canvas);
-        return;
-    }
-    
-    const ctx = canvas.getContext('2d');
-    const {width} = canvas;
-    const {height} = canvas;
-    const padding = 30;
-    
-    // Clear canvas with transparent background
-    ctx.clearRect(0, 0, width, height);
-    
-    // Sort all transactions by date and filter out negative values
-    const sortedData = detailsData
-        .filter(item => item.data_emissao && Number(item.valor_liquido) > 0)
-        .sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
-    
-    if (sortedData.length === 0) {
-        showChartEmptyState(canvas);
-        return;
-    }
-    
-    // Get date range and value range
-    const firstDate = new Date(sortedData[0].data_emissao);
-    const lastDate = new Date(sortedData[sortedData.length - 1].data_emissao);
-    const dateRange = lastDate - firstDate || 86400000; // 1 day minimum
-    
-    const values = sortedData.map(item => Number(item.valor_liquido));
-    const maxValue = Math.max(...values);
-    const minValue = Math.min(...values);
-    const valueRange = maxValue - minValue || 1;
-    
-    // Draw grid lines
-    ctx.strokeStyle = '#374151';
-    ctx.lineWidth = 0.5;
-    ctx.setLineDash([2, 2]);
-    
-    // Horizontal grid lines
-    const gridSteps = 4;
-    for (let i = 1; i <= gridSteps; i++) {
-        const y = padding + (i / gridSteps) * (height - 2 * padding);
-        ctx.beginPath();
-        ctx.moveTo(padding, y);
-        ctx.lineTo(width - padding, y);
-        ctx.stroke();
-    }
-    
-    ctx.setLineDash([]);
-    
-    // Draw axes
-    ctx.strokeStyle = '#6B7280';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    // Y axis
-    ctx.moveTo(padding, padding);
-    ctx.lineTo(padding, height - padding);
-    // X axis
-    ctx.lineTo(width - padding, height - padding);
-    ctx.stroke();
-    
-    // Calculate bar width based on number of transactions and available space
-    const availableWidth = width - 2 * padding;
-    const barWidth = Math.max(1, Math.min(4, availableWidth / sortedData.length));
-    
-    // Store bar positions for tooltip interaction
-    const barPositions = [];
-    
-    // Draw transaction bars with gradient and improved visuals
-    sortedData.forEach((item, _index) => {
-        const date = new Date(item.data_emissao);
-        const value = Number(item.valor_liquido);
-        
-        // Calculate positions
-        const x = padding + ((date - firstDate) / dateRange) * (width - 2 * padding);
-        const barHeight = ((value - minValue) / valueRange) * (height - 2 * padding);
-        const y = height - padding - barHeight;
-        
-        // Store position for tooltip
-        barPositions.push({
-            x: x - barWidth/2,
-            y,
-            width: barWidth,
-            height: barHeight,
-            data: {
-                date: item.data_emissao,
-                totalValue: value,
-                count: 1,
-                transactions: [item]
-            }
-        });
-        
-        // Create gradient for bars based on expense category
-        const categoryColor = getCategoryColor(item.categoria_despesa);
-        const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
-        gradient.addColorStop(0, categoryColor);
-        gradient.addColorStop(1, adjustColorBrightness(categoryColor, -20));
-        
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x - barWidth/2, y, barWidth, barHeight);
-        
-        // Add subtle shadow for depth
-        ctx.shadowColor = 'rgba(0,0,0,0.2)';
-        ctx.shadowBlur = 2;
-        ctx.shadowOffsetY = 1;
-        ctx.fillRect(x - barWidth/2, y, barWidth, barHeight);
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
-    });
-    
-    // Store bar positions globally for interactivity
-    chartData = { sortedData, canvas, ctx, width, height, padding, barPositions };
-    
-    // Draw labels
-    ctx.fillStyle = '#9CA3AF';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'center';
-    
-    // X-axis labels (first, middle, last dates)
-    const formatDate = (date) => {
-        return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(-2)}`;
-    };
-    
-    ctx.fillText(formatDate(firstDate), padding, height - 10);
-    if (dateRange > 86400000) { // More than 1 day
-        const middleDate = new Date(firstDate.getTime() + dateRange / 2);
-        ctx.fillText(formatDate(middleDate), width / 2, height - 10);
-        ctx.fillText(formatDate(lastDate), width - padding, height - 10);
-    }
-    
-    // Enhanced Y-axis labels
-    ctx.textAlign = 'right';
-    const formatCurrency = (value) => {
-        if (value >= 1000000) return `R$ ${(value / 1000000).toFixed(1)}M`;
-        if (value >= 1000) return `R$ ${(value / 1000).toFixed(0)}K`;
-        return `R$ ${value.toFixed(0)}`;
-    };
-    
-    // Multiple Y-axis labels along grid lines
-    const labelSteps = 4;
-    for (let i = 0; i <= labelSteps; i++) {
-        const value = minValue + (maxValue - minValue) * (1 - i / labelSteps);
-        const y = padding + (i / labelSteps) * (height - 2 * padding);
-        ctx.fillText(formatCurrency(value), padding - 8, y + 3);
-    }
-    
-    // Display summary statistics
-    displaySummaryStats(sortedData);
-    
-    // Setup interactivity
-    setupChartInteractivity(canvas);
-}
-
-function setupChartInteractivity(canvas) {
-    canvas.onmousemove = handleChartHover;
-    canvas.onmouseout = hideTooltip;
-}
-
-function handleChartHover(event) {
-    if (!chartData || !chartData.barPositions) return;
-    
-    const rect = chartData.canvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) * (chartData.canvas.width / rect.width);
-    const y = (event.clientY - rect.top) * (chartData.canvas.height / rect.height);
-    
-    const hoveredBar = chartData.barPositions.find(bar => 
-        x >= bar.x && x <= bar.x + bar.width && 
-        y >= bar.y && y <= bar.y + bar.height
-    );
-    
-    if (hoveredBar) {
-        chartData.canvas.style.cursor = 'pointer';
-        showTooltip(event, hoveredBar.data);
-    } else {
-        chartData.canvas.style.cursor = 'default';
-        hideTooltip();
-    }
-}
-
-function showTooltip(event, data) {
-    hideTooltip();
-    
-    const tooltip = document.createElement('div');
-    tooltip.style.cssText = `
-        position: fixed;
-        background: rgba(17, 24, 39, 0.95);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 11px;
-        pointer-events: none;
-        z-index: 1000;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(75, 85, 99, 0.3);
-        max-width: 200px;
-    `;
-    
-    const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value);
-    const formatDate = (dateStr) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(dateStr));
-    
-    const transaction = data.transactions[0];
-    tooltip.innerHTML = `
-        <div class="font-medium text-blue-300 mb-1">${formatDate(data.date)}</div>
-        <div>Valor: <span class="font-bold">${formatCurrency(data.totalValue)}</span></div>
-        ${transaction.categoria_despesa ? `<div class="text-xs text-gray-300 mt-1">📋 ${transaction.categoria_despesa}</div>` : ''}
-        ${transaction.fornecedor ? `<div class="text-xs text-gray-300 mt-1">→ ${transaction.fornecedor}</div>` : ''}
-        ${transaction.nome_parlamentar ? `<div class="text-xs text-gray-300 mt-1">← ${transaction.nome_parlamentar}</div>` : ''}
-    `;
-    
-    document.body.appendChild(tooltip);
-    chartTooltip = tooltip;
-    
-    const rect = tooltip.getBoundingClientRect();
-    tooltip.style.left = `${Math.min(event.clientX + 10, window.innerWidth - rect.width - 10)}px`;
-    tooltip.style.top = `${Math.max(event.clientY - rect.height - 10, 10)}px`;
-}
-
-function hideTooltip() {
-    if (chartTooltip) {
-        chartTooltip.remove();
-        chartTooltip = null;
-    }
-}
-
-function getCategoryColor(categoria) {
-    if (!categoria) return '#6B7280'; // Default gray
-    
-    // Hash function to generate consistent colors for categories (same as getCategoryBadge)
-    const hashCode = (str) => {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        return hash;
-    };
-    
-    // Color palette matching the category badges (hex equivalents for dark theme)
-    const colors = [
-        '#3B82F6', // blue
-        '#10B981', // green  
-        '#8B5CF6', // purple
-        '#F59E0B', // yellow
-        '#EC4899', // pink
-        '#6366F1', // indigo
-        '#EF4444', // red
-        '#F97316', // orange
-        '#14B8A6', // teal
-        '#06B6D4'  // cyan
-    ];
-    
-    const colorIndex = Math.abs(hashCode(categoria)) % colors.length;
-    return colors[colorIndex];
-}
-
-function adjustColorBrightness(color, percent) {
-    const num = parseInt(color.replace("#", ""), 16);
-    const amt = Math.round(2.55 * percent);
-    const R = (num >> 16) + amt;
-    const G = (num >> 8 & 0x00FF) + amt;
-    const B = (num & 0x0000FF) + amt;
-    return `#${(0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
-        (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
-        (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1)}`;
-}
-
-function showChartEmptyState(canvas) {
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    const {width} = canvas;
-    const {height} = canvas;
-    
-    ctx.clearRect(0, 0, width, height);
-    
-    // Draw empty state with icon
-    ctx.fillStyle = '#6B7280';
-    ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('📊', width / 2, height / 2 - 20);
-    
-    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#9CA3AF';
-    ctx.fillText('Nenhum dado temporal disponível', width / 2, height / 2 + 10);
-    ctx.fillText('Transações sem data válida', width / 2, height / 2 + 25);
-}
-
-function displaySummaryStats(transactionData) {
-    const totalValue = transactionData.reduce((sum, item) => sum + Number(item.valor_liquido), 0);
-    const avgValue = totalValue / transactionData.length;
-    const maxTransaction = Math.max(...transactionData.map(item => Number(item.valor_liquido)));
-    
-    // Find the chart container and add stats
-    const chartContainer = document.querySelector('#timeSeriesChart').parentElement;
-    let statsDiv = chartContainer.querySelector('.chart-stats');
-    
-    if (!statsDiv) {
-        statsDiv = document.createElement('div');
-        statsDiv.className = 'chart-stats text-xs text-gray-400 mb-2 flex justify-between';
-        chartContainer.insertBefore(statsDiv, chartContainer.firstChild);
-    }
-    
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(value);
-    };
-    
-    statsDiv.innerHTML = `
-        <div>Total: <span class="text-white font-medium">${formatCurrency(totalValue)}</span></div>
-        <div>Média: <span class="text-white font-medium">${formatCurrency(avgValue)}</span></div>
-        <div>Maior: <span class="text-white font-medium">${formatCurrency(maxTransaction)}</span></div>
-    `;
-}
+// Removed duplicate chart implementation - using StatisticsCharts class instead
 
 function initializeVisualization() {
     // Clear loading message
@@ -883,20 +449,12 @@ function initializeVisualization() {
     
     // Update statistics based on filtered data
     if (networkFilters.densityMode || networkFilters.topExpensesMode) {
-        updateStatisticsForFilteredData(filteredData);
-    } else if (window.currentAggregatedData) {
-        // Restore original statistics when no network filters are active
-        const deputados = new Set(window.currentAggregatedData.map(r => `${r.nome_parlamentar} (${r.sigla_partido})`));
-        const fornecedores = new Set(window.currentAggregatedData.map(r => r.fornecedor));
-        const totalValue = window.currentAggregatedData.reduce((sum, r) => sum + Number(r.valor_total), 0);
-        const totalTransactions = window.currentAggregatedData.reduce((sum, r) => sum + Number(r.num_transacoes), 0);
-        
-        document.getElementById('totalDeputados').textContent = deputados.size;
-        document.getElementById('totalFornecedores').textContent = fornecedores.size;
-        document.getElementById('totalValue').textContent = `${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        document.getElementById('totalTransactions').textContent = totalTransactions.toLocaleString();
-        
-        createCategoryPieChart(window.currentAggregatedData);
+        if (statisticsCharts) {
+            statisticsCharts.updateStatisticsForFilteredData(filteredData, window.currentAggregatedData);
+        }
+    } else if (window.currentAggregatedData && statisticsCharts) {
+        // Use StatisticsCharts class for consistent statistics management
+        statisticsCharts.updateStatistics(window.currentAggregatedData);
     }
     
     // Check if we have data to visualize
@@ -1440,6 +998,13 @@ async function showNodeInfo(nodeData) {
         const formatDate = (dateStr) => {
             if (!dateStr) return 'N/A';
             try {
+                // Handle DD/MM/YYYY format from SQL strftime
+                if (dateStr.includes('/')) {
+                    const [day, month, year] = dateStr.split('/');
+                    const date = new Date(year, month - 1, day); // month is 0-indexed
+                    return date.toLocaleDateString('pt-BR');
+                }
+                // Fallback for other formats
                 const date = new Date(dateStr);
                 return date.toLocaleDateString('pt-BR');
             } catch {
@@ -1584,9 +1149,11 @@ async function showNodeInfo(nodeData) {
         
         content.innerHTML = contentHTML;
         
-        // Create time series chart after content is set
+        // Create time series chart after content is set using StatisticsCharts
         setTimeout(() => {
-            createTimeSeriesChart(detailsData);
+            if (statisticsCharts) {
+                statisticsCharts.createTimeSeriesChart(detailsData);
+            }
         }, 50);
         
     } catch (error) {
@@ -1910,11 +1477,7 @@ function getThemeColors() {
 function updateD3Colors() {
     const colors = getThemeColors();
     
-    // Update D3.js container background color
-    const visualization = document.getElementById('visualization');
-    if (visualization) {
-        visualization.style.backgroundColor = colors.backgroundColor;
-    }
+    // D3.js container background color is now handled by CSS classes
     
     // Update link colors
     const svg = d3.select("#network-svg");
