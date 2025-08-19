@@ -1,5 +1,7 @@
 # 🕸️ VISO - Visualização Integrada de Sistemas Oficiais
 
+[![Tests](https://github.com/rafapolo/viso/actions/workflows/test.yml/badge.svg)](https://github.com/rafapolo/viso/actions/workflows/test.yml)
+
 Explore gastos de deputados federais através de visualizações interativas e consultas SQL diretas com os dados da Câmara dos Deputados.
 
 ![viso ui graph](./docs/viso_ui_graph.png)
@@ -77,13 +79,28 @@ Ferramenta para análises avançadas com consultas personalizadas.
 
 ### 🔗 URLs Compartilháveis
 - **Links Diretos**: Compartilhe visualizações específicas com URLs únicos
-- **Formato Intuitivo**: `/deputado/nome-partido` e `/empresa/nome-empresa`
+- **Formato Intuitivo**: `/deputado-nome-partido` e `/empresa-nome-empresa`
 - **Navegação Natural**: Botões voltar/avançar do browser funcionam perfeitamente
 - **Compatibilidade**: URLs antigas continuam funcionando para transição suave
 
+
+#### Core Components
+- **OPFS Storage Manager**: Persistent local file storage
+- **File System Worker**: Handles OPFS operations off-main-thread
+- **Data Processing Worker**: Heavy SQL computations and data processing
+- **Background Sync Worker**: Automatic data updates and synchronization
+- **Cache Manager**: Advanced caching with compression and versioning
+- **Offline Data Manager**: Orchestrates all components for offline support
+
+### Key Benefits
+- ✅ **Instant Loading**: Cached data loads immediately
+- ✅ **Offline Support**: Core functionality works without internet
+- ✅ **Better Performance**: Heavy operations moved to workers
+- ✅ **Automatic Updates**: Background sync keeps data fresh
+
 **Exemplos de URLs:**
-- `https://viso.com/deputado/fulano-de-tal-pt` → Abre direto no deputado
-- `https://viso.com/empresa/empresa-exemplo-ltda` → Abre direto na empresa
+- `/deputado-fulano-de-tal-pt` → Abre direto no deputado
+- `/empresa-empresa-exemplo-ltda` → Abre direto na empresa
 
 ---
 
@@ -91,4 +108,4 @@ Ferramenta para análises avançadas com consultas personalizadas.
 
 ---
 
-*Desenvolvido para fortalecer a democracia brasileira através da transparência*
+*Desenvolvido para fortalecer a democracia brasileira através da transparência e auditoria pública*

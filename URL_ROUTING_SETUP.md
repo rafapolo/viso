@@ -3,8 +3,8 @@
 ## Overview
 
 The application now supports shareable URLs with the following structure:
-- **Deputados**: `/deputado/{nome}-{partido}` (e.g., `/deputado/fulano-de-tal-pt`)
-- **Empresas**: `/empresa/{nome}` (e.g., `/empresa/empresa-exemplo-ltda`)
+- **Deputados**: `/deputado-{nome}-{partido}` (e.g., `/deputado-fulano-de-tal-pt`)
+- **Empresas**: `/empresa-{nome}` (e.g., `/empresa-empresa-exemplo-ltda`)
 
 ## Server Configuration Required
 
@@ -40,7 +40,7 @@ location / {
 
 #### Node.js/Express
 ```javascript
-app.get(['/deputado/*', '/empresa/*'], (req, res) => {
+app.get(['/deputado-*', '/empresa-*'], (req, res) => {
     res.sendFile(path.join(__dirname, 'dist/index.html'));
 });
 ```
@@ -48,21 +48,21 @@ app.get(['/deputado/*', '/empresa/*'], (req, res) => {
 ## How It Works
 
 1. **URL Generation**: When a user clicks on a node, the app generates a path-based URL using `history.pushState()`
-2. **Direct Navigation**: When someone visits a URL like `/deputado/fulano-pt`, the app parses the path and automatically selects the corresponding node
+2. **Direct Navigation**: When someone visits a URL like `/deputado-fulano-pt`, the app parses the path and automatically selects the corresponding node
 3. **Backward Compatibility**: Old fragment-based URLs (`#parlamentar-fulano-pt`) still work
 4. **Browser Navigation**: Back/forward buttons work correctly with the new routing system
 
 ## URL Structure Details
 
 ### Deputado URLs
-- Format: `/deputado/{name}-{party}`
+- Format: `/deputado-{name}-{party}`
 - Name and party are slugified (lowercase, spaces become hyphens, special characters removed)
-- Example: "FULANO DE TAL (PT)" becomes `/deputado/fulano-de-tal-pt`
+- Example: "FULANO DE TAL (PT)" becomes `/deputado-fulano-de-tal-pt`
 
 ### Empresa URLs  
-- Format: `/empresa/{company-name}`
+- Format: `/empresa-{company-name}`
 - Company name is slugified and truncated to 50 characters
-- Example: "Empresa Exemplo LTDA" becomes `/empresa/empresa-exemplo-ltda`
+- Example: "Empresa Exemplo LTDA" becomes `/empresa-empresa-exemplo-ltda`
 
 ## Testing
 
