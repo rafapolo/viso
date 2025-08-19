@@ -1374,7 +1374,7 @@ function showUrlRoutingFallback() {
                         <p>Os dados não puderam ser carregados para mostrar os detalhes desta ${entityType === 'deputado' ? 'deputada/deputado' : 'empresa'}.</p>
                         <p class="text-gray-400 text-sm mt-2">Verifique se o arquivo de dados está disponível e tente novamente.</p>
                     </div>
-                    <button onclick="window.location.href = '/'" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
+                    <button onclick="navigateHome()" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
                         Voltar à página inicial
                     </button>
                 </div>
@@ -2030,7 +2030,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Add navigation function for error page
+async function navigateHome() {
+    try {
+        // Dynamically import to avoid circular dependencies in network-app.js
+        const { getBasePath } = await import('../shared/app-config.js');
+        const basePath = getBasePath();
+        window.location.href = `${basePath}index.html`;
+    } catch (error) {
+        // Fallback to current directory if import fails
+        window.location.href = './index.html';
+    }
+}
+
 // Make functions available globally for onclick handlers
 window.highlightNodeInVisualization = highlightNodeInVisualization;
+window.navigateHome = navigateHome;
 
 export { loadData, setupEventListeners, initializeVisualization };
