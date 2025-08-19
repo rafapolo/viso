@@ -1,0 +1,42 @@
+/* Sankey Diagram Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #1a1a1a;
+    color: white;
+}
+
+.node rect {
+    cursor: move;
+    fill-opacity: .9;
+    shape-rendering: crispEdges;
+}
+
+.node text {
+    pointer-events: none;
+    text-shadow: 0 1px 0 #000;
+    font-size: 12px;
+    fill: white;
+}
+
+.link {
+    fill: none;
+    stroke-opacity: .5;
+}
+
+.link:hover {
+    stroke-opacity: .8;
+}
+
+#loading {
+    text-align: center;
+    font-size: 18px;
+    margin: 50px;
+}
+
+.stats {
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #333;
+    border-radius: 5px;
+}
