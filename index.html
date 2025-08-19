@@ -29,10 +29,21 @@
     <link rel="stylesheet" href="src/styles/common.css">
     <link rel="stylesheet" href="src/styles/index.css">
     <link rel="stylesheet" href="vendor/css/tailwindcss.min.css">
+    <script src="vendor/js/apache-arrow/Arrow.es2015.min.js"></script>
     <script src="vendor/js/d3.v7.min.js"></script>
     <script src="vendor/js/d3-sankey.min.js"></script>
     <script src="vendor/js/service-worker-registration.js"></script>
     <script src="vendor/js/theme-toggle.js"></script>
+    <script>
+        // Ensure Apache Arrow is loaded before modules
+        window.addEventListener('DOMContentLoaded', function() {
+            if (typeof window.Arrow === 'undefined') {
+                console.error('Apache Arrow not loaded properly');
+                return;
+            }
+            console.log('Apache Arrow loaded successfully:', typeof window.Arrow);
+        });
+    </script>
     <script type="module">
         import { getBasePath } from './src/shared/app-config.js';
         window.navigateToDb = () => {
