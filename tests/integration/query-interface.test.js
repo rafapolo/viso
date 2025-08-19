@@ -1,4 +1,4 @@
-const { describe, test, expect, beforeEach, afterEach } = require('@jest/globals');
+import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
 // Mock Monaco Editor
 const mockEditor = {

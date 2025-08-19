@@ -1,4 +1,4 @@
-const { describe, test, expect, beforeEach } = require('@jest/globals');
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 
 // Testing the refactored shared utilities structure
 describe('Shared Utils (Testing Refactored Structure)', () => {

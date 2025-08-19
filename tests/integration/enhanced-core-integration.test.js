@@ -1,4 +1,5 @@
 // Enhanced Core Integration Tests
+import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
 describe('Enhanced Core Integration', () => {
   let mockOfflineDataManager;
