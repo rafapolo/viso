@@ -30,27 +30,13 @@
     <link rel="stylesheet" href="src/styles/index.css">
     <link rel="stylesheet" href="vendor/css/tailwindcss.min.css">
     <script src="vendor/js/apache-arrow/Arrow.es2015.min.js"></script>
+    <script src="./src/shared/arrow-status.js"></script>
     <script src="vendor/js/d3.v7.min.js"></script>
     <script src="vendor/js/d3-sankey.min.js"></script>
     <script src="vendor/js/service-worker-registration.js"></script>
     <script src="vendor/js/theme-toggle.js"></script>
-    <script>
-        // Ensure Apache Arrow is loaded before modules
-        window.addEventListener('DOMContentLoaded', function() {
-            if (typeof window.Arrow === 'undefined') {
-                console.error('Apache Arrow not loaded properly');
-                return;
-            }
-            console.log('Apache Arrow loaded successfully:', typeof window.Arrow);
-        });
-    </script>
-    <script type="module">
-        import { getBasePath } from './src/shared/app-config.js';
-        window.navigateToDb = () => {
-            const basePath = getBasePath();
-            window.location.href = `${basePath}db.html?analise=sankey-fluxos`;
-        };
-    </script>
+    <script type="module" src="./src/shared/arrow-loader.js"></script>
+    <script type="module" src="./src/shared/navigation.js"></script>
     <script type="module" src="src/core.js"></script>
     <script type="module" src="src/apps/network-app.js"></script>
 </head>
@@ -63,7 +49,7 @@
                     📊
                 </div>
                 <div class="text-base font-semibold">Viso UI</div>
-                <button onclick="navigateToDb()" class="ml-auto px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-xs font-medium transition-all duration-200 transform hover:scale-105 flex items-center gap-2">
+                <button id="nav-to-db" class="ml-auto px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-xs font-medium transition-all duration-200 transform hover:scale-105 flex items-center gap-2">
                     <span>🗄️</span>
                     <span>Viso DB</span>
                 </button>
@@ -207,9 +193,9 @@
         <!-- Main Content -->
         <div class="flex-1 flex flex-col relative">
             <!-- Visualization -->
-            <div id="visualization" class="flex-1 relative overflow-hidden" style="background-color: #0f1419;">
+            <div id="visualization" class="flex-1 relative overflow-hidden bg-white dark:bg-gray-950">
                 <!-- Floating Search Box -->
-                <div class="absolute top-6 left-1/2 transform -translate-x-1/2 z-20">
+                <div class="absolute top-6 left-1/2 transform -translate-x-1/2" style="z-index: 100;">
                     <div class="relative bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
                         <input 
                             type="text" 
@@ -230,19 +216,19 @@
                 </div>
                 
                 <!-- Zoom controls -->
-                <div class="absolute top-4 right-4 flex flex-col gap-2">
+                <div class="absolute top-4 right-4 flex flex-col gap-2" style="z-index: 100;">
                     <button id="zoom-in" class="bg-gray-800 hover:bg-gray-700 text-white w-8 h-8 rounded flex items-center justify-center text-lg font-bold">+</button>
                     <button id="zoom-out" class="bg-gray-800 hover:bg-gray-700 text-white w-8 h-8 rounded flex items-center justify-center text-lg font-bold">−</button>
                     <button id="zoom-reset" class="bg-gray-800 hover:bg-gray-700 text-white w-8 h-8 rounded flex items-center justify-center text-xs font-bold">⌂</button>
                 </div>
                 <!-- Force Strength Control - Bottom Center -->
-                <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20">
+                <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2" style="z-index: 100;">
                     <div class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3">
                         <div class="flex items-center gap-3">
                             <label for="forceStrength" class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2 whitespace-nowrap">
                                 <span>-</span>
                             </label>
-                            <input type="range" id="forceStrength" class="slider-track h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer" min="1" max="80" value="15" step="1" style="width: 250px;">
+                            <input type="range" id="forceStrength" class="slider-track h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer" min="1" max="100" value="15" step="1" style="width: 250px;">
                             <span class="text-xs text-gray-600 dark:text-gray-300">+</span>
                         </div>
                     </div>
@@ -255,7 +241,7 @@
             </div>
             
             <!-- Right Sidebar (Entity Panel) -->
-            <div id="right-panel" class="absolute top-0 right-0 w-80 h-full bg-gray-100 dark:bg-gray-900 border-l border-gray-300 dark:border-gray-700 flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out z-10 shadow-lg">
+            <div id="right-panel" class="absolute top-0 right-0 w-80 h-full bg-gray-100 dark:bg-gray-900 border-l border-gray-300 dark:border-gray-700 flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out shadow-lg" style="z-index: 9999;">
             <div class="p-4 border-b border-gray-300 dark:border-gray-700">
                 <div class="flex justify-between items-center">
                     <div class="text-sm font-semibold text-gray-900 dark:text-white">Painel da Entidade</div>

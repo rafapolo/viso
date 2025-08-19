@@ -31,36 +31,17 @@
     <link rel="stylesheet" href="src/styles/db.css">
     <link rel="stylesheet" href="vendor/css/tailwindcss.min.css">
     <!-- Monaco Editor CSS will be loaded by Vite -->
-    <script>
-        // Set up Monaco Editor base URL
-        // Monaco Editor paths will be handled by build process
-    </script>
     <!-- Monaco Editor will be loaded by Vite build process -->
     <script src="vendor/js/apache-arrow/Arrow.es2015.min.js"></script>
+    <script src="./src/shared/arrow-status.js"></script>
     <script src="vendor/js/sql-formatter.js"></script>
-    <script>
-        // Clear AMD define to avoid conflicts with D3
-        if (typeof define !== 'undefined') {
-            var originalDefine = define;
-            define = undefined;
-        }
-    </script>
+    <script src="./src/shared/amd-handler.js"></script>
     <script src="vendor/js/d3.v7.min.js"></script>
     <script src="vendor/js/d3-sankey.min.js"></script>
-    <script>
-        // Restore AMD define after D3 loads
-        if (typeof originalDefine !== 'undefined') {
-            define = originalDefine;
-        }
-        // Ensure Apache Arrow is loaded before modules
-        window.addEventListener('DOMContentLoaded', function() {
-            if (typeof window.Arrow === 'undefined') {
-                console.error('Apache Arrow not loaded properly');
-                return;
-            }
-            console.log('Apache Arrow loaded successfully:', typeof window.Arrow);
-        });
-    </script>
+    <script src="./src/shared/amd-restore.js"></script>
+    <script type="module" src="./src/shared/arrow-loader.js"></script>
+    <script type="module" src="./src/shared/navigation.js"></script>
+    <script type="module" src="./src/db/category-toggle.js"></script>
     <script type="module" src="./src/db-api.js"></script>
     <!-- db-config.js will be loaded by Vite build process -->
     
@@ -74,7 +55,7 @@
                     🦆
                 </div>
                 <div class="text-base font-semibold">Viso UI</div>
-                <button onclick="navigateToNetwork()" class="ml-auto px-3 py-1.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg text-xs font-medium transition-all duration-200 transform hover:scale-105 flex items-center gap-2">
+                <button id="nav-to-index" class="ml-auto px-3 py-1.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg text-xs font-medium transition-all duration-200 transform hover:scale-105 flex items-center gap-2">
                     <span>📊</span>
                     <span>Ver Grafo</span>
                 </button>
@@ -101,7 +82,7 @@
                 <div id="sample-queries-list" class="space-y-1">
                     <!-- Exemplos -->
                     <div class="category-section" data-category="exemplos">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mb-1 bg-slate-50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-md hover:bg-slate-100 dark:hover:bg-slate-900/30 transition-colors" onclick="toggleCategory('exemplos')">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mb-1 bg-slate-50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-md hover:bg-slate-100 dark:hover:bg-slate-900/30 transition-colors" data-category="exemplos">
                             <span class="text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wide">📚 Exemplos</span>
                             <svg class="category-chevron w-4 h-4 text-slate-500 transition-transform" style="transform: rotate(0deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -158,7 +139,7 @@ LIMIT 15" data-id="fornecedores-multi-deputados">
                     
                     <!-- Temporal Analysis -->
                     <div class="category-section" data-category="temporal">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" onclick="toggleCategory('temporal')">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" data-category='temporal'>
                             <span class="text-xs font-medium text-blue-700 dark:text-blue-300 uppercase tracking-wide">📈 Análise Temporal</span>
                             <svg class="category-chevron w-4 h-4 text-blue-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -210,7 +191,7 @@ ORDER BY ano DESC" data-id="comparacao-ano-a-ano">
                     
                     <!-- Advanced Category Analysis -->
                     <div class="category-section" data-category="category">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-md hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors" onclick="toggleCategory('category')">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-md hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors" data-category='category'>
                             <span class="text-xs font-medium text-teal-700 dark:text-teal-300 uppercase tracking-wide">🔍 Análise de Categorias</span>
                             <svg class="category-chevron w-4 h-4 text-teal-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -257,7 +238,7 @@ ORDER BY maior_valor DESC" data-id="estatisticas-por-categoria">
                     
                     <!-- Travel & Expense Analysis -->
                     <div class="category-section" data-category="travel">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-md hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors" onclick="toggleCategory('travel')">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-md hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors" data-category='travel'>
                             <span class="text-xs font-medium text-sky-700 dark:text-sky-300 uppercase tracking-wide">✈️ Análise de Viagens</span>
                             <svg class="category-chevron w-4 h-4 text-sky-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -319,7 +300,7 @@ ORDER BY gasto_medio DESC" data-id="gasto-hospedagem-por-partido">
                     
                     <!-- Vendor Intelligence -->
                     <div class="category-section" data-category="vendor">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-md hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors" onclick="toggleCategory('vendor')">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-md hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors" data-category='vendor'>
                             <span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">🏪 Inteligência de Fornecedores</span>
                             <svg class="category-chevron w-4 h-4 text-emerald-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -398,7 +379,7 @@ ORDER BY num_transacoes DESC" data-id="principal-fornecedor-por-categoria">
                     
                     <!-- Parliamentary Insights -->
                     <div class="category-section" data-category="parliamentary">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-md hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors" onclick="toggleCategory('parliamentary')">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-md hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors" data-category='parliamentary'>
                             <span class="text-xs font-medium text-violet-700 dark:text-violet-300 uppercase tracking-wide">🏛️ Insights Parlamentares</span>
                             <svg class="category-chevron w-4 h-4 text-violet-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -464,7 +445,7 @@ ORDER BY
                     
                     <!-- Data Quality & Audit -->
                     <div class="category-section" data-category="audit">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors" onclick="toggleCategory('audit')">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors" data-category='audit'>
                             <span class="text-xs font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wide">🔍 Qualidade & Auditoria</span>
                             <svg class="category-chevron w-4 h-4 text-amber-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -565,7 +546,7 @@ LIMIT 20" data-id="valores-altos-duplicados">
                     
                     <!-- Risk Detection Analysis -->
                     <div class="category-section" data-category="risk">
-                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors" onclick="toggleCategory('risk')">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors" data-category='risk'>
                             <span class="text-xs font-medium text-red-700 dark:text-red-300 uppercase tracking-wide">🚨 Detecção de Riscos</span>
                             <svg class="category-chevron w-4 h-4 text-red-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -1024,7 +1005,7 @@ LIMIT 50" data-id="concentracao-fornecedores">
                 </div>
                 
                 <div class="flex items-center gap-3">
-                    <button id="share-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-2" onclick="shareCurrentQuery()">
+                    <button id="share-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-2" data-action="share">
                         🔗 Compartilhar
                     </button>
                     <button id="export-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center gap-2" disabled>
@@ -1145,13 +1126,6 @@ LIMIT 50" data-id="concentracao-fornecedores">
     </div>
 
     <script src="vendor/js/theme-toggle.js"></script>
-    <script type="module">
-        import { getBasePath } from './src/shared/app-config.js';
-        window.navigateToNetwork = () => {
-            const basePath = getBasePath();
-            window.location.href = `${basePath}index.html`;
-        };
-    </script>
     <script type="module" src="./src/apps/db-app.js"></script>
 </body>
 </html>
