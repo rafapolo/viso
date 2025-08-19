@@ -1,4 +1,5 @@
 // Monaco Editor Management
+import * as monaco from 'monaco-editor';
 import { ErrorHandler } from '../shared/error-handler.js';
 
 export class EditorManager {
@@ -21,7 +22,7 @@ export class EditorManager {
 
       try {
         const isDark = document.documentElement.classList.contains('dark');
-        this.editor = window.monaco.editor.create(editorContainer, {
+        this.editor = monaco.editor.create(editorContainer, {
           value: 'SELECT * FROM despesas LIMIT 10;',
           language: 'sql',
           theme: isDark ? 'vs-dark' : 'vs',
@@ -49,11 +50,11 @@ export class EditorManager {
    * Setup keyboard shortcuts for the editor
    */
   setupKeyboardShortcuts() {
-    if (!this.editor || !window.monaco) return;
+    if (!this.editor || !monaco) return;
 
     // Ctrl+Enter / Cmd+Enter to execute query
     this.editor.addCommand(
-      window.monaco.KeyMod.CtrlCmd | window.monaco.KeyCode.Enter,
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
       () => {
         const event = new CustomEvent('executeQuery');
         document.dispatchEvent(event);
@@ -219,7 +220,7 @@ export class EditorManager {
     if (this.editor) {
       const position = this.editor.getPosition();
       this.editor.executeEdits('', [{
-        range: new window.monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+        range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
         text
       }]);
     }
