@@ -4,7 +4,7 @@ import { createHtmlPlugin } from 'vite-plugin-html';
 
 export default defineConfig({
   // Base configuration
-  base: './',
+  base: '/',
   
   // Plugins
   plugins: [
@@ -17,7 +17,27 @@ export default defineConfig({
         minifyCSS: true,
         minifyJS: true
       } : false
-    })
+    }),
+    // SPA routing plugin
+    {
+      name: 'spa-fallback',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url && (req.url.startsWith('/deputado-') || req.url.startsWith('/empresa-'))) {
+            req.url = '/index.html';
+          }
+          next();
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url && (req.url.startsWith('/deputado-') || req.url.startsWith('/empresa-'))) {
+            req.url = '/index.html';
+          }
+          next();
+        });
+      }
+    }
   ],
   
   // Build configuration
@@ -104,7 +124,7 @@ export default defineConfig({
   
   // Development server
   server: {
-    port: 3000,
+    port: 3001,
     host: true,
     open: false,
     cors: true
