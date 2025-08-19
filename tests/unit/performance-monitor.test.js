@@ -1,4 +1,5 @@
 // Performance Monitor Tests
+import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
 describe('PerformanceMonitor', () => {
   let MockPerformanceMonitor;

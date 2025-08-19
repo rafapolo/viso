@@ -10,6 +10,11 @@ async function loadData() {
     try {
         const progressEl = document.getElementById('loadingProgress');
         
+        // Wait for core.js to load and initialize global functions
+        while (!window.duckdbAPI || !window.duckdbAPI.initDuckDB || !window.updateConnectionStatus) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
         progressEl.textContent = 'Inicializando DuckDB...';
         await window.duckdbAPI.initDuckDB();
         
@@ -52,7 +57,9 @@ async function loadData() {
         
     } catch (error) {
         console.error('❌ Erro:', error);
-        window.updateConnectionStatus('error', 'Erro de inicialização');
+        if (window.updateConnectionStatus) {
+            window.updateConnectionStatus('error', 'Erro de inicialização');
+        }
         document.getElementById('loading').innerHTML = `
             <div class="text-red-400">
                 <div class="text-lg mb-2">❌ Erro de Conexão</div>
@@ -71,11 +78,13 @@ let healthCheckInterval;
 function startConnectionMonitoring() {
     // Check connection health every 30 seconds
     healthCheckInterval = setInterval(async () => {
-        if (window.getConnectionStatus() === 'connected') {
+        if (window.getConnectionStatus && window.getConnectionStatus() === 'connected') {
             const isHealthy = await window.duckdbAPI.checkConnectionHealth();
             if (!isHealthy) {
                 console.warn('🔴 Connection lost during health check');
-                window.updateConnectionStatus('error', 'Conexão perdida');
+                if (window.updateConnectionStatus) {
+                    window.updateConnectionStatus('error', 'Conexão perdida');
+                }
             }
         }
     }, 30000);
@@ -1208,7 +1217,7 @@ function updateUrlForNode(nodeData) {
                     .replace(/\s+/g, '-')
                     .replace(/[^a-z0-9-]/g, '')
                     .replace(/--+/g, '-');
-                path = `/deputado/${slug}`;
+                path = `/deputado-${slug}`;
             } else {
                 // Fallback if format doesn't match
                 const slug = nodeData.label
@@ -1216,7 +1225,7 @@ function updateUrlForNode(nodeData) {
                     .replace(/\s+/g, '-')
                     .replace(/[^a-z0-9-]/g, '')
                     .replace(/--+/g, '-');
-                path = `/deputado/${slug}`;
+                path = `/deputado-${slug}`;
             }
         } else if (nodeData.type === 'fornecedor') {
             // Create URL-friendly slug for company
@@ -1226,7 +1235,7 @@ function updateUrlForNode(nodeData) {
                 .replace(/[^a-z0-9-]/g, '')
                 .replace(/--+/g, '-')
                 .substring(0, 50); // Limit length
-            path = `/empresa/${slug}`;
+            path = `/empresa-${slug}`;
         }
         
         if (path) {
@@ -1239,20 +1248,36 @@ function updateUrlForNode(nodeData) {
     }
 }
 
-function handleUrlRouting() {
+function handleUrlRouting(retryCount = 0) {
     try {
+        // Check if data is available
+        if (!processedData || !processedData.nodes || processedData.nodes.length === 0) {
+            if (retryCount >= 10) {
+                console.error('Failed to load data for routing after 10 retries. Data may not be available.');
+                // Show a message to the user about the URL they tried to access
+                showUrlRoutingFallback();
+                return;
+            }
+            console.warn(`Data not yet available for routing, retrying... (attempt ${retryCount + 1}/10)`);
+            // Retry after a short delay
+            setTimeout(() => {
+                handleUrlRouting(retryCount + 1);
+            }, 1000);
+            return;
+        }
+        
         let targetNode = null;
         let slug = '';
         let entityType = '';
         
         // First, check for path-based routes
         const {pathname} = window.location;
-        if (pathname.startsWith('/deputado/')) {
+        if (pathname.startsWith('/deputado-')) {
             entityType = 'deputado';
-            slug = pathname.replace('/deputado/', '');
-        } else if (pathname.startsWith('/empresa/')) {
+            slug = pathname.replace('/deputado-', '');
+        } else if (pathname.startsWith('/empresa-')) {
             entityType = 'fornecedor';
-            slug = pathname.replace('/empresa/', '');
+            slug = pathname.replace('/empresa-', '');
         } else {
             // Fall back to fragment-based routing for backward compatibility
             const fragment = window.location.hash.slice(1); // Remove #
@@ -1316,6 +1341,45 @@ function handleUrlRouting() {
         }
     } catch (error) {
         console.warn('Error handling URL routing:', error);
+    }
+}
+
+function showUrlRoutingFallback() {
+    const { pathname } = window.location;
+    let entityName = '';
+    let entityType = '';
+    
+    if (pathname.startsWith('/deputado-')) {
+        entityType = 'deputado';
+        entityName = pathname.replace('/deputado-', '').replace(/-/g, ' ');
+    } else if (pathname.startsWith('/empresa-')) {
+        entityType = 'empresa';
+        entityName = pathname.replace('/empresa-', '').replace(/-/g, ' ');
+    }
+    
+    if (entityName && entityType) {
+        // Update the page title to show what the user was looking for
+        document.title = `${entityName} - VISO`;
+        
+        // Show a message in the loading area about the specific entity they were looking for
+        const loadingEl = document.getElementById('loading');
+        if (loadingEl) {
+            loadingEl.innerHTML = `
+                <div class="text-center">
+                    <div class="text-yellow-400 mb-4">
+                        <h2 class="text-xl font-bold">Procurando por: ${entityName}</h2>
+                        <p class="text-sm">Tipo: ${entityType === 'deputado' ? 'Deputado(a)' : 'Empresa'}</p>
+                    </div>
+                    <div class="text-white">
+                        <p>Os dados não puderam ser carregados para mostrar os detalhes desta ${entityType === 'deputado' ? 'deputada/deputado' : 'empresa'}.</p>
+                        <p class="text-gray-400 text-sm mt-2">Verifique se o arquivo de dados está disponível e tente novamente.</p>
+                    </div>
+                    <button onclick="window.location.href = '/'" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
+                        Voltar à página inicial
+                    </button>
+                </div>
+            `;
+        }
     }
 }
 
@@ -1960,7 +2024,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Then load data (URL parameters are handled there)
     loadData().catch(error => {
         console.error('Failed to load data:', error);
-        window.updateConnectionStatus('error', 'Falha na inicialização');
+        if (window.updateConnectionStatus) {
+            window.updateConnectionStatus('error', 'Falha na inicialização');
+        }
     });
 });
 

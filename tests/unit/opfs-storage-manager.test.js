@@ -1,4 +1,5 @@
 // OPFS Storage Manager Tests
+import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
 describe('OPFSStorageManager', () => {
   let mockNavigator;
