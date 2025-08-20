@@ -1,7 +1,7 @@
 // Data Processing for Network Visualization
 import { APIUtils } from '../shared/api-utils.js';
 import { ErrorHandler } from '../shared/error-handler.js';
-import { APP_CONSTANTS } from '../shared/constants.js';
+import { APP_CONSTANTS } from '../core/config.js';
 
 export class DataProcessor {
   constructor() {

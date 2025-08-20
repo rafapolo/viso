@@ -76,7 +76,7 @@ export default defineConfig(({ command, mode }) => ({
           
           // Application modules
           shared: [
-            'src/shared/constants.js',
+            'src/core/config.js',
             'src/shared/dom-utils.js',
             'src/shared/api-utils.js',
             'src/shared/error-handler.js',
@@ -94,7 +94,7 @@ export default defineConfig(({ command, mode }) => ({
             'src/utils/query-utils.js'
           ],
           apps: [
-            'src/apps/network-app.js',
+            'src/apps/graph-app.js',
             'src/apps/db-app.js'
           ]
         },
