@@ -56,7 +56,7 @@ function startServer(port = 3000) {
     try {
         console.log('🔄 Testing db.html functionality...');
         
-        await page.goto('http://localhost:3000/db.html', { 
+        await page.goto('http://localhost:3001/db.html', { 
             waitUntil: 'networkidle',
             timeout: 30000 
         });

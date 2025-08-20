@@ -3,7 +3,7 @@ import { APP_CONSTANTS } from '../shared/constants.js';
 import { DOMUtils } from '../shared/dom-utils.js';
 import { ErrorHandler } from '../shared/error-handler.js';
 
-export class StatisticsCharts {
+class StatisticsCharts {
   constructor() {
     this.chartData = null;
     this.chartTooltip = null;
@@ -119,7 +119,7 @@ export class StatisticsCharts {
       // Convert to array and sort by value
       const categoryData = Array.from(categoryTotals.entries())
         .sort((a, b) => b[1] - a[1])
-        .slice(0, APP_CONSTANTS.CHARTS.MAX_PIE_SLICES || 8);
+        .slice(0, APP_CONSTANTS.TEXT.MAX_PIE_SLICES || 8);
 
       const total = categoryData.reduce((sum, [, value]) => sum + value, 0);
       if (total === 0) {
