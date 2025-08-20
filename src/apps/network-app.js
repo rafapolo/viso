@@ -1465,19 +1465,16 @@ function setupEventListeners() {
 
 // Helper functions for theme-aware colors
 function getThemeColors() {
-    const isDark = document.documentElement.classList.contains('dark');
     return {
-        linkStroke: isDark ? '#999' : '#4b5563', // Dark grey for light mode
-        backgroundColor: isDark ? '#0f1419' : '#f3f4f6',
-        deputadoLabelColor: isDark ? 'white' : 'black',
+        linkStroke: '#999',
+        backgroundColor: '#0f1419',
+        deputadoLabelColor: 'white',
         selectionStroke: '#FFD700'
     };
 }
 
 function updateD3Colors() {
     const colors = getThemeColors();
-    
-    // D3.js container background color is now handled by CSS classes
     
     // Update link colors
     const svg = d3.select("#network-svg");
@@ -1490,41 +1487,13 @@ function updateD3Colors() {
             if (d && d.type === 'deputado') {
                 return colors.deputadoLabelColor;
             }
-            // Keep other labels unchanged
-            return d && d.type === 'deputado' ? colors.deputadoLabelColor : "rgb(196, 82, 17)";
+            return "rgb(196, 82, 17)"; // Company color
         });
 }
 
-// Add dark mode toggle functionality
-function setupThemeToggle() {
-    const themeToggle = document.getElementById('theme-toggle');
-    const html = document.documentElement;
-    
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            if (html.classList.contains('dark')) {
-                html.classList.remove('dark');
-                themeToggle.textContent = '🌞';
-                document.body.className = 'font-sans bg-white text-gray-900 h-screen overflow-hidden';
-            } else {
-                html.classList.add('dark');
-                themeToggle.textContent = '🌙';
-                document.body.className = 'font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen overflow-hidden';
-            }
-            
-            // Update D3.js colors after theme change
-            updateD3Colors();
-            
-            // Force slider theme update
-            updateSliderTheme();
-        });
-    }
-}
 
 // Function to manually update slider styling for theme changes
 function updateSliderTheme() {
-    const html = document.documentElement;
-    const isDark = html.classList.contains('dark');
     const slider = document.getElementById('minValue');
     
     if (slider) {
@@ -1533,14 +1502,9 @@ function updateSliderTheme() {
         slider.offsetHeight; // Trigger reflow
         slider.style.display = 'block';
         
-        // Additional approach: update via CSS custom properties
-        if (isDark) {
-            slider.style.setProperty('--track-bg', '#374151');
-            slider.style.setProperty('--thumb-border', '#1f2937');
-        } else {
-            slider.style.setProperty('--track-bg', '#d1d5db');
-            slider.style.setProperty('--thumb-border', '#ffffff');
-        }
+        // Set dark mode CSS custom properties
+        slider.style.setProperty('--track-bg', '#374151');
+        slider.style.setProperty('--thumb-border', '#1f2937');
     }
 }
 
@@ -1578,9 +1542,6 @@ window.addEventListener('popstate', () => {
 
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Setup theme toggle first
-    setupThemeToggle();
-    
     // Initialize slider theme
     updateSliderTheme();
     
