@@ -1,6 +1,6 @@
 # 🕸️ VISO - Visualização Integrada de Sistemas Oficiais
 
-[![Tests](https://github.com/rafapolo/viso/actions/workflows/test.yml/badge.svg)](https://github.com/rafapolo/viso/actions/workflows/test.yml)
+[![Build](https://github.com/rafapolo/viso/actions/workflows/build.yml/badge.svg)](https://github.com/rafapolo/viso/actions/workflows/build.yml)
 
 Explore gastos de deputados federais através de visualizações interativas e consultas SQL diretas com os dados da Câmara dos Deputados.
 
