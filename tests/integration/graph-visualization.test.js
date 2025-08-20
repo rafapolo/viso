@@ -36,7 +36,7 @@ const mockD3 = {
 global.d3 = mockD3;
 
 // Sample test data
-const sampleNetworkData = {
+const sampleGraphData = {
   nodes: [
     { id: 'deputy_1', name: 'Deputado A', type: 'deputy', value: 10000 },
     { id: 'supplier_1', name: 'Empresa A', type: 'supplier', value: 15000 },
@@ -53,11 +53,11 @@ const sampleAggregatedData = [
   { nome_parlamentar: 'Deputado A', fornecedor: 'Empresa A', categoria_despesa: 'COMBUSTÍVEL', total_value: 5000, transaction_count: 3 }
 ];
 
-// Mock DOM elements that network visualization expects
+// Mock DOM elements that graph visualization expects
 const createMockDOMElements = () => {
   // Main visualization container
   const svg = document.createElement('svg');
-  svg.id = 'network-svg';
+  svg.id = 'graph-svg';
   svg.getBoundingClientRect = jest.fn(() => ({ width: 800, height: 600 }));
   document.body.appendChild(svg);
   
@@ -75,7 +75,7 @@ const createMockDOMElements = () => {
     { id: 'searchBox', type: 'input', value: '' },
     { id: 'showCompanyNames', type: 'input', checked: false },
     { id: 'showEdgeAmounts', type: 'input', checked: false },
-    { id: 'networkDensityToggle', type: 'input', checked: false },
+    { id: 'graphDensityToggle', type: 'input', checked: false },
     { id: 'topExpensesToggle', type: 'input', checked: false }
   ];
 
@@ -134,12 +134,12 @@ const createMockDOMElements = () => {
   document.body.appendChild(categoryLegend);
 };
 
-// Mock network visualization functions (these would normally be in the HTML)
-const mockNetworkVisualizationFunctions = () => {
+// Mock graph visualization functions (these would normally be in the HTML)
+const mockGraphVisualizationFunctions = () => {
   global.processedData = { nodes: [], links: [] };
   global.currentAggregatedData = sampleAggregatedData;
   global.currentVisualization = null;
-  global.networkFilters = {
+  global.graphFilters = {
     densityMode: false,
     topExpensesMode: false
   };
@@ -147,12 +147,12 @@ const mockNetworkVisualizationFunctions = () => {
   // Mock main visualization functions
   global.initializeVisualization = jest.fn(() => {
     document.getElementById('loading').style.display = 'none';
-    global.processedData = sampleNetworkData;
+    global.processedData = sampleGraphData;
     
     // Simulate D3 visualization creation
-    const svg = d3.select('#network-svg');
-    const nodes = svg.selectAll('.node').data(sampleNetworkData.nodes);
-    const links = svg.selectAll('.link').data(sampleNetworkData.links);
+    const svg = d3.select('#graph-svg');
+    const nodes = svg.selectAll('.node').data(sampleGraphData.nodes);
+    const links = svg.selectAll('.link').data(sampleGraphData.links);
     
     // Call D3 functions to satisfy test expectations
     d3.zoom();
@@ -168,7 +168,7 @@ const mockNetworkVisualizationFunctions = () => {
 
   global.processData = jest.fn(async () => {
     // Simulate data processing
-    global.processedData = sampleNetworkData;
+    global.processedData = sampleGraphData;
     return Promise.resolve();
   });
 
@@ -182,7 +182,7 @@ const mockNetworkVisualizationFunctions = () => {
     }
   });
 
-  global.applyNetworkFilters = jest.fn(() => {
+  global.applyGraphFilters = jest.fn(() => {
     return global.processedData;
   });
 
@@ -237,10 +237,10 @@ const mockNetworkVisualizationFunctions = () => {
   });
 };
 
-describe('Network Visualization Integration Tests', () => {
+describe('Graph Visualization Integration Tests', () => {
   beforeEach(() => {
     createMockDOMElements();
-    mockNetworkVisualizationFunctions();
+    mockGraphVisualizationFunctions();
   });
 
   afterEach(() => {
@@ -264,7 +264,7 @@ describe('Network Visualization Integration Tests', () => {
       global.initializeVisualization();
 
       expect(d3.forceSimulation).toHaveBeenCalled();
-      expect(d3.select).toHaveBeenCalledWith('#network-svg');
+      expect(d3.select).toHaveBeenCalledWith('#graph-svg');
     });
 
     test('should hide loading indicator when visualization is ready', () => {
@@ -316,31 +316,31 @@ describe('Network Visualization Integration Tests', () => {
       const minValueSlider = document.getElementById('minValue');
       minValueSlider.value = '1000';
 
-      global.applyNetworkFilters();
+      global.applyGraphFilters();
       
-      expect(global.applyNetworkFilters).toHaveBeenCalled();
+      expect(global.applyGraphFilters).toHaveBeenCalled();
     });
 
     test('should apply party filter', () => {
       const partyFilter = document.getElementById('partyFilter');
       partyFilter.value = 'PARTIDO';
 
-      global.applyNetworkFilters();
+      global.applyGraphFilters();
       
-      expect(global.applyNetworkFilters).toHaveBeenCalled();
+      expect(global.applyGraphFilters).toHaveBeenCalled();
     });
 
     test('should apply search filter', () => {
       const searchBox = document.getElementById('searchBox');
       searchBox.value = 'João';
 
-      global.applyNetworkFilters();
+      global.applyGraphFilters();
       
-      expect(global.applyNetworkFilters).toHaveBeenCalled();
+      expect(global.applyGraphFilters).toHaveBeenCalled();
     });
   });
 
-  describe('Network Display Options', () => {
+  describe('Graph Display Options', () => {
     beforeEach(() => {
       global.initializeVisualization();
     });
@@ -364,11 +364,11 @@ describe('Network Visualization Integration Tests', () => {
     });
 
     test('should handle density mode toggle', () => {
-      const toggle = document.getElementById('networkDensityToggle');
+      const toggle = document.getElementById('graphDensityToggle');
       toggle.checked = true;
-      global.networkFilters.densityMode = true;
+      global.graphFilters.densityMode = true;
 
-      const filteredData = global.applyNetworkFilters();
+      const filteredData = global.applyGraphFilters();
       global.updateStatisticsForFilteredData(filteredData);
       
       expect(global.updateStatisticsForFilteredData).toHaveBeenCalled();
@@ -377,9 +377,9 @@ describe('Network Visualization Integration Tests', () => {
     test('should handle top expenses mode toggle', () => {
       const toggle = document.getElementById('topExpensesToggle');
       toggle.checked = true;
-      global.networkFilters.topExpensesMode = true;
+      global.graphFilters.topExpensesMode = true;
 
-      const filteredData = global.applyNetworkFilters();
+      const filteredData = global.applyGraphFilters();
       global.updateStatisticsForFilteredData(filteredData);
       
       expect(global.updateStatisticsForFilteredData).toHaveBeenCalled();
@@ -494,7 +494,7 @@ describe('Network Visualization Integration Tests', () => {
 
   describe('Responsive Behavior', () => {
     test('should handle window resize', () => {
-      const svg = document.getElementById('network-svg');
+      const svg = document.getElementById('graph-svg');
       
       // Simulate window resize
       global.dispatchEvent(new Event('resize'));
@@ -538,7 +538,7 @@ describe('Network Visualization Integration Tests', () => {
       }
 
       // Should handle rapid updates without performance issues
-      expect(global.applyNetworkFilters).toBeDefined();
+      expect(global.applyGraphFilters).toBeDefined();
     });
   });
 });

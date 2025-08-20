@@ -1,5 +1,5 @@
 // Centralized Application Configuration
-import { APP_CONSTANTS, COLORS } from './constants.js';
+import { APP_CONSTANTS, COLORS } from '../core/config.js';
 
 export const APP_CONFIG = {
   // Database Configuration
