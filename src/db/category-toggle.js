@@ -10,6 +10,18 @@ function toggleCategory(categoryId) {
     if (content && chevron) {
         const isHidden = content.style.display === 'none';
         
+        // Close all other categories first (accordion behavior)
+        const allCategories = document.querySelectorAll('.category-section');
+        allCategories.forEach(section => {
+            if (section !== categorySection) {
+                const otherContent = section.querySelector('.category-content');
+                const otherChevron = section.querySelector('.category-chevron');
+                if (otherContent) otherContent.style.display = 'none';
+                if (otherChevron) otherChevron.style.transform = 'rotate(-90deg)';
+            }
+        });
+        
+        // Toggle the clicked category
         if (isHidden) {
             content.style.display = 'block';
             chevron.style.transform = 'rotate(0deg)';
