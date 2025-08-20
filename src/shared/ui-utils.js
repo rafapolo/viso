@@ -200,6 +200,17 @@ export class UIComponents {
             return false;
         }
 
+        // Only register service worker in production
+        const isProduction = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
+        
+        if (!isProduction) {
+            if (enableLogging) {
+                // eslint-disable-next-line no-console
+                console.log('SW registration skipped in development mode');
+            }
+            return false;
+        }
+
         try {
             const registration = await navigator.serviceWorker.register(swPath);
             
