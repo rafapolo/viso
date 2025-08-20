@@ -1,5 +1,5 @@
 // API Utilities for DuckDB and other API interactions
-import { APP_CONSTANTS } from './constants.js';
+import { APP_CONSTANTS } from '../core/config.js';
 
 export class APIUtils {
   /**

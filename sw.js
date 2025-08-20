@@ -55,19 +55,19 @@ self.addEventListener('fetch', (event) => {
         }
         
         // Otherwise fetch from network
-        return fetch(event.request)
-          .catch((error) => {
-            console.log('SW: Fetch failed:', error);
-            // Return a basic offline page for navigation requests
-            if (event.request.mode === 'navigate') {
-              return new Response(
-                '<!DOCTYPE html><html><head><title>Offline</title></head><body><h1>App is offline</h1><p>Please check your connection.</p></body></html>',
-                { headers: { 'Content-Type': 'text/html' } }
-              );
-            }
-            // For non-navigation requests, return a basic response
-            return new Response('', { status: 404, statusText: 'Not Found' });
-          });
+        return fetch(event.request);
+      })
+      .catch((error) => {
+        console.log('SW: Fetch failed:', error);
+        // Return a basic offline page for navigation requests
+        if (event.request.mode === 'navigate') {
+          return new Response(
+            '<!DOCTYPE html><html><head><title>Offline</title></head><body><h1>App is offline</h1><p>Please check your connection.</p></body></html>',
+            { headers: { 'Content-Type': 'text/html' } }
+          );
+        }
+        // For non-navigation requests, return a basic response
+        return new Response('', { status: 404, statusText: 'Not Found' });
       })
   );
 });
