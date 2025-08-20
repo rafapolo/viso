@@ -388,9 +388,9 @@ export class SankeyVisualization {
         const nodeStats = new Map();
 
         // Color schemes
-        const partyColors = loadedD3.scaleOrdinal()(loadedD3.schemeCategory10);
-        const categoryColors = loadedD3.scaleOrdinal()(loadedD3.schemeSet3);
-        const supplierColors = loadedD3.scaleOrdinal()(loadedD3.schemeDark2);
+        const partyColors = loadedD3.scaleOrdinal(loadedD3.schemeCategory10);
+        const categoryColors = loadedD3.scaleOrdinal(loadedD3.schemeSet3);
+        const supplierColors = loadedD3.scaleOrdinal(loadedD3.schemeDark2);
 
         // Statistics
         const parties = new Set();
