@@ -323,4 +323,29 @@ export class QueryExecutor {
       warnings
     };
   }
+
+  /**
+   * Dispose of resources and cleanup
+   */
+  dispose() {
+    // Clear current results
+    this.currentResults = null;
+    this.isExecuting = false;
+    
+    // Clear UI state
+    const resultsContent = DOMUtils.getElementById('results');
+    if (resultsContent) {
+      resultsContent.innerHTML = '';
+    }
+    
+    const executionStats = DOMUtils.getElementById('execution-stats');
+    if (executionStats) {
+      executionStats.innerHTML = '';
+    }
+    
+    const resultStats = DOMUtils.getElementById('result-stats');
+    if (resultStats) {
+      resultStats.innerHTML = '';
+    }
+  }
 }

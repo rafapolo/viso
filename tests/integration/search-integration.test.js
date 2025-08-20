@@ -5,7 +5,7 @@ import { jest } from '@jest/globals';
 Object.defineProperty(window, 'location', {
   value: {
     search: '',
-    href: 'http://localhost:3002/db.html'
+    href: 'http://localhost:3001/db.html'
   },
   writable: true
 });
