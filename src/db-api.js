@@ -1,7 +1,7 @@
 // Database API setup for db.html
 // D3 should already be available globally from script tag in HTML
 import { format } from '../vendor/js/sql-formatter-module.js';
-import { duckDBManager } from './core.js';
+import { duckDBManager } from './core/app.js';
 // D3 Sankey functions will be available from global d3 object loaded via script tag
 const d3Sankey = window.d3?.sankey;
 const sankeyLinkHorizontal = window.d3?.sankeyLinkHorizontal;

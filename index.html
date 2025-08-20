@@ -37,7 +37,7 @@
     <script type="module" src="./src/shared/arrow-loader.js"></script>
     <script type="module" src="./src/shared/navigation.js"></script>
     <script type="module" src="src/core.js"></script>
-    <script type="module" src="src/apps/network-app.js"></script>
+    <script type="module" src="src/apps/graph-app.js"></script>
 </head>
 <body class="font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen overflow-hidden">
     <div class="flex h-screen">
@@ -111,12 +111,12 @@
                         </label>
                     </div>                        
                     <div class="flex items-center justify-between py-1">
-                        <label for="networkDensityToggle" class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                        <label for="graphDensityToggle" class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-2">
                             <span>🔗</span>
                             <span>Rede mais Densa</span>
                         </label>
                         <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="networkDensityToggle" class="sr-only peer" data-active="false">
+                            <input type="checkbox" id="graphDensityToggle" class="sr-only peer" data-active="false">
                             <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                         </label>
                     </div>
@@ -204,7 +204,7 @@
                         </button>
                     </div>
                 </div>
-                <svg id="network-svg" class="w-full h-full cursor-grab"></svg>
+                <svg id="graph-svg" class="w-full h-full cursor-grab"></svg>
                 <div id="loading" class="absolute inset-0 flex flex-col justify-center items-center text-duckdb-500 text-lg">
                     <div class="loading-spinner mb-3"></div>
                     <div>Inicializando Viso UI...</div>
