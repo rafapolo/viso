@@ -267,19 +267,19 @@ export class SankeyVisualization {
      */
     async renderSankey(flowData) {
         // Check if d3 is available globally first (loaded via script tag)
-        let {d3} = window;
+        let loadedD3 = window.d3;
         
-        if (!d3 || !d3.sankey) {
+        if (!loadedD3 || !loadedD3.sankey) {
             // Fallback to library facade with retries
             let retries = 5;
             
             while (retries > 0) {
                 try {
-                    const loadedD3 = await this.libraryFacade.getD3();
-                    if (loadedD3 && loadedD3.sankey) {
-                        // Use reassignment instead of creating a new variable
-                        window.d3 = loadedD3;
-                        d3 = loadedD3;
+                    const libraryD3 = await this.libraryFacade.getD3();
+                    if (libraryD3 && libraryD3.sankey) {
+                        // Use global assignment
+                        window.d3 = libraryD3;
+                        loadedD3 = libraryD3;
                         break; // Successfully loaded
                     }
                 } catch (error) {
@@ -295,17 +295,17 @@ export class SankeyVisualization {
         }
 
         // Final check - also check if d3-sankey might be loaded but not attached yet
-        if (!d3 || !d3.sankey) {
+        if (!loadedD3 || !loadedD3.sankey) {
             // Wait a bit more for d3-sankey to attach to the global d3
             await new Promise(resolve => setTimeout(resolve, 1000));
-            d3 = window.d3;
+            ({ d3: loadedD3 } = { d3: window.d3 });
         }
 
-        if (!d3 || !d3.sankey) {
+        if (!loadedD3 || !loadedD3.sankey) {
             throw new Error('D3 Sankey extension not loaded after multiple attempts');
         }
 
-        const svg = d3.select(this.container.querySelector('#sankey-svg'));
+        const svg = loadedD3.select(this.container.querySelector('#sankey-svg'));
         svg.selectAll("*").remove();
 
         // Calculate dimensions
@@ -322,7 +322,7 @@ export class SankeyVisualization {
         }
 
         // Create Sankey layout
-        const sankey = d3.sankey()
+        const sankey = loadedD3.sankey()
             .nodeId(d => d.id)
             .nodeWidth(20)
             .nodePadding(15)
@@ -338,7 +338,7 @@ export class SankeyVisualization {
             .data(sankeyGraph.links)
             .enter().append("path")
             .attr("class", "link")
-            .attr("d", d3.sankeyLinkHorizontal())
+            .attr("d", loadedD3.sankeyLinkHorizontal())
             .attr("stroke", d => d.source.color)
             .attr("stroke-width", d => Math.max(1, d.width))
             .attr("stroke-opacity", 0.5)
@@ -382,14 +382,15 @@ export class SankeyVisualization {
      * Build Sankey data structure with statistics
      */
     buildSankeyData(flowData) {
+        const loadedD3 = window.d3;
         const nodes = new Map();
         const links = [];
         const nodeStats = new Map();
 
         // Color schemes
-        const partyColors = window.d3.scaleOrdinal(window.d3.schemeCategory10);
-        const categoryColors = window.d3.scaleOrdinal(window.d3.schemeSet3);
-        const supplierColors = window.d3.scaleOrdinal(window.d3.schemeDark2);
+        const partyColors = loadedD3.scaleOrdinal()(loadedD3.schemeCategory10);
+        const categoryColors = loadedD3.scaleOrdinal()(loadedD3.schemeSet3);
+        const supplierColors = loadedD3.scaleOrdinal()(loadedD3.schemeDark2);
 
         // Statistics
         const parties = new Set();
