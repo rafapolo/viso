@@ -266,11 +266,43 @@ export class SankeyVisualization {
      * Render the Sankey diagram
      */
     async renderSankey(flowData) {
-        // Load D3 library through facade
-        const d3 = await this.libraryFacade.getD3();
+        // Check if d3 is available globally first (loaded via script tag)
+        let {d3} = window;
+        
+        if (!d3 || !d3.sankey) {
+            // Fallback to library facade with retries
+            let retries = 5;
+            
+            while (retries > 0) {
+                try {
+                    const loadedD3 = await this.libraryFacade.getD3();
+                    if (loadedD3 && loadedD3.sankey) {
+                        // Use reassignment instead of creating a new variable
+                        window.d3 = loadedD3;
+                        d3 = loadedD3;
+                        break; // Successfully loaded
+                    }
+                } catch (error) {
+                    console.warn('D3 loading attempt failed:', error);
+                }
+                
+                retries--;
+                if (retries > 0) {
+                    // Wait and retry
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+        }
 
-        if (!d3.sankey) {
-            throw new Error('D3 Sankey extension not loaded');
+        // Final check - also check if d3-sankey might be loaded but not attached yet
+        if (!d3 || !d3.sankey) {
+            // Wait a bit more for d3-sankey to attach to the global d3
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            d3 = window.d3;
+        }
+
+        if (!d3 || !d3.sankey) {
+            throw new Error('D3 Sankey extension not loaded after multiple attempts');
         }
 
         const svg = d3.select(this.container.querySelector('#sankey-svg'));
