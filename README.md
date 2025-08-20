@@ -28,6 +28,22 @@ Ferramenta para análises avançadas com consultas personalizadas.
 - **Editor profissional** com syntax highlighting
 - **Execução rápida** (Ctrl+Enter) e resultados paginados
 
+### 🔗 URLs Compartilháveis
+- **Links Diretos**: Compartilhe visualizações específicas com URLs únicos
+- **Formato Intuitivo**: `/deputado-nome-e-partido` e `/empresa-nome-empresa`
+- **Navegação Natural**: Botões voltar/avançar do browser funcionam perfeitamente
+- **Compatibilidade**: URLs antigas continuam funcionando para transição suave
+
+## 📈 Casos de Uso
+**Profissionais**: Jornalistas investigativos, pesquisadores, advogados, ativistas  
+**Cidadãos**: Fiscalização popular, conhecer candidatos, aprendizado democrático
+**Resultados esperados**: Maior transparência, deputados mais responsáveis, democracia fortalecida
+
+## 🔒 Ética e Responsabilidade
+- **100% dados públicos** oficiais da Câmara dos Deputados  
+- **Uso responsável**: contextualize sempre, não faça acusações sem investigação aprofundada
+- **Presunção de inocência**: dados mostram gastos, não comprovam irregularidades
+
 ## 🛠️ Stack Tecnológico
 - **Frontend**: HTML5, Tailwind CSS, JavaScript ES6+
 - **Banco**: DuckDB WASM para SQL no browser
@@ -40,67 +56,21 @@ Ferramenta para análises avançadas com consultas personalizadas.
 - **🆕 Offline**: Suporte completo para modo offline
 - **🆕 Routing**: Sistema de URLs compartilháveis com navegação SPA
 
-## 📈 Casos de Uso
-**Profissionais**: Jornalistas investigativos, pesquisadores, advogados, ativistas  
-**Cidadãos**: Fiscalização popular, conhecer candidatos, aprendizado democrático
-
-**Resultados esperados**: Maior transparência, deputados mais responsáveis, democracia fortalecida
-
-## 🔒 Ética e Responsabilidade
-- **100% dados públicos** oficiais da Câmara dos Deputados  
-- **Uso responsável**: contextualize sempre, não faça acusações sem investigação aprofundada
-- **Presunção de inocência**: dados mostram gastos, não comprovam irregularidades
-
-## 🚀 Recursos Avançados
-
 ### ⚡ Performance Otimizada
 - **Carregamento Instantâneo**: Dados em cache carregam imediatamente
 - **Workers Dedicados**: Processamento pesado em background
-- **Compressão Automática**: Reduz uso de storage em até 50%
-- **Cache Inteligente**: Sistema multi-camada com TTL configurável
-
-### 📱 Modo Offline
 - **Funciona Offline**: Funcionalidades principais disponíveis sem internet
 - **Sync Automático**: Atualização automática quando volta online
 - **Storage Local**: Dados persistem entre sessões usando OPFS
-- **Fallbacks Inteligentes**: Degrada graciosamente sem perder funcionalidade
-
-### 🔧 Gerenciamento de Storage
-- **Interface de Gerenciamento**: UI completa para controlar cache e storage
-- **Monitoramento**: Estatísticas detalhadas de uso e performance
-- **Limpeza Automática**: Remove dados expirados automaticamente
-- **Controle Granular**: Gerencia datasets, cache e arquivos temporários
-
-### 📊 Monitoramento de Performance
-- **Métricas em Tempo Real**: Taxa de cache hit, uso de memória, tempos de resposta
-- **Recomendações**: Sugestões automáticas para otimização
-- **Alertas**: Notificações para problemas de performance
-- **Relatórios**: Dados completos para análise de performance
-
-### 🔗 URLs Compartilháveis
-- **Links Diretos**: Compartilhe visualizações específicas com URLs únicos
-- **Formato Intuitivo**: `/deputado-nome-partido` e `/empresa-nome-empresa`
-- **Navegação Natural**: Botões voltar/avançar do browser funcionam perfeitamente
-- **Compatibilidade**: URLs antigas continuam funcionando para transição suave
 
 
 #### Core Components
-- **OPFS Storage Manager**: Persistent local file storage
-- **File System Worker**: Handles OPFS operations off-main-thread
-- **Data Processing Worker**: Heavy SQL computations and data processing
-- **Background Sync Worker**: Automatic data updates and synchronization
-- **Cache Manager**: Advanced caching with compression and versioning
-- **Offline Data Manager**: Orchestrates all components for offline support
-
-### Key Benefits
-- ✅ **Instant Loading**: Cached data loads immediately
-- ✅ **Offline Support**: Core functionality works without internet
-- ✅ **Better Performance**: Heavy operations moved to workers
-- ✅ **Automatic Updates**: Background sync keeps data fresh
-
-**Exemplos de URLs:**
-- `/deputado-fulano-de-tal-pt` → Abre direto no deputado
-- `/empresa-empresa-exemplo-ltda` → Abre direto na empresa
+- **OPFS Storage Manager**: Armazenamento local persistente de arquivos
+- **File System Worker**: Lida com operações OPFS fora do thread principal
+- **Data Processing Worker**: Cálculos SQL pesados e processamento de dados
+- **Background Sync Worker**: Atualizações e sincronização automáticas de dados
+- **Cache Manager**: Cache avançado com compactação e controle de versão
+- **Offline Data Manager**: Orquestra todos os componentes para suporte offline
 
 ---
 

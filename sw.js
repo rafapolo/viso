@@ -49,8 +49,13 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request)
+        // Return cached version if available
+        if (response) {
+          return response;
+        }
+        
+        // Otherwise fetch from network
+        return fetch(event.request)
           .catch((error) => {
             console.log('SW: Fetch failed:', error);
             // Return a basic offline page for navigation requests
@@ -60,6 +65,8 @@ self.addEventListener('fetch', (event) => {
                 { headers: { 'Content-Type': 'text/html' } }
               );
             }
+            // For non-navigation requests, return a basic response
+            return new Response('', { status: 404, statusText: 'Not Found' });
           });
       })
   );

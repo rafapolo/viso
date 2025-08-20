@@ -1,5 +1,5 @@
 // Centralized Application Configuration
-import { APP_CONSTANTS } from './constants.js';
+import { APP_CONSTANTS, COLORS } from './constants.js';
 
 export const APP_CONFIG = {
   // Database Configuration
@@ -44,7 +44,7 @@ export const APP_CONFIG = {
     charts: {
       pieChart: {
         maxSlices: APP_CONSTANTS.TEXT.MAX_PIE_SLICES,
-        colors: Object.values(APP_CONSTANTS.COLORS.ENTITIES)
+        colors: Object.values(COLORS.ENTITIES)
       },
       timeline: {
         maxDataPoints: 50,
