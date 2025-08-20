@@ -1248,6 +1248,7 @@ LIMIT 500`;
 // Initialize the application when DOM is ready
 let dbApp = null;
 
+
 // Wait for required dependencies to be available
 async function waitForDependencies() {
   let retries = 0;
