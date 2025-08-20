@@ -1,6 +1,6 @@
 // Results Display Management
 import { DOMUtils } from '../shared/dom-utils.js';
-import { DATA_TYPE_ICONS } from '../shared/constants.js';
+import { DATA_TYPE_ICONS } from '../core/config.js';
 import { ErrorHandler } from '../shared/error-handler.js';
 
 export class ResultsDisplay {

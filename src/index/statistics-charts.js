@@ -1,5 +1,5 @@
 // Statistics and Charts Management
-import { APP_CONSTANTS } from '../shared/constants.js';
+import { APP_CONSTANTS } from '../core/config.js';
 import { DOMUtils } from '../shared/dom-utils.js';
 import { ErrorHandler } from '../shared/error-handler.js';
 
@@ -91,16 +91,23 @@ class StatisticsCharts {
     const canvas = DOMUtils.getElementById('categoryPieChart');
     const legend = DOMUtils.getElementById('categoryLegend');
 
-    if (!canvas || !data || data.length === 0) {
+    if (!canvas) {
+      return;
+    }
+
+    if (!data || data.length === 0) {
       if (legend) {
         DOMUtils.updateContent(legend, '<div class="text-gray-500 text-center">Nenhum dado disponível</div>', true);
       }
+      // Clear canvas
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       return;
     }
 
     try {
       const ctx = canvas.getContext('2d');
-      const size = 180;
+      const size = 200; // Match HTML canvas size
       canvas.width = size;
       canvas.height = size;
 
@@ -110,24 +117,31 @@ class StatisticsCharts {
 
       // Calculate category totals
       const categoryTotals = new Map();
+      
       data.forEach(record => {
         const category = record.categoria_despesa || 'Outros';
         const value = Number(record.valor_total) || 0;
-        categoryTotals.set(category, (categoryTotals.get(category) || 0) + value);
+        if (value > 0) {
+          categoryTotals.set(category, (categoryTotals.get(category) || 0) + value);
+        }
       });
+
 
       // Convert to array and sort by value
       const categoryData = Array.from(categoryTotals.entries())
         .sort((a, b) => b[1] - a[1])
-        .slice(0, APP_CONSTANTS.TEXT.MAX_PIE_SLICES || 8);
+        .slice(0, APP_CONSTANTS.CHARTS?.MAX_PIE_SLICES || 8);
 
       const total = categoryData.reduce((sum, [, value]) => sum + value, 0);
-      if (total === 0) {
+      if (total === 0 || categoryData.length === 0) {
         if (legend) {
           DOMUtils.updateContent(legend, '<div class="text-gray-500 text-center">Nenhum dado disponível</div>', true);
         }
+        // Clear canvas
+        ctx.clearRect(0, 0, size, size);
         return;
       }
+
 
       // Colors for categories
       const colors = [

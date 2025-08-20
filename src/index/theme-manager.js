@@ -1,5 +1,5 @@
 // Theme Management for Index Application
-import { COLORS } from '../shared/constants.js';
+import { COLORS } from '../core/config.js';
 import { DOMUtils } from '../shared/dom-utils.js';
 
 export class ThemeManager {

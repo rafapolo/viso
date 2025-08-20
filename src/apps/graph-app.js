@@ -1,6 +1,6 @@
 // const rawData = [];
 let processedData = { nodes: [], links: [] };
-const networkFilters = {
+const graphFilters = {
     densityMode: false, // Toggleable, uses 20% when enabled
     topExpensesMode: false
 };
@@ -30,14 +30,19 @@ async function loadData() {
         progressEl.textContent = 'Configurando filtros...';
         await populateFilters();
         
+        // Initialize statistics charts BEFORE processing data
+        try {
+            statisticsCharts = new StatisticsCharts();
+        } catch (error) {
+            console.error('Failed to initialize StatisticsCharts:', error);
+            statisticsCharts = null;
+        }
+        
         progressEl.textContent = 'Processando dados...';
         await updateVisualization();
         
         setupEventListeners();
         startConnectionMonitoring();
-        
-        // Initialize statistics charts
-        statisticsCharts = new StatisticsCharts();
         
         // Setup event listener for time series chart creation
         document.addEventListener('createTimeSeriesChart', (event) => {
@@ -383,14 +388,14 @@ function updateDensityStats() {
     }
 }
 
-function applyNetworkFilters() {
+function applyGraphFilters() {
     if (!processedData.nodes || !processedData.links) return processedData;
     
     let filteredNodes = [...processedData.nodes];
     let filteredLinks = [...processedData.links];
     
     // Apply network density filter (20% when enabled)
-    if (networkFilters.densityMode) {
+    if (graphFilters.densityMode) {
         const densityScores = calculateNodeDensity(processedData);
         const filteredNodeIds = filterNodesByDensity(densityScores);
         
@@ -411,7 +416,7 @@ function applyNetworkFilters() {
     }
     
     // Apply top expenses filter
-    if (networkFilters.topExpensesMode) {
+    if (graphFilters.topExpensesMode) {
         // Sort links by value and take top 15
         const topLinks = [...filteredLinks]
             .sort((a, b) => b.value - a.value)
@@ -445,10 +450,10 @@ function initializeVisualization() {
     if (loadingEl) loadingEl.style.display = 'none';
     
     // Apply network filters and get filtered data
-    const filteredData = applyNetworkFilters();
+    const filteredData = applyGraphFilters();
     
     // Update statistics based on filtered data
-    if (networkFilters.densityMode || networkFilters.topExpensesMode) {
+    if (graphFilters.densityMode || graphFilters.topExpensesMode) {
         if (statisticsCharts) {
             statisticsCharts.updateStatisticsForFilteredData(filteredData, window.currentAggregatedData);
         }
@@ -469,7 +474,7 @@ function initializeVisualization() {
     
     // Creating D3.js visualization
     
-    const svg = d3.select("#network-svg");
+    const svg = d3.select("#graph-svg");
     const container = svg.node().parentElement;
     const width = container.clientWidth;
     const height = container.clientHeight;
@@ -950,7 +955,7 @@ async function showNodeInfo(nodeData) {
     updateUrlForNode(nodeData);
     
     // Reset all nodes to normal appearance first
-    const svg = d3.select('#network-svg');
+    const svg = d3.select('#graph-svg');
     const searchFilter = document.getElementById('searchBox').value.trim().toLowerCase();
     svg.selectAll('circle')
         .attr("stroke-width", d => {
@@ -1220,7 +1225,7 @@ function highlightNodeInVisualization(entityName, entityType) { // Used in HTML 
     if (!targetNode) return;
     
     // Get the current D3 selection for nodes
-    const svg = d3.select("#network-svg");
+    const svg = d3.select("#graph-svg");
     const nodes = svg.selectAll("circle");
     
     // Reset all nodes to normal appearance
@@ -1288,7 +1293,7 @@ function hideNodeInfo() {
     }
     
     // Reset all nodes to normal appearance when hiding panel
-    const svg = d3.select('#network-svg');
+    const svg = d3.select('#graph-svg');
     const searchFilter = document.getElementById('searchBox').value.trim().toLowerCase();
     svg.selectAll('circle')
         .attr("stroke-width", d => {
@@ -1444,16 +1449,16 @@ function setupEventListeners() {
     updateSliderDisplay();
     
     // Network analysis toggle switches
-    const networkDensityToggle = document.getElementById('networkDensityToggle');
+    const graphDensityToggle = document.getElementById('graphDensityToggle');
     const topExpensesToggle = document.getElementById('topExpensesToggle');
     
-    networkDensityToggle.addEventListener('change', () => {
-        networkFilters.densityMode = networkDensityToggle.checked;
+    graphDensityToggle.addEventListener('change', () => {
+        graphFilters.densityMode = graphDensityToggle.checked;
         initializeVisualization();
     });
     
     topExpensesToggle.addEventListener('change', () => {
-        networkFilters.topExpensesMode = topExpensesToggle.checked;
+        graphFilters.topExpensesMode = topExpensesToggle.checked;
         initializeVisualization();
     });
     
@@ -1477,7 +1482,7 @@ function updateD3Colors() {
     const colors = getThemeColors();
     
     // Update link colors
-    const svg = d3.select("#network-svg");
+    const svg = d3.select("#graph-svg");
     svg.selectAll("line")
         .attr("stroke", colors.linkStroke);
     

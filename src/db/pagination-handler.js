@@ -1,5 +1,5 @@
 // Pagination Management
-// import { APP_CONSTANTS } from '../shared/constants.js';
+// import { APP_CONSTANTS } from '../core/config.js';
 import { DOMUtils } from '../shared/dom-utils.js';
 
 export class PaginationHandler {
