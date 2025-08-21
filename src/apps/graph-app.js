@@ -1,7 +1,8 @@
 // const rawData = [];
 let processedData = { nodes: [], links: [] };
 const graphFilters = {
-    densityMode: false // Toggleable, uses 20% when enabled
+    densityMode: false, // Toggleable, uses 20% when enabled
+    topExpensesMode: false
 };
 
 // Track party coloring state
@@ -421,6 +422,25 @@ function applyGraphFilters() {
         // Density filter applied
     }
     
+    // Apply top expenses filter
+    if (graphFilters.topExpensesMode) {
+        // Sort links by value and take top 15
+        const topLinks = [...filteredLinks]
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 15);
+        
+        // Get nodes involved in top links
+        const topNodeIds = new Set();
+        topLinks.forEach(link => {
+            const sourceId = typeof link.source === 'object' ? link.source.id : link.source.toString();
+            const targetId = typeof link.target === 'object' ? link.target.id : link.target.toString();
+            topNodeIds.add(sourceId);
+            topNodeIds.add(targetId);
+        });
+        
+        filteredNodes = filteredNodes.filter(node => topNodeIds.has(node.id));
+        filteredLinks = topLinks;
+    }
     
     return { nodes: filteredNodes, links: filteredLinks };
 }
@@ -440,7 +460,7 @@ function initializeVisualization() {
     const filteredData = applyGraphFilters();
     
     // Update statistics based on filtered data
-    if (graphFilters.densityMode) {
+    if (graphFilters.densityMode || graphFilters.topExpensesMode) {
         if (statisticsCharts) {
             statisticsCharts.updateStatisticsForFilteredData(filteredData, window.currentAggregatedData);
         }
@@ -1445,9 +1465,15 @@ function setupEventListeners() {
     
     // Network analysis toggle switches
     const graphDensityToggle = document.getElementById('graphDensityToggle');
+    const topExpensesToggle = document.getElementById('topExpensesToggle');
     
     graphDensityToggle.addEventListener('change', () => {
         graphFilters.densityMode = graphDensityToggle.checked;
+        initializeVisualization();
+    });
+    
+    topExpensesToggle.addEventListener('change', () => {
+        graphFilters.topExpensesMode = topExpensesToggle.checked;
         initializeVisualization();
     });
     
