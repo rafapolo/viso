@@ -16,6 +16,10 @@
     background-color: #FFC000 !important;
 }
 
+#results-table{
+    background: radial-gradient(circle, rgb(17 29 53) 0%, rgb(0 0 1) 100%);
+}
+
 /* Modern card-based query button types */
 .sample-query {
     position: relative;
