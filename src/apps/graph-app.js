@@ -661,7 +661,7 @@ function initializeVisualization() {
         d.fy = event.y;
     }
     
-    function dragended(event, d) {
+    function dragended(event, _d) {
         if (!event.active) simulation.alphaTarget(0);
         // Keep nodes fixed at their dragged position - don't clear fx/fy
     }
