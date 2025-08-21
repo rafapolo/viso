@@ -177,6 +177,10 @@ export class DataProcessor {
       filteredData = this.filterByDensity(filteredData);
     }
 
+    // Apply top expenses filtering
+    if (filters.topExpensesMode) {
+      filteredData = this.filterByTopExpenses(filteredData, 15);
+    }
 
     return filteredData;
   }
@@ -211,6 +215,33 @@ export class DataProcessor {
     };
   }
 
+  /**
+   * Filter network by top expenses
+   * @param {Object} networkData - Network data
+   * @param {number} topCount - Number of top nodes to keep
+   * @returns {Object} Filtered network data
+   */
+  filterByTopExpenses(networkData, topCount = 15) {
+    // Sort nodes by total value and take top N
+    const topNodes = networkData.nodes
+      .sort((a, b) => b.total_value - a.total_value)
+      .slice(0, topCount)
+      .map(node => node.id);
+
+    // Filter links to only include connections between top nodes
+    const filteredLinks = networkData.links.filter(link =>
+      topNodes.includes(link.source) && topNodes.includes(link.target)
+    );
+
+    const filteredNodes = networkData.nodes.filter(node => topNodes.includes(node.id));
+
+    // Top expenses filter applied
+
+    return {
+      nodes: filteredNodes,
+      links: filteredLinks
+    };
+  }
 
   /**
    * Calculate density scores for nodes

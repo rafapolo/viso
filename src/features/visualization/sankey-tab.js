@@ -17,13 +17,13 @@ export class SankeyTab {
     async render(container, databaseService = null) {
         // Create a database service adapter if using global API
         const dbService = databaseService || this.createDatabaseServiceAdapter();
-        
+
         await this.sankeyViz.initialize(container, dbService);
         const success = await this.sankeyViz.render();
-        
+
         // Store resize handler for backward compatibility
         this.resizeHandler = this.sankeyViz.resizeHandler;
-        
+
         return success;
     }
 
@@ -33,7 +33,7 @@ export class SankeyTab {
     createDatabaseServiceAdapter() {
         // Use the unified database service instead of global API
         const databaseService = getGlobalDatabaseService();
-        
+
         // Ensure service is initialized
         if (!databaseService.db || !databaseService.conn) {
             // Return wrapper that initializes on first use
@@ -49,7 +49,7 @@ export class SankeyTab {
                 }
             };
         }
-        
+
         return databaseService;
     }
 
