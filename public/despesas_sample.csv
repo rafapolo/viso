@@ -1,7 +1,0 @@
-nome_parlamentar,sigla_partido,fornecedor,categoria_despesa,subcategoria_despesa,valor_liquido,data_emissao,ano_competencia
-João Silva,PT,Empresa A Ltda,COMBUSTÍVEIS E LUBRIFICANTES,Combustível,1500.5,2023-01-15,2023
-Maria Santos,PSDB,Empresa B S.A.,PASSAGENS AÉREAS,Passagem Aérea Nacional,2500,2023-02-20,2023
-Pedro Costa,PDT,Empresa A Ltda,LOCAÇÃO OU FRETAMENTO DE VEÍCULOS,Locação de Veículos,800.75,2023-03-10,2023
-Ana Silva,PMDB,Posto Portal da Posse Ltda,COMBUSTÍVEIS E LUBRIFICANTES,Combustível,350,2023-04-05,2023
-Carlos Oliveira,PSB,Matheus Vinicius Xavier Santos,"CONSULTORIA, PESQUISA E TRABALHOS TÉCNICOS",Consultoria,5000,2023-05-12,2023
-Lucia Fernandes,PP,Tech Solutions Ltda,LOCAÇÃO OU FRETAMENTO DE SOFTWARE,Software,1200,2023-06-18,2023
