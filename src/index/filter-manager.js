@@ -324,16 +324,9 @@ export class FilterManager {
   setupToggleListeners(updateCallback) {
     // Network analysis toggles
     const networkDensityToggle = DOMUtils.getElementById('networkDensityToggle');
-    const topExpensesToggle = DOMUtils.getElementById('topExpensesToggle');
 
     if (networkDensityToggle) {
       DOMUtils.addEventListener(networkDensityToggle, 'change', () => {
-        updateCallback();
-      });
-    }
-
-    if (topExpensesToggle) {
-      DOMUtils.addEventListener(topExpensesToggle, 'change', () => {
         updateCallback();
       });
     }
@@ -374,11 +367,9 @@ export class FilterManager {
    */
   getNetworkFilters() {
     const densityToggle = DOMUtils.getElementById('networkDensityToggle');
-    const topExpensesToggle = DOMUtils.getElementById('topExpensesToggle');
 
     return {
-      densityMode: densityToggle ? densityToggle.checked : false,
-      topExpensesMode: topExpensesToggle ? topExpensesToggle.checked : false
+      densityMode: densityToggle ? densityToggle.checked : false
     };
   }
 

@@ -6,6 +6,18 @@ if ('serviceWorker' in navigator) {
         
         if (!isProduction) {
             console.log('SW registration skipped in development mode');
+            
+            // Unregister any existing service workers in development
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                    await registration.unregister();
+                    console.log('SW unregistered in development:', registration);
+                }
+            } catch (error) {
+                console.log('SW unregistration failed:', error);
+            }
+            
             return;
         }
         
