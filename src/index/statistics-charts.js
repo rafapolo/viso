@@ -107,7 +107,7 @@ class StatisticsCharts {
 
     try {
       const ctx = canvas.getContext('2d');
-      const size = 200; // Match HTML canvas size
+      const size = 150; // Match HTML canvas size
       canvas.width = size;
       canvas.height = size;
 
