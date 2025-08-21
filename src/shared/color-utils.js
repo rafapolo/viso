@@ -58,4 +58,50 @@ export class ColorUtils {
         const lightColor = this.adjustColorBrightness(color, lighten);
         return `linear-gradient(${direction}, ${color}, ${lightColor})`;
     }
+
+    static getPartyColor(party, options = {}) {
+        const { defaultColor = '#3b82f6' } = options;
+        
+        if (!party) return defaultColor;
+        
+        // Predefined colors for common Brazilian parties
+        const partyColors = {
+            'PT': '#e11d1d',     // Red
+            'PSDB': '#0070f3',   // Blue  
+            'MDB': '#10b981',    // Green
+            'PL': '#8b5cf6',     // Purple
+            'PP': '#f59e0b',     // Orange
+            'PSB': '#06b6d4',    // Cyan
+            'PDT': '#84cc16',    // Lime
+            'REPUBLICANOS': '#f97316', // Orange-red
+            'UNIÃO': '#ec4899',  // Pink
+            'PSL': '#6366f1',    // Indigo
+            'PODE': '#14b8a6',   // Teal
+            'DEM': '#0ea5e9',    // Sky blue
+            'SOLIDARIEDADE': '#a855f7', // Violet
+            'AVANTE': '#059669', // Emerald
+            'PCdoB': '#dc2626',  // Red-600
+            'REDE': '#16a34a',   // Green-600
+            'PMN': '#ca8a04',    // Yellow-600
+            'PROS': '#9333ea',   // Purple-600
+            'PV': '#65a30d',     // Lime-600
+            'PMB': '#2563eb'     // Blue-600
+        };
+        
+        // Return predefined color if exists
+        if (partyColors[party]) {
+            return partyColors[party];
+        }
+        
+        // Fallback to hash-based color generation for unknown parties
+        let hash = 0;
+        for (let i = 0; i < party.length; i++) {
+            const char = party.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        
+        const colorIndex = Math.abs(hash) % this.categoryColors.length;
+        return this.categoryColors[colorIndex];
+    }
 }
