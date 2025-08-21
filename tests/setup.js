@@ -21,8 +21,9 @@ global.console = {
 };
 
 // Mock HTMLCanvasElement first
-global.HTMLCanvasElement = global.HTMLCanvasElement || class HTMLCanvasElement {
+global.HTMLCanvasElement = global.HTMLCanvasElement || class HTMLCanvasElement extends HTMLElement {
   constructor() {
+    super();
     this.width = 300;
     this.height = 150;
   }
@@ -200,15 +201,15 @@ if (!global.document.body) {
 beforeEach(() => {
   // Clear DOM
   document.body.innerHTML = '';
-  
+
   // Reset all mocks and modules for isolation
   jest.clearAllMocks();
   jest.resetModules();
-  
+
   // Reset global state
   global.fetch?.mockClear?.();
   global.performance.now?.mockClear?.();
-  
+
   // Reset any global variables that might be set by modules
   if (typeof window !== 'undefined') {
     // Reset any window properties that tests might modify
@@ -224,10 +225,10 @@ afterEach(() => {
   // Clean up DOM completely
   document.body.innerHTML = '';
   document.head.innerHTML = '';
-  
+
   // Clear any remaining timers
   jest.clearAllTimers();
-  
+
   // Reset any modified global objects
   jest.restoreAllMocks();
 });
