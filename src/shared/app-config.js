@@ -13,7 +13,7 @@ export const APP_CONFIG = {
       valor_liquido,
       strftime(data_emissao, '%d/%m/%Y') as data_emissao
     FROM despesas 
-    WHERE valor_liquido > 1000
+    WHERE valor_liquido > 500
     ORDER BY valor_liquido DESC 
     LIMIT 100`,
     maxRetries: 3,
