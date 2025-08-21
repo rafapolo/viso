@@ -87,10 +87,6 @@ body, html {
     overflow: hidden;
 }
 
-#graph-svg{
-    background: radial-gradient(circle, rgb(17 29 53) 0%, rgb(0 0 1) 100%);
-}
-
 .sidebar-header {
     text-align: center;
     background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
@@ -150,4 +146,8 @@ body, html {
 
 #node-info-section {
     max-height: calc(100vh - 60px); /* Account for header */
+}
+
+#graph-svg{
+    background: radial-gradient(circle, rgb(17 29 53) 0%, rgb(0 0 1) 100%);
 }
