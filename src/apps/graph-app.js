@@ -658,8 +658,7 @@ function initializeVisualization() {
     
     function dragended(event, d) {
         if (!event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
+        // Keep nodes fixed at their dragged position - don't clear fx/fy
     }
     
     // Zoom button controls
