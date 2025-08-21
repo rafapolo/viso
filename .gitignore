@@ -59,7 +59,7 @@ temp/
 # Cache directories
 .cache/
 .vite-cache/
-
+.DS_Store
 # Husky
 .husky/_
 
