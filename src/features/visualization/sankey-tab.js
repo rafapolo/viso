@@ -1,4 +1,4 @@
-import { createEmbeddedSankeyTab } from '../../services/sankey-visualization.js';
+import { createEmbeddedSankeyTab } from '../../dataviz/sankey-visualization.js';
 import { getGlobalDatabaseService } from '../../services/database-service.js';
 
 // ===== SANKEY TAB WRAPPER =====
