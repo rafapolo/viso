@@ -2,7 +2,7 @@
 import { TooltipManager } from '../shared/ui-utils.js';
 import { ErrorHandler } from '../shared/error-handler.js';
 import { FormatUtils } from '../shared/formatters.js';
-import { getGlobalLibraryFacade } from './library-facade.js';
+import { getGlobalLibraryFacade } from '../services/library-facade.js';
 
 /**
  * Unified Sankey Visualization Service
