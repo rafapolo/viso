@@ -510,10 +510,15 @@ function initializeVisualization() {
         return d.type === 'deputado' ? 8 : 6;
     };
     
-    // Create force simulation with default D3 collision detection
+    // Get current force strength from slider (preserves user setting across filter changes)
+    const forceSlider = document.getElementById('forceStrength');
+    const currentForceValue = forceSlider ? parseInt(forceSlider.value) : 4; // Default to 4 (equivalent to -200)
+    const forceStrength = -currentForceValue * 50;
+    
+    // Create force simulation with current force strength setting
     const simulation = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id).distance(50))
-        .force("charge", d3.forceManyBody().strength(-200))
+        .force("charge", d3.forceManyBody().strength(forceStrength))
         .force("center", d3.forceCenter(width / 2, height / 2))
         .force("collision", d3.forceCollide().radius(d => getNodeRadius(d) + 2));
     
