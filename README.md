@@ -1,4 +1,4 @@
-# 🕸️ VISO - Visualização Integrada de Sistemas Oficiais
+# 🕸️ VISO - Visualização Interativa de Sistemas Obscuros
 
 [![Build](https://github.com/rafapolo/viso/actions/workflows/build.yml/badge.svg)](https://github.com/rafapolo/viso/actions/workflows/build.yml)
 
@@ -8,9 +8,13 @@ Explore gastos de deputados federais através de visualizações interativas e c
 
 ![viso ui db](./docs/viso_ui_db.png)
 
+![viso ui db](./docs/viso_ui_fluxos.png)
+
+💡 **Amostra**: Despesas maiores que R$1000 dos últimos 5 anos.
+
 ## 🎯 O que você pode descobrir
 - **Quanto cada deputado gasta** e conexões com empresas
-- **Padrões suspeitos** entre políticos e empresas  
+- **Padrões suspeitos** entre políticos e empresas
 - **Análises customizadas** através de consultas SQL
 
 ## 🔧 Duas Interfaces Integradas
@@ -22,7 +26,7 @@ Interface principal com grafo interativo de conexões deputado-empresa.
 - **Interativo**: zoom, pan, clique para detalhes
 - **🆕 URLs Compartilháveis**: Links diretos para deputados e empresas específicas
 
-### 🗄️ Explorador SQL 
+### 🗄️ Explorador SQL
 Ferramenta para análises avançadas com consultas personalizadas.
 - **Consultas pré-definidas** para análises comuns
 - **Editor profissional** com syntax highlighting
@@ -35,12 +39,12 @@ Ferramenta para análises avançadas com consultas personalizadas.
 - **Compatibilidade**: URLs antigas continuam funcionando para transição suave
 
 ## 📈 Casos de Uso
-**Profissionais**: Jornalistas investigativos, pesquisadores, advogados, ativistas  
+**Profissionais**: Jornalistas investigativos, pesquisadores, advogados, ativistas
 **Cidadãos**: Fiscalização popular, conhecer candidatos, aprendizado democrático
 **Resultados esperados**: Maior transparência, deputados mais responsáveis, democracia fortalecida
 
 ## 🔒 Ética e Responsabilidade
-- **100% dados públicos** oficiais da Câmara dos Deputados  
+- **100% dados públicos** oficiais da Câmara dos Deputados
 - **Uso responsável**: contextualize sempre, não faça acusações sem investigação aprofundada
 - **Presunção de inocência**: dados mostram gastos, não comprovam irregularidades
 
@@ -62,15 +66,6 @@ Ferramenta para análises avançadas com consultas personalizadas.
 - **Funciona Offline**: Funcionalidades principais disponíveis sem internet
 - **Sync Automático**: Atualização automática quando volta online
 - **Storage Local**: Dados persistem entre sessões usando OPFS
-
-
-#### Core Components
-- **OPFS Storage Manager**: Armazenamento local persistente de arquivos
-- **File System Worker**: Lida com operações OPFS fora do thread principal
-- **Data Processing Worker**: Cálculos SQL pesados e processamento de dados
-- **Background Sync Worker**: Atualizações e sincronização automáticas de dados
-- **Cache Manager**: Cache avançado com compactação e controle de versão
-- **Offline Data Manager**: Orquestra todos os componentes para suporte offline
 
 ---
 
