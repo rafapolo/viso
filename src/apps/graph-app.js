@@ -170,6 +170,36 @@ function findFornecedorNodeBySlug(slug) {
     return null;
 }
 
+async function resolveFornecedorLabelFromDatabaseBySlug(slug) {
+    if (!slug || !window.duckdbAPI?.query) return null;
+
+    try {
+        const result = await window.duckdbAPI.query(`
+            SELECT DISTINCT fornecedor
+            FROM despesas
+            WHERE fornecedor IS NOT NULL
+        `);
+        const fornecedores = result.toArray().map(row => row.fornecedor).filter(Boolean);
+
+        const exact = fornecedores.find(name => slugifyLabel(name).substring(0, 50) === slug);
+        if (exact) return exact;
+
+        const boundary = fornecedores
+            .filter(name => slugifyLabel(name).startsWith(`${slug}-`))
+            .sort((a, b) => slugifyLabel(a).length - slugifyLabel(b).length);
+        if (boundary.length) return boundary[0];
+
+        const prefix = fornecedores
+            .filter(name => slugifyLabel(name).startsWith(slug))
+            .sort((a, b) => slugifyLabel(a).length - slugifyLabel(b).length);
+        if (prefix.length) return prefix[0];
+    } catch (error) {
+        console.warn('Error resolving fornecedor label by slug:', error);
+    }
+
+    return null;
+}
+
 function resetFormSelectionsForRoute() {
     let changed = false;
 
@@ -1019,7 +1049,7 @@ function updateUrlForNode(nodeData) {
     }
 }
 
-function handleUrlRouting(retryCount = 0) {
+async function handleUrlRouting(retryCount = 0) {
     try {
         // Check if data is available
         if (!processedData || !processedData.nodes || processedData.nodes.length === 0) {
@@ -1121,7 +1151,12 @@ function handleUrlRouting(retryCount = 0) {
         
         // If target is still missing from base aggregated sample, do one internal route-only search pass.
         if (!targetNode && slug && entityType && !routeFocusState.forcedSearchApplied) {
-            forcedRouteSearchTerm = slug.replace(/-/g, ' ').trim();
+            if (entityType === 'fornecedor') {
+                const resolvedLabel = await resolveFornecedorLabelFromDatabaseBySlug(slug);
+                forcedRouteSearchTerm = resolvedLabel || slug.replace(/-/g, ' ').trim();
+            } else {
+                forcedRouteSearchTerm = slug.replace(/-/g, ' ').trim();
+            }
             routeFocusState.forcedSearchApplied = true;
             updateVisualization()
                 .then(() => {
