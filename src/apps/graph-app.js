@@ -132,18 +132,37 @@ function getDeputadoNameOnlySlugFromRoute(routeSlug) {
 
 function findFornecedorNodeBySlug(slug) {
     const fornecedores = processedData.nodes.filter(node => node.type === 'fornecedor');
+    const normalizedSlug = (slug || '').toLowerCase().replace(/^-+|-+$/g, '');
+    if (!normalizedSlug) return null;
 
     // 1) Exact match with app URL slug format (truncated)
-    let matched = fornecedores.find(node => getNodeSlug(node) === slug);
+    let matched = fornecedores.find(node => getNodeSlug(node) === normalizedSlug);
     if (matched) return matched;
 
     // 2) Exact match against full normalized label (not truncated)
-    matched = fornecedores.find(node => slugifyLabel(node.label) === slug);
+    matched = fornecedores.find(node => slugifyLabel(node.label) === normalizedSlug);
     if (matched) return matched;
 
-    // 3) Prefix fallback for manually shortened/shared slugs
-    const prefixMatches = fornecedores.filter(node => slugifyLabel(node.label).startsWith(slug));
-    if (prefixMatches.length === 1) return prefixMatches[0];
+    // 3) Boundary-aware prefix fallback (slug + suffix), pick closest candidate
+    const boundaryPrefixMatches = fornecedores
+        .map(node => ({ node, fullSlug: slugifyLabel(node.label) }))
+        .filter(({ fullSlug }) => fullSlug.startsWith(`${normalizedSlug}-`))
+        .sort((a, b) => a.fullSlug.length - b.fullSlug.length);
+    if (boundaryPrefixMatches.length > 0) return boundaryPrefixMatches[0].node;
+
+    // 4) Generic prefix fallback, pick closest candidate
+    const prefixMatches = fornecedores
+        .map(node => ({ node, fullSlug: slugifyLabel(node.label) }))
+        .filter(({ fullSlug }) => fullSlug.startsWith(normalizedSlug))
+        .sort((a, b) => a.fullSlug.length - b.fullSlug.length);
+    if (prefixMatches.length > 0) return prefixMatches[0].node;
+
+    // 5) Last-resort contains fallback, pick closest candidate
+    const containsMatches = fornecedores
+        .map(node => ({ node, fullSlug: slugifyLabel(node.label) }))
+        .filter(({ fullSlug }) => fullSlug.includes(normalizedSlug))
+        .sort((a, b) => a.fullSlug.length - b.fullSlug.length);
+    if (containsMatches.length > 0) return containsMatches[0].node;
 
     return null;
 }
