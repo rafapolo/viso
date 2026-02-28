@@ -37,7 +37,8 @@ const APP_BASE_PATH = (() => {
 const routeFocusState = {
     active: false,
     entityType: '',
-    slug: ''
+    slug: '',
+    filtersPrepared: false
 };
 
 function withBasePath(pathname) {
@@ -87,12 +88,28 @@ function getRouteFocusedNode() {
         return null;
     }
 
-    return processedData.nodes.find(node => {
-        if (node.type !== routeFocusState.entityType) {
-            return false;
+    if (routeFocusState.entityType === 'fornecedor') {
+        return findFornecedorNodeBySlug(routeFocusState.slug);
+    }
+
+    if (routeFocusState.entityType === 'deputado') {
+        let matched = processedData.nodes.find(node => {
+            if (node.type !== 'deputado') return false;
+            return getNodeSlug(node) === routeFocusState.slug;
+        });
+
+        if (!matched) {
+            const routeNameSlug = getDeputadoNameOnlySlugFromRoute(routeFocusState.slug);
+            matched = processedData.nodes.find(node => {
+                if (node.type !== 'deputado') return false;
+                return getDeputadoNameOnlySlugFromNode(node) === routeNameSlug;
+            }) || null;
         }
-        return getNodeSlug(node) === routeFocusState.slug;
-    }) || null;
+
+        return matched;
+    }
+
+    return null;
 }
 
 function getDeputadoNameOnlySlugFromNode(node) {
@@ -129,6 +146,51 @@ function findFornecedorNodeBySlug(slug) {
     if (prefixMatches.length === 1) return prefixMatches[0];
 
     return null;
+}
+
+function resetFormSelectionsForRoute() {
+    let changed = false;
+
+    const partyFilter = document.getElementById('partyFilter');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const searchBox = document.getElementById('searchBox');
+    const clearSearch = document.getElementById('clearSearch');
+    const minValueSlider = document.getElementById('minValue');
+    const graphDensityToggle = document.getElementById('graphDensityToggle');
+    const topExpensesToggle = document.getElementById('topExpensesToggle');
+
+    if (partyFilter && partyFilter.value !== '') {
+        partyFilter.value = '';
+        changed = true;
+    }
+    if (categoryFilter && categoryFilter.value !== '') {
+        categoryFilter.value = '';
+        changed = true;
+    }
+    if (searchBox && searchBox.value !== '') {
+        searchBox.value = '';
+        changed = true;
+    }
+    if (clearSearch) {
+        clearSearch.classList.add('hidden');
+    }
+    if (minValueSlider && Number(minValueSlider.value) !== 0) {
+        minValueSlider.value = 0;
+        changed = true;
+    }
+
+    if (graphDensityToggle && graphDensityToggle.checked) {
+        graphDensityToggle.checked = false;
+        graphFilters.densityMode = false;
+        changed = true;
+    }
+    if (topExpensesToggle && topExpensesToggle.checked) {
+        topExpensesToggle.checked = false;
+        graphFilters.topExpensesMode = false;
+        changed = true;
+    }
+
+    return changed;
 }
 
 // Initialize DuckDB and load data
@@ -248,9 +310,6 @@ async function populateFilters() {
         const option = document.createElement('option');
         option.value = party;
         option.textContent = party;
-        if (party === 'PT') {
-            option.selected = true;
-        }
         partySelect.appendChild(option);
     });
     
@@ -990,6 +1049,23 @@ function handleUrlRouting(retryCount = 0) {
             routeFocusState.entityType = entityType;
             routeFocusState.slug = slug;
 
+            // Route URLs must load without any active form filters/selections.
+            if (!routeFocusState.filtersPrepared) {
+                const hadChanges = resetFormSelectionsForRoute();
+                routeFocusState.filtersPrepared = true;
+
+                if (hadChanges || retryCount === 0) {
+                    updateVisualization()
+                        .then(() => {
+                            setTimeout(() => handleUrlRouting(retryCount + 1), 200);
+                        })
+                        .catch(error => {
+                            console.warn('Error preparing route view:', error);
+                        });
+                    return;
+                }
+            }
+
             if (entityType === 'deputado') {
                 // Find matching deputado node
                 targetNode = processedData.nodes.find(node => {
@@ -1014,6 +1090,7 @@ function handleUrlRouting(retryCount = 0) {
             routeFocusState.active = false;
             routeFocusState.entityType = '';
             routeFocusState.slug = '';
+            routeFocusState.filtersPrepared = false;
         }
         
         // If route exists but node isn't in current filtered graph, relax filters and retry once.
@@ -1455,6 +1532,7 @@ function hideNodeInfo() {
     routeFocusState.active = false;
     routeFocusState.entityType = '';
     routeFocusState.slug = '';
+    routeFocusState.filtersPrepared = false;
     
     // Reset all nodes to normal appearance when hiding panel
     const svg = d3.select('#graph-svg');
