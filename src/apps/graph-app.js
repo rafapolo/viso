@@ -95,6 +95,24 @@ function getRouteFocusedNode() {
     }) || null;
 }
 
+function getDeputadoNameOnlySlugFromNode(node) {
+    const match = node.label.match(/^(.+?)\s*\(([^)]+)\)$/);
+    if (match) {
+        const [, name] = match;
+        return slugifyLabel(name.trim());
+    }
+    return slugifyLabel(node.label);
+}
+
+function getDeputadoNameOnlySlugFromRoute(routeSlug) {
+    const parts = routeSlug.split('-').filter(Boolean);
+    if (parts.length <= 1) {
+        return routeSlug;
+    }
+    // Assume last token is party when route uses deputado-{name}-{party}
+    return parts.slice(0, -1).join('-');
+}
+
 // Initialize DuckDB and load data
 async function loadData() {
     try {
@@ -889,9 +907,11 @@ function updateUrlForNode(nodeData) {
         }
         
         if (path) {
-            // Update URL without page reload using path-based routing
-            const currentSearch = window.location.search;
-            history.pushState({ nodeData }, '', `${withBasePath(path)}${currentSearch}`);
+            // Keep normal query params, but drop one-shot routing bootstrap param
+            const params = new URLSearchParams(window.location.search);
+            params.delete('route');
+            const nextSearch = params.toString();
+            history.pushState({ nodeData }, '', `${withBasePath(path)}${nextSearch ? `?${nextSearch}` : ''}`);
         }
     } catch (error) {
         console.warn('Error updating URL for node:', error);
@@ -924,7 +944,10 @@ function handleUrlRouting(retryCount = 0) {
         
         // First, check for path-based routes
         const pathname = stripBasePath(window.location.pathname);
-        const routePath = routedPath && routedPath.startsWith('/') ? routedPath : pathname;
+        const normalizedRoutedPath = routedPath && routedPath.startsWith('/')
+            ? stripBasePath(routedPath)
+            : routedPath;
+        const routePath = normalizedRoutedPath && normalizedRoutedPath.startsWith('/') ? normalizedRoutedPath : pathname;
         if (routePath.startsWith('/deputado-')) {
             entityType = 'deputado';
             slug = routePath.replace('/deputado-', '');
@@ -955,6 +978,15 @@ function handleUrlRouting(retryCount = 0) {
                     if (node.type !== 'deputado') return false;
                     return getNodeSlug(node) === slug;
                 });
+
+                // Fallback: name-only match in case party suffix changed in data
+                if (!targetNode) {
+                    const routeNameSlug = getDeputadoNameOnlySlugFromRoute(slug);
+                    targetNode = processedData.nodes.find(node => {
+                        if (node.type !== 'deputado') return false;
+                        return getDeputadoNameOnlySlugFromNode(node) === routeNameSlug;
+                    });
+                }
             } else if (entityType === 'fornecedor') {
                 // Find matching fornecedor node
                 targetNode = processedData.nodes.find(node => {
@@ -1397,8 +1429,10 @@ function hideNodeInfo() {
     
     // Clear URL when closing panel - go back to home with search params preserved
     try {
-        const searchParams = window.location.search;
-        history.pushState('', '', `${withBasePath('/')}${searchParams}`);
+        const params = new URLSearchParams(window.location.search);
+        params.delete('route');
+        const nextSearch = params.toString();
+        history.pushState('', '', `${withBasePath('/')}${nextSearch ? `?${nextSearch}` : ''}`);
     } catch (error) {
         console.warn('Error clearing URL:', error);
     }
