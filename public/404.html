@@ -7,21 +7,25 @@
     <script>
         // GitHub Pages SPA redirect script
         (function() {
+            const basePath = '/viso';
             const path = window.location.pathname;
             const search = window.location.search;
             const hash = window.location.hash;
+            const normalizedPath = path.startsWith(basePath) ? (path.slice(basePath.length) || '/') : path;
             
             // Check if this is a route that should go to db.html
-            if (path.includes('db.html') || search.includes('analise=')) {
-                window.location.replace('/viso/db.html' + search + hash);
+            if (normalizedPath.includes('db.html') || search.includes('analise=')) {
+                window.location.replace(basePath + '/db.html' + search + hash);
             }
             // Check if this is a deputado or empresa route that should go to index.html
-            else if (path.includes('deputado-') || path.includes('empresa-')) {
-                window.location.replace('/viso/index.html' + search + hash);
+            else if (normalizedPath.includes('deputado-') || normalizedPath.includes('empresa-')) {
+                const params = new URLSearchParams(search);
+                params.set('route', normalizedPath);
+                window.location.replace(basePath + '/index.html?' + params.toString() + hash);
             }
             // Default fallback to index.html
             else {
-                window.location.replace('/viso/index.html' + search + hash);
+                window.location.replace(basePath + '/index.html' + search + hash);
             }
         })();
     </script>

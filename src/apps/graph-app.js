@@ -18,6 +18,29 @@ let statisticsCharts = null;
 // Make ColorUtils globally available
 window.ColorUtils = ColorUtils;
 
+const APP_BASE_PATH = (() => {
+    const rawBase = import.meta.env.BASE_URL || '/';
+    const normalizedBase = rawBase.startsWith('/') ? rawBase : `/${rawBase}`;
+    return normalizedBase.endsWith('/') ? normalizedBase.slice(0, -1) : normalizedBase;
+})();
+
+function withBasePath(pathname) {
+    if (!pathname.startsWith('/')) {
+        pathname = `/${pathname}`;
+    }
+    return APP_BASE_PATH === '' || APP_BASE_PATH === '/' ? pathname : `${APP_BASE_PATH}${pathname}`;
+}
+
+function stripBasePath(pathname) {
+    if (APP_BASE_PATH && APP_BASE_PATH !== '/' && pathname.startsWith(`${APP_BASE_PATH}/`)) {
+        return pathname.slice(APP_BASE_PATH.length);
+    }
+    if (APP_BASE_PATH && APP_BASE_PATH !== '/' && pathname === APP_BASE_PATH) {
+        return '/';
+    }
+    return pathname;
+}
+
 // Initialize DuckDB and load data
 async function loadData() {
     try {
@@ -819,7 +842,7 @@ function updateUrlForNode(nodeData) {
         if (path) {
             // Update URL without page reload using path-based routing
             const currentSearch = window.location.search;
-            history.pushState({ nodeData }, '', `${path}${currentSearch}`);
+            history.pushState({ nodeData }, '', `${withBasePath(path)}${currentSearch}`);
         }
     } catch (error) {
         console.warn('Error updating URL for node:', error);
@@ -847,15 +870,18 @@ function handleUrlRouting(retryCount = 0) {
         let targetNode = null;
         let slug = '';
         let entityType = '';
+        const urlParams = new URLSearchParams(window.location.search);
+        const routedPath = urlParams.get('route');
         
         // First, check for path-based routes
-        const {pathname} = window.location;
-        if (pathname.startsWith('/deputado-')) {
+        const pathname = stripBasePath(window.location.pathname);
+        const routePath = routedPath && routedPath.startsWith('/') ? routedPath : pathname;
+        if (routePath.startsWith('/deputado-')) {
             entityType = 'deputado';
-            slug = pathname.replace('/deputado-', '');
-        } else if (pathname.startsWith('/empresa-')) {
+            slug = routePath.replace('/deputado-', '');
+        } else if (routePath.startsWith('/empresa-')) {
             entityType = 'fornecedor';
-            slug = pathname.replace('/empresa-', '');
+            slug = routePath.replace('/empresa-', '');
         } else {
             // Fall back to fragment-based routing for backward compatibility
             const fragment = window.location.hash.slice(1); // Remove #
@@ -923,16 +949,18 @@ function handleUrlRouting(retryCount = 0) {
 }
 
 function showUrlRoutingFallback() {
-    const { pathname } = window.location;
+    const pathname = stripBasePath(window.location.pathname);
+    const urlParams = new URLSearchParams(window.location.search);
+    const routePath = urlParams.get('route') || pathname;
     let entityName = '';
     let entityType = '';
     
-    if (pathname.startsWith('/deputado-')) {
+    if (routePath.startsWith('/deputado-')) {
         entityType = 'deputado';
-        entityName = pathname.replace('/deputado-', '').replace(/-/g, ' ');
-    } else if (pathname.startsWith('/empresa-')) {
+        entityName = routePath.replace('/deputado-', '').replace(/-/g, ' ');
+    } else if (routePath.startsWith('/empresa-')) {
         entityType = 'empresa';
-        entityName = pathname.replace('/empresa-', '').replace(/-/g, ' ');
+        entityName = routePath.replace('/empresa-', '').replace(/-/g, ' ');
     }
     
     if (entityName && entityType) {
@@ -1302,7 +1330,7 @@ function hideNodeInfo() {
     // Clear URL when closing panel - go back to home with search params preserved
     try {
         const searchParams = window.location.search;
-        history.pushState('', '', `/${searchParams}`);
+        history.pushState('', '', `${withBasePath('/')}${searchParams}`);
     } catch (error) {
         console.warn('Error clearing URL:', error);
     }
