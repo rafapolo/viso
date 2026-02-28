@@ -222,7 +222,7 @@ class DuckDBManager {
         return result.toArray();
     }
 
-    async queryAggregatedData(minValue = 0, partyFilter = '', categoryFilter = '', searchFilter = '') {
+    async queryAggregatedData(minValue = 0, partyFilter = '', categoryFilter = '', searchFilter = '', applyDefaultMinFloor = true) {
         await this.ensureConnection();
         
         let whereClause = "WHERE nome_parlamentar IS NOT NULL AND fornecedor IS NOT NULL";
@@ -239,6 +239,10 @@ class DuckDBManager {
             whereClause += ` AND (LOWER(nome_parlamentar) LIKE '%${searchFilter.toLowerCase()}%' OR LOWER(fornecedor) LIKE '%${searchFilter.toLowerCase()}%')`;
         }
         
+        const effectiveMinValue = applyDefaultMinFloor
+            ? Math.max(minValue, 1000)
+            : Math.max(minValue, 0);
+
         const query = `
             SELECT 
                 nome_parlamentar,
@@ -250,7 +254,7 @@ class DuckDBManager {
             FROM despesas 
             ${whereClause}
             GROUP BY nome_parlamentar, sigla_partido, fornecedor, categoria_despesa
-            HAVING SUM(valor_liquido) > ${Math.max(minValue, 1000)}
+            HAVING SUM(valor_liquido) > ${effectiveMinValue}
             ORDER BY valor_total DESC
             LIMIT 10000
         `;
@@ -378,8 +382,8 @@ const duckDBManager = new DuckDBManager();
 window.duckdbAPI = {
     initDuckDB: () => duckDBManager.initDuckDB(),
     loadParquetData: () => duckDBManager.loadParquetData(),
-    queryAggregatedData: (minValue, partyFilter, categoryFilter, searchFilter) => 
-        duckDBManager.queryAggregatedData(minValue, partyFilter, categoryFilter, searchFilter),
+    queryAggregatedData: (minValue, partyFilter, categoryFilter, searchFilter, applyDefaultMinFloor = true) => 
+        duckDBManager.queryAggregatedData(minValue, partyFilter, categoryFilter, searchFilter, applyDefaultMinFloor),
     getValueRange: (partyFilter, categoryFilter, searchFilter) => 
         duckDBManager.getValueRange(partyFilter, categoryFilter, searchFilter),
     getFilterOptions: () => duckDBManager.getFilterOptions(),

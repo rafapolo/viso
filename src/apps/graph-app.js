@@ -439,7 +439,14 @@ async function processData() {
     // Query DuckDB with all filters including the current minimum value
     const sliderMinValue = parseFloat(document.getElementById('minValue').value) || 0;
     const actualMinValue = forcedRouteSearchTerm ? 0 : sliderMinValue;
-    let aggregatedData = await window.duckdbAPI.queryAggregatedData(actualMinValue, partyFilter, categoryFilter, searchFilter);
+    const applyDefaultMinFloor = !forcedRouteSearchTerm;
+    let aggregatedData = await window.duckdbAPI.queryAggregatedData(
+        actualMinValue,
+        partyFilter,
+        categoryFilter,
+        searchFilter,
+        applyDefaultMinFloor
+    );
     
     // If search filter exists, filter to show only relations of the searched entity
     if (searchFilter) {
@@ -1041,6 +1048,7 @@ function updateUrlForNode(nodeData) {
             // Keep normal query params, but drop one-shot routing bootstrap param
             const params = new URLSearchParams(window.location.search);
             params.delete('route');
+            params.delete('node');
             const nextSearch = params.toString();
             history.pushState({ nodeData }, '', `${withBasePath(path)}${nextSearch ? `?${nextSearch}` : ''}`);
         }
@@ -1072,13 +1080,17 @@ async function handleUrlRouting(retryCount = 0) {
         let entityType = '';
         const urlParams = new URLSearchParams(window.location.search);
         const routedPath = urlParams.get('route');
+        const nodeParam = urlParams.get('node');
         
         // First, check for path-based routes
         const pathname = stripBasePath(window.location.pathname);
+        const normalizedNodePath = nodeParam
+            ? (nodeParam.startsWith('/') ? nodeParam : `/${nodeParam}`)
+            : '';
         const normalizedRoutedPath = routedPath && routedPath.startsWith('/')
             ? stripBasePath(routedPath)
             : routedPath;
-        const routePath = normalizedRoutedPath && normalizedRoutedPath.startsWith('/') ? normalizedRoutedPath : pathname;
+        const routePath = normalizedNodePath || (normalizedRoutedPath && normalizedRoutedPath.startsWith('/') ? normalizedRoutedPath : pathname);
         if (routePath.startsWith('/deputado-')) {
             entityType = 'deputado';
             slug = routePath.replace('/deputado-', '');
@@ -1184,7 +1196,11 @@ async function handleUrlRouting(retryCount = 0) {
 function showUrlRoutingFallback() {
     const pathname = stripBasePath(window.location.pathname);
     const urlParams = new URLSearchParams(window.location.search);
-    const routePath = urlParams.get('route') || pathname;
+    const nodeParam = urlParams.get('node');
+    const routeParam = urlParams.get('route');
+    const routePath = nodeParam
+        ? (nodeParam.startsWith('/') ? nodeParam : `/${nodeParam}`)
+        : (routeParam || pathname);
     let entityName = '';
     let entityType = '';
     
@@ -1564,6 +1580,7 @@ function hideNodeInfo() {
     try {
         const params = new URLSearchParams(window.location.search);
         params.delete('route');
+        params.delete('node');
         const nextSearch = params.toString();
         history.pushState('', '', `${withBasePath('/')}${nextSearch ? `?${nextSearch}` : ''}`);
     } catch (error) {

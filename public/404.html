@@ -20,7 +20,7 @@
             // Check if this is a deputado or empresa route that should go to index.html
             else if (normalizedPath.includes('deputado-') || normalizedPath.includes('empresa-')) {
                 const params = new URLSearchParams(search);
-                params.set('route', normalizedPath);
+                params.set('node', normalizedPath.replace(/^\//, ''));
                 window.location.replace(basePath + '/index.html?' + params.toString() + hash);
             }
             // Default fallback to index.html
