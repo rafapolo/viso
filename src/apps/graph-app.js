@@ -113,6 +113,24 @@ function getDeputadoNameOnlySlugFromRoute(routeSlug) {
     return parts.slice(0, -1).join('-');
 }
 
+function findFornecedorNodeBySlug(slug) {
+    const fornecedores = processedData.nodes.filter(node => node.type === 'fornecedor');
+
+    // 1) Exact match with app URL slug format (truncated)
+    let matched = fornecedores.find(node => getNodeSlug(node) === slug);
+    if (matched) return matched;
+
+    // 2) Exact match against full normalized label (not truncated)
+    matched = fornecedores.find(node => slugifyLabel(node.label) === slug);
+    if (matched) return matched;
+
+    // 3) Prefix fallback for manually shortened/shared slugs
+    const prefixMatches = fornecedores.filter(node => slugifyLabel(node.label).startsWith(slug));
+    if (prefixMatches.length === 1) return prefixMatches[0];
+
+    return null;
+}
+
 // Initialize DuckDB and load data
 async function loadData() {
     try {
@@ -988,11 +1006,7 @@ function handleUrlRouting(retryCount = 0) {
                     });
                 }
             } else if (entityType === 'fornecedor') {
-                // Find matching fornecedor node
-                targetNode = processedData.nodes.find(node => {
-                    if (node.type !== 'fornecedor') return false;
-                    return getNodeSlug(node) === slug;
-                });
+                targetNode = findFornecedorNodeBySlug(slug);
             }
         }
         
