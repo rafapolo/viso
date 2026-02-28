@@ -21,8 +21,24 @@ window.ColorUtils = ColorUtils;
 const APP_BASE_PATH = (() => {
     const rawBase = import.meta.env.BASE_URL || '/';
     const normalizedBase = rawBase.startsWith('/') ? rawBase : `/${rawBase}`;
-    return normalizedBase.endsWith('/') ? normalizedBase.slice(0, -1) : normalizedBase;
+    const envBase = normalizedBase.endsWith('/') ? normalizedBase.slice(0, -1) : normalizedBase;
+
+    // Fallback for GitHub Pages when BASE_URL is not injected as /viso/
+    if (envBase === '' || envBase === '/') {
+        const pathname = window.location.pathname || '/';
+        if (pathname === '/viso' || pathname.startsWith('/viso/')) {
+            return '/viso';
+        }
+    }
+
+    return envBase;
 })();
+
+const routeFocusState = {
+    active: false,
+    entityType: '',
+    slug: ''
+};
 
 function withBasePath(pathname) {
     if (!pathname.startsWith('/')) {
@@ -39,6 +55,44 @@ function stripBasePath(pathname) {
         return '/';
     }
     return pathname;
+}
+
+function slugifyLabel(text) {
+    return text
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/--+/g, '-');
+}
+
+function getNodeSlug(nodeData) {
+    if (nodeData.type === 'deputado') {
+        const match = nodeData.label.match(/^(.+?)\s*\(([^)]+)\)$/);
+        if (match) {
+            const [, name, party] = match;
+            return slugifyLabel(`${name.trim()}-${party.trim()}`);
+        }
+        return slugifyLabel(nodeData.label);
+    }
+
+    if (nodeData.type === 'fornecedor') {
+        return slugifyLabel(nodeData.label).substring(0, 50);
+    }
+
+    return '';
+}
+
+function getRouteFocusedNode() {
+    if (!routeFocusState.active || !routeFocusState.slug || !processedData?.nodes?.length) {
+        return null;
+    }
+
+    return processedData.nodes.find(node => {
+        if (node.type !== routeFocusState.entityType) {
+            return false;
+        }
+        return getNodeSlug(node) === routeFocusState.slug;
+    }) || null;
 }
 
 // Initialize DuckDB and load data
@@ -464,6 +518,25 @@ function applyGraphFilters() {
         filteredNodes = filteredNodes.filter(node => topNodeIds.has(node.id));
         filteredLinks = topLinks;
     }
+
+    // Route focus mode: show only the selected node and its direct relations
+    const focusedNode = getRouteFocusedNode();
+    if (focusedNode) {
+        const focusedLinks = filteredLinks.filter(link => {
+            const sourceId = typeof link.source === 'object' ? link.source.id : link.source.toString();
+            const targetId = typeof link.target === 'object' ? link.target.id : link.target.toString();
+            return sourceId === focusedNode.id || targetId === focusedNode.id;
+        });
+
+        const relatedNodeIds = new Set([focusedNode.id]);
+        focusedLinks.forEach(link => {
+            relatedNodeIds.add(typeof link.source === 'object' ? link.source.id : link.source.toString());
+            relatedNodeIds.add(typeof link.target === 'object' ? link.target.id : link.target.toString());
+        });
+
+        filteredNodes = filteredNodes.filter(node => relatedNodeIds.has(node.id));
+        filteredLinks = focusedLinks;
+    }
     
     return { nodes: filteredNodes, links: filteredLinks };
 }
@@ -808,34 +881,10 @@ function updateUrlForNode(nodeData) {
         let path = '';
         
         if (nodeData.type === 'deputado') {
-            // Extract name and party from label like "FULANO DE TAL (PT)"
-            const match = nodeData.label.match(/^(.+?)\s*\(([^)]+)\)$/);
-            if (match) {
-                const [, name, party] = match;
-                // Create URL-friendly slug: name-party
-                const slug = `${name.trim()}-${party.trim()}`
-                    .toLowerCase()
-                    .replace(/\s+/g, '-')
-                    .replace(/[^a-z0-9-]/g, '')
-                    .replace(/--+/g, '-');
-                path = `/deputado-${slug}`;
-            } else {
-                // Fallback if format doesn't match
-                const slug = nodeData.label
-                    .toLowerCase()
-                    .replace(/\s+/g, '-')
-                    .replace(/[^a-z0-9-]/g, '')
-                    .replace(/--+/g, '-');
-                path = `/deputado-${slug}`;
-            }
+            const slug = getNodeSlug(nodeData);
+            path = `/deputado-${slug}`;
         } else if (nodeData.type === 'fornecedor') {
-            // Create URL-friendly slug for company
-            const slug = nodeData.label
-                .toLowerCase()
-                .replace(/\s+/g, '-')
-                .replace(/[^a-z0-9-]/g, '')
-                .replace(/--+/g, '-')
-                .substring(0, 50); // Limit length
+            const slug = getNodeSlug(nodeData);
             path = `/empresa-${slug}`;
         }
         
@@ -896,49 +945,68 @@ function handleUrlRouting(retryCount = 0) {
         
         // If we have a slug and entity type, find the matching node
         if (slug && entityType) {
+            routeFocusState.active = true;
+            routeFocusState.entityType = entityType;
+            routeFocusState.slug = slug;
+
             if (entityType === 'deputado') {
                 // Find matching deputado node
                 targetNode = processedData.nodes.find(node => {
                     if (node.type !== 'deputado') return false;
-                    
-                    // Create slug from node label and compare
-                    const match = node.label.match(/^(.+?)\s*\(([^)]+)\)$/);
-                    if (match) {
-                        const [, name, party] = match;
-                        const nodeSlug = `${name.trim()}-${party.trim()}`
-                            .toLowerCase()
-                            .replace(/\s+/g, '-')
-                            .replace(/[^a-z0-9-]/g, '')
-                            .replace(/--+/g, '-');
-                        return nodeSlug === slug;
-                    }
-                    
-                    // Fallback comparison
-                    const nodeSlug = node.label
-                        .toLowerCase()
-                        .replace(/\s+/g, '-')
-                        .replace(/[^a-z0-9-]/g, '')
-                        .replace(/--+/g, '-');
-                    return nodeSlug === slug;
+                    return getNodeSlug(node) === slug;
                 });
             } else if (entityType === 'fornecedor') {
                 // Find matching fornecedor node
                 targetNode = processedData.nodes.find(node => {
                     if (node.type !== 'fornecedor') return false;
-                    
-                    const nodeSlug = node.label
-                        .toLowerCase()
-                        .replace(/\s+/g, '-')
-                        .replace(/[^a-z0-9-]/g, '')
-                        .replace(/--+/g, '-')
-                        .substring(0, 50);
-                    return nodeSlug === slug;
+                    return getNodeSlug(node) === slug;
                 });
             }
         }
         
+        if (!slug || !entityType) {
+            routeFocusState.active = false;
+            routeFocusState.entityType = '';
+            routeFocusState.slug = '';
+        }
+        
+        // If route exists but node isn't in current filtered graph, relax filters and retry once.
+        if (!targetNode && slug && entityType && retryCount < 1) {
+            const partyFilter = document.getElementById('partyFilter');
+            const categoryFilter = document.getElementById('categoryFilter');
+            const searchBox = document.getElementById('searchBox');
+            const clearSearch = document.getElementById('clearSearch');
+            const minValueSlider = document.getElementById('minValue');
+
+            if (partyFilter && partyFilter.value) {
+                partyFilter.value = '';
+            }
+            if (categoryFilter && categoryFilter.value) {
+                categoryFilter.value = '';
+            }
+            if (searchBox && searchBox.value) {
+                searchBox.value = '';
+            }
+            if (clearSearch) {
+                clearSearch.classList.add('hidden');
+            }
+            if (minValueSlider) {
+                minValueSlider.value = 0;
+            }
+
+            updateVisualization()
+                .then(() => {
+                    setTimeout(() => handleUrlRouting(retryCount + 1), 200);
+                })
+                .catch(error => {
+                    console.warn('Error retrying URL routing after relaxing filters:', error);
+                });
+            return;
+        }
+
         // If we found a matching node, select it
         if (targetNode) {
+            initializeVisualization();
             setTimeout(() => {
                 showNodeInfo(targetNode);
             }, 1000); // Wait for visualization to be ready
@@ -1334,6 +1402,11 @@ function hideNodeInfo() {
     } catch (error) {
         console.warn('Error clearing URL:', error);
     }
+
+    const hadRouteFocus = routeFocusState.active;
+    routeFocusState.active = false;
+    routeFocusState.entityType = '';
+    routeFocusState.slug = '';
     
     // Reset all nodes to normal appearance when hiding panel
     const svg = d3.select('#graph-svg');
@@ -1361,6 +1434,10 @@ function hideNodeInfo() {
         content.className = 'p-4 flex flex-col flex-1 min-h-0';
         closeBtn.classList.add('hidden');
     }, 300);
+
+    if (hadRouteFocus) {
+        initializeVisualization();
+    }
 }
 
 async function updateVisualization() {
