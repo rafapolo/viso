@@ -38,8 +38,11 @@ const routeFocusState = {
     active: false,
     entityType: '',
     slug: '',
-    filtersPrepared: false
+    filtersPrepared: false,
+    forcedSearchApplied: false
 };
+
+let forcedRouteSearchTerm = '';
 
 function withBasePath(pathname) {
     if (!pathname.startsWith('/')) {
@@ -345,7 +348,8 @@ async function processData() {
     // Process data with current filters
     const partyFilter = document.getElementById('partyFilter').value;
     const categoryFilter = document.getElementById('categoryFilter').value;
-    const searchFilter = document.getElementById('searchBox').value.trim();
+    const uiSearchFilter = document.getElementById('searchBox').value.trim();
+    const searchFilter = forcedRouteSearchTerm || uiSearchFilter;
     
     // Processing data with filters
     
@@ -403,7 +407,8 @@ async function processData() {
     }
     
     // Query DuckDB with all filters including the current minimum value
-    const actualMinValue = parseFloat(document.getElementById('minValue').value) || 0;
+    const sliderMinValue = parseFloat(document.getElementById('minValue').value) || 0;
+    const actualMinValue = forcedRouteSearchTerm ? 0 : sliderMinValue;
     let aggregatedData = await window.duckdbAPI.queryAggregatedData(actualMinValue, partyFilter, categoryFilter, searchFilter);
     
     // If search filter exists, filter to show only relations of the searched entity
@@ -1110,44 +1115,27 @@ function handleUrlRouting(retryCount = 0) {
             routeFocusState.entityType = '';
             routeFocusState.slug = '';
             routeFocusState.filtersPrepared = false;
+            routeFocusState.forcedSearchApplied = false;
+            forcedRouteSearchTerm = '';
         }
         
-        // If route exists but node isn't in current filtered graph, relax filters and retry once.
-        if (!targetNode && slug && entityType && retryCount < 1) {
-            const partyFilter = document.getElementById('partyFilter');
-            const categoryFilter = document.getElementById('categoryFilter');
-            const searchBox = document.getElementById('searchBox');
-            const clearSearch = document.getElementById('clearSearch');
-            const minValueSlider = document.getElementById('minValue');
-
-            if (partyFilter && partyFilter.value) {
-                partyFilter.value = '';
-            }
-            if (categoryFilter && categoryFilter.value) {
-                categoryFilter.value = '';
-            }
-            if (searchBox && searchBox.value) {
-                searchBox.value = '';
-            }
-            if (clearSearch) {
-                clearSearch.classList.add('hidden');
-            }
-            if (minValueSlider) {
-                minValueSlider.value = 0;
-            }
-
+        // If target is still missing from base aggregated sample, do one internal route-only search pass.
+        if (!targetNode && slug && entityType && !routeFocusState.forcedSearchApplied) {
+            forcedRouteSearchTerm = slug.replace(/-/g, ' ').trim();
+            routeFocusState.forcedSearchApplied = true;
             updateVisualization()
                 .then(() => {
                     setTimeout(() => handleUrlRouting(retryCount + 1), 200);
                 })
                 .catch(error => {
-                    console.warn('Error retrying URL routing after relaxing filters:', error);
+                    console.warn('Error retrying URL routing with forced route search:', error);
                 });
             return;
         }
 
         // If we found a matching node, select it
         if (targetNode) {
+            forcedRouteSearchTerm = '';
             initializeVisualization();
             setTimeout(() => {
                 showNodeInfo(targetNode);
@@ -1552,6 +1540,8 @@ function hideNodeInfo() {
     routeFocusState.entityType = '';
     routeFocusState.slug = '';
     routeFocusState.filtersPrepared = false;
+    routeFocusState.forcedSearchApplied = false;
+    forcedRouteSearchTerm = '';
     
     // Reset all nodes to normal appearance when hiding panel
     const svg = d3.select('#graph-svg');
