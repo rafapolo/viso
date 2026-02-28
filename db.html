@@ -16,29 +16,29 @@
     <meta name="msapplication-tap-highlight" content="no">
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="%BASE_URL%manifest.json">
     
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMzIiIGZpbGw9IiMxZTQwYWYiLz4KPGVsbGlwc2UgY3g9Ijk2IiBjeT0iNjQiIHJ4PSI0OCIgcnk9IjE2IiBmaWxsPSJ3aGl0ZSIvPgo8cmVjdCB4PSI0OCIgeT0iNjQiIHdpZHRoPSI5NiIgaGVpZ2h0PSI2NCIgZmlsbD0id2hpdGUiLz4KPGVsbGlwc2UgY3g9Ijk2IiBjeT0iMTI4IiByeD0iNDgiIHJ5PSIxNiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cg==">
     
     <!-- Font Preloading for Performance -->
-    <link rel="preload" href="vendor/fonts/monda-regular.ttf" as="font" type="font/ttf" crossorigin>
-    <link rel="preload" href="vendor/fonts/monda-bold.ttf" as="font" type="font/ttf" crossorigin>
-    <link href="vendor/css/google-fonts.css" rel="stylesheet">
+    <link rel="preload" href="%BASE_URL%vendor/fonts/monda-regular.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="%BASE_URL%vendor/fonts/monda-bold.ttf" as="font" type="font/ttf" crossorigin>
+    <link href="%BASE_URL%vendor/css/google-fonts.css" rel="stylesheet">
     <link rel="shortcut icon" type="image/x-icon" href="https://extrapolo.com/favicon.ico">
     
     <link rel="stylesheet" href="src/styles/common.css">
     <link rel="stylesheet" href="src/styles/db.css">
-    <link rel="stylesheet" href="vendor/css/tailwindcss.min.css">
+    <link rel="stylesheet" href="%BASE_URL%vendor/css/tailwindcss.min.css">
     <!-- Monaco Editor CSS will be loaded by Vite -->
     <!-- Monaco Editor will be loaded by Vite build process -->
-    <script src="vendor/js/apache-arrow/Arrow.es2015.min.js"></script>
+    <script src="%BASE_URL%vendor/js/apache-arrow/Arrow.es2015.min.js"></script>
     <script src="./src/shared/arrow-status.js"></script>
-    <script src="vendor/js/sql-formatter.js"></script>
+    <script src="%BASE_URL%vendor/js/sql-formatter.js"></script>
     <script src="./src/shared/amd-handler.js"></script>
-    <script src="vendor/js/d3.v7.min.js"></script>
-    <script src="vendor/js/d3-sankey.min.js"></script>
-    <script src="vendor/js/theme-toggle.js"></script>
+    <script src="%BASE_URL%vendor/js/d3.v7.min.js"></script>
+    <script src="%BASE_URL%vendor/js/d3-sankey.min.js"></script>
+    <script src="%BASE_URL%vendor/js/theme-toggle.js"></script>
     <script src="./src/shared/amd-restore.js"></script>
     <script type="module" src="./src/shared/arrow-loader.js"></script>
     <script type="module" src="./src/shared/navigation.js"></script>
