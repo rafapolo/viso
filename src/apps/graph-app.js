@@ -39,7 +39,8 @@ const routeFocusState = {
     entityType: '',
     slug: '',
     filtersPrepared: false,
-    forcedSearchApplied: false
+    forcedSearchApplied: false,
+    subgraphFallbackApplied: false
 };
 
 let forcedRouteSearchTerm = '';
@@ -243,6 +244,150 @@ function resetFormSelectionsForRoute() {
     }
 
     return changed;
+}
+
+function setProcessedDataFromAggregatedData(aggregatedData) {
+    // Create nodes and links with totals
+    const nodeMap = new Map();
+    const nodeTotals = new Map();
+    const nodes = [];
+    const links = [];
+
+    let nodeId = 0;
+
+    // First pass: collect totals for each node
+    aggregatedData.forEach(record => {
+        const deputado = `${record.nome_parlamentar} (${record.sigla_partido})`;
+        const {fornecedor} = record;
+
+        if (!nodeTotals.has(deputado)) {
+            nodeTotals.set(deputado, {
+                total: 0,
+                transactions: 0,
+                connections: 0,
+                type: 'deputado',
+                party: record.sigla_partido
+            });
+        }
+        const deputadoTotals = nodeTotals.get(deputado);
+        deputadoTotals.total += Number(record.valor_total);
+        deputadoTotals.transactions += Number(record.num_transacoes);
+        deputadoTotals.connections += 1;
+
+        if (!nodeTotals.has(fornecedor)) {
+            nodeTotals.set(fornecedor, {
+                total: 0,
+                transactions: 0,
+                connections: 0,
+                type: 'fornecedor'
+            });
+        }
+        const fornecedorTotals = nodeTotals.get(fornecedor);
+        fornecedorTotals.total += Number(record.valor_total);
+        fornecedorTotals.transactions += Number(record.num_transacoes);
+        fornecedorTotals.connections += 1;
+    });
+
+    // Second pass: create nodes and links
+    aggregatedData.forEach(record => {
+        const deputado = `${record.nome_parlamentar} (${record.sigla_partido})`;
+        const {fornecedor} = record;
+
+        if (!nodeMap.has(deputado)) {
+            const totals = nodeTotals.get(deputado);
+            nodeMap.set(deputado, nodeId);
+            nodes.push({
+                id: nodeId.toString(),
+                label: deputado,
+                type: 'deputado',
+                party: record.sigla_partido,
+                totalValue: totals.total,
+                totalTransactions: totals.transactions,
+                totalConnections: totals.connections,
+                size: Math.log(totals.total) * 2
+            });
+            nodeId++;
+        }
+
+        if (!nodeMap.has(fornecedor)) {
+            const totals = nodeTotals.get(fornecedor);
+            nodeMap.set(fornecedor, nodeId);
+            nodes.push({
+                id: nodeId.toString(),
+                label: fornecedor,
+                type: 'fornecedor',
+                totalValue: totals.total,
+                totalTransactions: totals.transactions,
+                totalConnections: totals.connections,
+                size: Math.log(totals.total) * 1.5
+            });
+            nodeId++;
+        }
+
+        links.push({
+            source: nodeMap.get(deputado).toString(),
+            target: nodeMap.get(fornecedor).toString(),
+            value: Number(record.valor_total),
+            count: Number(record.num_transacoes),
+            width: Math.max(1, Math.log(Number(record.valor_total)) * 0.5)
+        });
+    });
+
+    processedData = { nodes, links };
+
+    // Update stats
+    const deputados = new Set(aggregatedData.map(r => `${r.nome_parlamentar} (${r.sigla_partido})`));
+    const fornecedores = new Set(aggregatedData.map(r => r.fornecedor));
+    const totalValue = aggregatedData.reduce((sum, r) => sum + Number(r.valor_total), 0);
+    const totalTransactions = aggregatedData.reduce((sum, r) => sum + Number(r.num_transacoes), 0);
+
+    document.getElementById('totalDeputados').textContent = deputados.size;
+    document.getElementById('totalFornecedores').textContent = fornecedores.size;
+    document.getElementById('totalValue').textContent = `${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    document.getElementById('totalTransactions').textContent = totalTransactions.toLocaleString();
+
+    if (statisticsCharts) {
+        statisticsCharts.createCategoryPieChart(aggregatedData);
+    }
+
+    window.currentAggregatedData = aggregatedData;
+}
+
+async function loadRouteSubgraphFallback(entityType, slug) {
+    if (!window.duckdbAPI?.query || !slug) return false;
+
+    try {
+        if (entityType === 'fornecedor') {
+            const label = await resolveFornecedorLabelFromDatabaseBySlug(slug);
+            if (!label) return false;
+            const escaped = label.replace(/'/g, "''");
+
+            const result = await window.duckdbAPI.query(`
+                SELECT
+                    nome_parlamentar,
+                    sigla_partido,
+                    fornecedor,
+                    categoria_despesa,
+                    SUM(valor_liquido) as valor_total,
+                    COUNT(*) as num_transacoes
+                FROM despesas
+                WHERE nome_parlamentar IS NOT NULL
+                  AND fornecedor = '${escaped}'
+                GROUP BY nome_parlamentar, sigla_partido, fornecedor, categoria_despesa
+                ORDER BY valor_total DESC
+            `);
+
+            const data = result.toArray();
+            if (!data.length) return false;
+
+            setProcessedDataFromAggregatedData(data);
+            return true;
+        }
+    } catch (error) {
+        console.warn('Error loading route subgraph fallback:', error);
+    }
+
+    return false;
 }
 
 // Initialize DuckDB and load data
@@ -478,117 +623,7 @@ async function processData() {
         }
     }
     
-    // Create nodes and links with totals
-    const nodeMap = new Map();
-    const nodeTotals = new Map();
-    const nodes = [];
-    const links = [];
-    
-    let nodeId = 0;
-    
-    // First pass: collect totals for each node
-    aggregatedData.forEach(record => {
-        const deputado = `${record.nome_parlamentar} (${record.sigla_partido})`;
-        const {fornecedor} = record;
-        
-        // Track deputado totals
-        if (!nodeTotals.has(deputado)) {
-            nodeTotals.set(deputado, { 
-                total: 0, 
-                transactions: 0, 
-                connections: 0,
-                type: 'deputado',
-                party: record.sigla_partido 
-            });
-        }
-        const deputadoTotals = nodeTotals.get(deputado);
-        deputadoTotals.total += Number(record.valor_total);
-        deputadoTotals.transactions += Number(record.num_transacoes);
-        deputadoTotals.connections += 1;
-        
-        // Track fornecedor totals
-        if (!nodeTotals.has(fornecedor)) {
-            nodeTotals.set(fornecedor, { 
-                total: 0, 
-                transactions: 0, 
-                connections: 0,
-                type: 'fornecedor' 
-            });
-        }
-        const fornecedorTotals = nodeTotals.get(fornecedor);
-        fornecedorTotals.total += Number(record.valor_total);
-        fornecedorTotals.transactions += Number(record.num_transacoes);
-        fornecedorTotals.connections += 1;
-    });
-    
-    // Second pass: create nodes and links
-    aggregatedData.forEach(record => {
-        const deputado = `${record.nome_parlamentar} (${record.sigla_partido})`;
-        const {fornecedor} = record;
-        
-        // Add deputado node
-        if (!nodeMap.has(deputado)) {
-            const totals = nodeTotals.get(deputado);
-            nodeMap.set(deputado, nodeId);
-            nodes.push({
-                id: nodeId.toString(),
-                label: deputado,
-                type: 'deputado',
-                party: record.sigla_partido,
-                totalValue: totals.total,
-                totalTransactions: totals.transactions,
-                totalConnections: totals.connections,
-                size: Math.log(totals.total) * 2
-            });
-            nodeId++;
-        }
-        
-        // Add fornecedor node
-        if (!nodeMap.has(fornecedor)) {
-            const totals = nodeTotals.get(fornecedor);
-            nodeMap.set(fornecedor, nodeId);
-            nodes.push({
-                id: nodeId.toString(),
-                label: fornecedor,
-                type: 'fornecedor',
-                totalValue: totals.total,
-                totalTransactions: totals.transactions,
-                totalConnections: totals.connections,
-                size: Math.log(totals.total) * 1.5
-            });
-            nodeId++;
-        }
-        
-        // Add link
-        links.push({
-            source: nodeMap.get(deputado).toString(),
-            target: nodeMap.get(fornecedor).toString(),
-            value: Number(record.valor_total),
-            count: Number(record.num_transacoes),
-            width: Math.max(1, Math.log(Number(record.valor_total)) * 0.5)
-        });
-    });
-    
-    processedData = { nodes, links };
-    
-    // Update stats
-    const deputados = new Set(aggregatedData.map(r => `${r.nome_parlamentar} (${r.sigla_partido})`));
-    const fornecedores = new Set(aggregatedData.map(r => r.fornecedor));
-    const totalValue = aggregatedData.reduce((sum, r) => sum + Number(r.valor_total), 0);
-    const totalTransactions = aggregatedData.reduce((sum, r) => sum + Number(r.num_transacoes), 0);
-    
-    document.getElementById('totalDeputados').textContent = deputados.size;
-    document.getElementById('totalFornecedores').textContent = fornecedores.size;
-    document.getElementById('totalValue').textContent = `${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-    document.getElementById('totalTransactions').textContent = totalTransactions.toLocaleString();
-    
-    // Update category pie chart using StatisticsCharts
-    if (statisticsCharts) {
-        statisticsCharts.createCategoryPieChart(aggregatedData);
-    }
-    
-    // Store aggregatedData for network filtering stats
-    window.currentAggregatedData = aggregatedData;
+    setProcessedDataFromAggregatedData(aggregatedData);
     
     // Data processed
 }
@@ -1158,6 +1193,7 @@ async function handleUrlRouting(retryCount = 0) {
             routeFocusState.slug = '';
             routeFocusState.filtersPrepared = false;
             routeFocusState.forcedSearchApplied = false;
+            routeFocusState.subgraphFallbackApplied = false;
             forcedRouteSearchTerm = '';
         }
         
@@ -1178,6 +1214,17 @@ async function handleUrlRouting(retryCount = 0) {
                     console.warn('Error retrying URL routing with forced route search:', error);
                 });
             return;
+        }
+
+        // Last resort: load direct entity subgraph from DB and retry selection.
+        if (!targetNode && slug && entityType && !routeFocusState.subgraphFallbackApplied) {
+            routeFocusState.subgraphFallbackApplied = true;
+            const loaded = await loadRouteSubgraphFallback(entityType, slug);
+            if (loaded) {
+                initializeVisualization();
+                setTimeout(() => handleUrlRouting(retryCount + 1), 150);
+                return;
+            }
         }
 
         // If we found a matching node, select it
@@ -1593,6 +1640,7 @@ function hideNodeInfo() {
     routeFocusState.slug = '';
     routeFocusState.filtersPrepared = false;
     routeFocusState.forcedSearchApplied = false;
+    routeFocusState.subgraphFallbackApplied = false;
     forcedRouteSearchTerm = '';
     
     // Reset all nodes to normal appearance when hiding panel
