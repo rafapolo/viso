@@ -417,19 +417,57 @@ async function loadData() {
             statisticsCharts = null;
         }
         
+        // Pre-initialize route focus before first visualization so the focused view
+        // appears on the very first render instead of after a 1.5s delay.
+        const preUrlParams = new URLSearchParams(window.location.search);
+        const preNodeParam = preUrlParams.get('node');
+        let hasPreRoute = false;
+        if (preNodeParam) {
+            const normalizedPrePath = preNodeParam.startsWith('/') ? preNodeParam : `/${preNodeParam}`;
+            let preSlug = '';
+            if (normalizedPrePath.startsWith('/empresa-')) {
+                preSlug = normalizedPrePath.replace('/empresa-', '');
+                routeFocusState.active = true;
+                routeFocusState.entityType = 'fornecedor';
+                routeFocusState.slug = preSlug;
+                routeFocusState.filtersPrepared = true;
+                hasPreRoute = true;
+            } else if (normalizedPrePath.startsWith('/deputado-')) {
+                preSlug = normalizedPrePath.replace('/deputado-', '');
+                routeFocusState.active = true;
+                routeFocusState.entityType = 'deputado';
+                routeFocusState.slug = preSlug;
+                routeFocusState.filtersPrepared = true;
+                hasPreRoute = true;
+            }
+            if (preSlug) {
+                // Resolve the actual entity name so the forced-search query matches exactly
+                if (routeFocusState.entityType === 'fornecedor') {
+                    try {
+                        const resolvedLabel = await resolveFornecedorLabelFromDatabaseBySlug(preSlug);
+                        forcedRouteSearchTerm = resolvedLabel || preSlug.replace(/-/g, ' ').trim();
+                    } catch {
+                        forcedRouteSearchTerm = preSlug.replace(/-/g, ' ').trim();
+                    }
+                } else {
+                    forcedRouteSearchTerm = preSlug.replace(/-/g, ' ').trim();
+                }
+            }
+        }
+
         progressEl.textContent = 'Processando dados...';
         await updateVisualization();
-        
+
         setupEventListeners();
         startConnectionMonitoring();
-        
+
         // Setup event listener for time series chart creation
         document.addEventListener('createTimeSeriesChart', (event) => {
             if (statisticsCharts && event.detail && event.detail.detailsData) {
                 statisticsCharts.createTimeSeriesChart(event.detail.detailsData);
             }
         });
-        
+
         // Handle URL search parameter after data is loaded
         const urlParams = new URLSearchParams(window.location.search);
         const searchTerm = urlParams.get('busca');
@@ -449,11 +487,13 @@ async function loadData() {
                 checkForSingleSearchResult(decodeURIComponent(searchTerm));
             }, 500);
         }
-        
-        // Handle URL routing for direct node linking (supports both paths and fragments)
+
+        // Handle URL routing for direct node linking (supports both paths and fragments).
+        // When route focus was pre-initialized, use a short delay since the focused view
+        // is already rendered; we only need to open the detail panel.
         setTimeout(() => {
             handleUrlRouting();
-        }, 1500);
+        }, hasPreRoute ? 100 : 1500);
         
     } catch (error) {
         console.error('❌ Erro:', error);
@@ -1671,7 +1711,9 @@ function hideNodeInfo() {
     }, 300);
 
     if (hadRouteFocus) {
-        initializeVisualization();
+        // Reload the full dataset so the graph shows all nodes, not just the
+        // focused entity's subset that was loaded for the deep-link view.
+        updateVisualization();
     }
 }
 
