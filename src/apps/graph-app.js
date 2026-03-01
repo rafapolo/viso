@@ -40,10 +40,9 @@ const routeFocusState = {
     slug: '',
     filtersPrepared: false,
     forcedSearchApplied: false,
-    subgraphFallbackApplied: false
+    subgraphFallbackApplied: false,
+    searchTerm: ''
 };
-
-let forcedRouteSearchTerm = '';
 
 function withBasePath(pathname) {
     if (!pathname.startsWith('/')) {
@@ -68,6 +67,49 @@ function slugifyLabel(text) {
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '')
         .replace(/--+/g, '-');
+}
+
+// Returns { entityType, slug } from a normalized path like '/empresa-foo' or '/deputado-bar'.
+// Returns { entityType: '', slug: '' } when the path doesn't match any entity prefix.
+function parseEntityFromPath(path) {
+    if (path.startsWith('/deputado-')) {
+        return { entityType: 'deputado', slug: path.replace('/deputado-', '') };
+    }
+    if (path.startsWith('/empresa-')) {
+        return { entityType: 'fornecedor', slug: path.replace('/empresa-', '') };
+    }
+    return { entityType: '', slug: '' };
+}
+
+// Returns the string id of a D3 link endpoint, which may be an object (after simulation) or a string.
+function linkEndpointId(endpoint) {
+    return typeof endpoint === 'object' ? endpoint.id : endpoint.toString();
+}
+
+function resetRouteFocusState() {
+    routeFocusState.active = false;
+    routeFocusState.entityType = '';
+    routeFocusState.slug = '';
+    routeFocusState.filtersPrepared = false;
+    routeFocusState.forcedSearchApplied = false;
+    routeFocusState.subgraphFallbackApplied = false;
+    routeFocusState.searchTerm = '';
+}
+
+function resetNodeAppearance() {
+    const searchFilter = document.getElementById('searchBox').value.trim().toLowerCase();
+    d3.select('#graph-svg').selectAll('circle')
+        .attr("stroke-width", d => (searchFilter && d.label.toLowerCase().includes(searchFilter)) ? 3 : 1.5)
+        .attr("stroke", "#fff")
+        .attr("r", d => d.type === 'deputado' ? 8 : 6);
+}
+
+function highlightNode(nodeId) {
+    d3.select('#graph-svg').selectAll('circle')
+        .filter(d => d.id === nodeId)
+        .attr("stroke-width", 4)
+        .attr("stroke", "#FFD700")
+        .attr("r", d => (d.type === 'deputado' ? 8 : 6) + 2);
 }
 
 function getNodeSlug(nodeData) {
@@ -171,8 +213,11 @@ function findFornecedorNodeBySlug(slug) {
     return null;
 }
 
+const _fornecedorSlugCache = new Map();
+
 async function resolveFornecedorLabelFromDatabaseBySlug(slug) {
     if (!slug || !window.duckdbAPI?.query) return null;
+    if (_fornecedorSlugCache.has(slug)) return _fornecedorSlugCache.get(slug);
 
     try {
         const result = await window.duckdbAPI.query(`
@@ -182,22 +227,26 @@ async function resolveFornecedorLabelFromDatabaseBySlug(slug) {
         `);
         const fornecedores = result.toArray().map(row => row.fornecedor).filter(Boolean);
 
-        const exact = fornecedores.find(name => slugifyLabel(name).substring(0, 50) === slug);
-        if (exact) return exact;
+        // Pre-compute slugs once to avoid O(N log N) repeated calls inside sort/filter
+        const withSlugs = fornecedores.map(name => ({ name, s: slugifyLabel(name) }));
 
-        const boundary = fornecedores
-            .filter(name => slugifyLabel(name).startsWith(`${slug}-`))
-            .sort((a, b) => slugifyLabel(a).length - slugifyLabel(b).length);
-        if (boundary.length) return boundary[0];
+        const exact = withSlugs.find(({ s }) => s.substring(0, 50) === slug);
+        if (exact) { _fornecedorSlugCache.set(slug, exact.name); return exact.name; }
 
-        const prefix = fornecedores
-            .filter(name => slugifyLabel(name).startsWith(slug))
-            .sort((a, b) => slugifyLabel(a).length - slugifyLabel(b).length);
-        if (prefix.length) return prefix[0];
+        const boundary = withSlugs
+            .filter(({ s }) => s.startsWith(`${slug}-`))
+            .sort((a, b) => a.s.length - b.s.length);
+        if (boundary.length) { _fornecedorSlugCache.set(slug, boundary[0].name); return boundary[0].name; }
+
+        const prefix = withSlugs
+            .filter(({ s }) => s.startsWith(slug))
+            .sort((a, b) => a.s.length - b.s.length);
+        if (prefix.length) { _fornecedorSlugCache.set(slug, prefix[0].name); return prefix[0].name; }
     } catch (error) {
         console.warn('Error resolving fornecedor label by slug:', error);
     }
 
+    _fornecedorSlugCache.set(slug, null);
     return null;
 }
 
@@ -247,18 +296,28 @@ function resetFormSelectionsForRoute() {
 }
 
 function setProcessedDataFromAggregatedData(aggregatedData) {
-    // Create nodes and links with totals
     const nodeMap = new Map();
     const nodeTotals = new Map();
     const nodes = [];
     const links = [];
-
     let nodeId = 0;
 
-    // First pass: collect totals for each node
+    // Collect per-node totals and summary stats in a single pass
+    const deputadoSet = new Set();
+    const fornecedorSet = new Set();
+    let totalValue = 0;
+    let totalTransactions = 0;
+
     aggregatedData.forEach(record => {
         const deputado = `${record.nome_parlamentar} (${record.sigla_partido})`;
         const {fornecedor} = record;
+        const valor = Number(record.valor_total);
+        const transacoes = Number(record.num_transacoes);
+
+        deputadoSet.add(deputado);
+        fornecedorSet.add(fornecedor);
+        totalValue += valor;
+        totalTransactions += transacoes;
 
         if (!nodeTotals.has(deputado)) {
             nodeTotals.set(deputado, {
@@ -269,10 +328,10 @@ function setProcessedDataFromAggregatedData(aggregatedData) {
                 party: record.sigla_partido
             });
         }
-        const deputadoTotals = nodeTotals.get(deputado);
-        deputadoTotals.total += Number(record.valor_total);
-        deputadoTotals.transactions += Number(record.num_transacoes);
-        deputadoTotals.connections += 1;
+        const dt = nodeTotals.get(deputado);
+        dt.total += valor;
+        dt.transactions += transacoes;
+        dt.connections += 1;
 
         if (!nodeTotals.has(fornecedor)) {
             nodeTotals.set(fornecedor, {
@@ -282,10 +341,10 @@ function setProcessedDataFromAggregatedData(aggregatedData) {
                 type: 'fornecedor'
             });
         }
-        const fornecedorTotals = nodeTotals.get(fornecedor);
-        fornecedorTotals.total += Number(record.valor_total);
-        fornecedorTotals.transactions += Number(record.num_transacoes);
-        fornecedorTotals.connections += 1;
+        const ft = nodeTotals.get(fornecedor);
+        ft.total += valor;
+        ft.transactions += transacoes;
+        ft.connections += 1;
     });
 
     // Second pass: create nodes and links
@@ -335,14 +394,8 @@ function setProcessedDataFromAggregatedData(aggregatedData) {
 
     processedData = { nodes, links };
 
-    // Update stats
-    const deputados = new Set(aggregatedData.map(r => `${r.nome_parlamentar} (${r.sigla_partido})`));
-    const fornecedores = new Set(aggregatedData.map(r => r.fornecedor));
-    const totalValue = aggregatedData.reduce((sum, r) => sum + Number(r.valor_total), 0);
-    const totalTransactions = aggregatedData.reduce((sum, r) => sum + Number(r.num_transacoes), 0);
-
-    document.getElementById('totalDeputados').textContent = deputados.size;
-    document.getElementById('totalFornecedores').textContent = fornecedores.size;
+    document.getElementById('totalDeputados').textContent = deputadoSet.size;
+    document.getElementById('totalFornecedores').textContent = fornecedorSet.size;
     document.getElementById('totalValue').textContent = `${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     document.getElementById('totalTransactions').textContent = totalTransactions.toLocaleString();
 
@@ -353,36 +406,19 @@ function setProcessedDataFromAggregatedData(aggregatedData) {
     window.currentAggregatedData = aggregatedData;
 }
 
+// Only supports fornecedor entities; deputado fallback is not needed (name-only slug match handles it).
 async function loadRouteSubgraphFallback(entityType, slug) {
-    if (!window.duckdbAPI?.query || !slug) return false;
+    if (!window.duckdbAPI?.queryAggregatedData || !slug || entityType !== 'fornecedor') return false;
 
     try {
-        if (entityType === 'fornecedor') {
-            const label = await resolveFornecedorLabelFromDatabaseBySlug(slug);
-            if (!label) return false;
-            const escaped = label.replace(/'/g, "''");
+        const label = await resolveFornecedorLabelFromDatabaseBySlug(slug);
+        if (!label) return false;
 
-            const result = await window.duckdbAPI.query(`
-                SELECT
-                    nome_parlamentar,
-                    sigla_partido,
-                    fornecedor,
-                    categoria_despesa,
-                    SUM(valor_liquido) as valor_total,
-                    COUNT(*) as num_transacoes
-                FROM despesas
-                WHERE nome_parlamentar IS NOT NULL
-                  AND fornecedor = '${escaped}'
-                GROUP BY nome_parlamentar, sigla_partido, fornecedor, categoria_despesa
-                ORDER BY valor_total DESC
-            `);
+        const data = await window.duckdbAPI.queryAggregatedData(0, '', '', label, false);
+        if (!data.length) return false;
 
-            const data = result.toArray();
-            if (!data.length) return false;
-
-            setProcessedDataFromAggregatedData(data);
-            return true;
-        }
+        setProcessedDataFromAggregatedData(data);
+        return true;
     } catch (error) {
         console.warn('Error loading route subgraph fallback:', error);
     }
@@ -419,39 +455,30 @@ async function loadData() {
         
         // Pre-initialize route focus before first visualization so the focused view
         // appears on the very first render instead of after a 1.5s delay.
+        // Detect route from either ?node= param (GitHub Pages 404.html redirect) or
+        // the raw pathname (direct path-based URL in local preview / production).
         const preUrlParams = new URLSearchParams(window.location.search);
         const preNodeParam = preUrlParams.get('node');
+        const preNodePath = preNodeParam
+            ? (preNodeParam.startsWith('/') ? preNodeParam : `/${preNodeParam}`)
+            : stripBasePath(window.location.pathname);
+        const { entityType: preEntityType, slug: preSlug } = parseEntityFromPath(preNodePath);
         let hasPreRoute = false;
-        if (preNodeParam) {
-            const normalizedPrePath = preNodeParam.startsWith('/') ? preNodeParam : `/${preNodeParam}`;
-            let preSlug = '';
-            if (normalizedPrePath.startsWith('/empresa-')) {
-                preSlug = normalizedPrePath.replace('/empresa-', '');
-                routeFocusState.active = true;
-                routeFocusState.entityType = 'fornecedor';
-                routeFocusState.slug = preSlug;
-                routeFocusState.filtersPrepared = true;
-                hasPreRoute = true;
-            } else if (normalizedPrePath.startsWith('/deputado-')) {
-                preSlug = normalizedPrePath.replace('/deputado-', '');
-                routeFocusState.active = true;
-                routeFocusState.entityType = 'deputado';
-                routeFocusState.slug = preSlug;
-                routeFocusState.filtersPrepared = true;
-                hasPreRoute = true;
-            }
-            if (preSlug) {
-                // Resolve the actual entity name so the forced-search query matches exactly
-                if (routeFocusState.entityType === 'fornecedor') {
-                    try {
-                        const resolvedLabel = await resolveFornecedorLabelFromDatabaseBySlug(preSlug);
-                        forcedRouteSearchTerm = resolvedLabel || preSlug.replace(/-/g, ' ').trim();
-                    } catch {
-                        forcedRouteSearchTerm = preSlug.replace(/-/g, ' ').trim();
-                    }
-                } else {
-                    forcedRouteSearchTerm = preSlug.replace(/-/g, ' ').trim();
-                }
+        if (preSlug) {
+            resetFormSelectionsForRoute();
+            routeFocusState.active = true;
+            routeFocusState.entityType = preEntityType;
+            routeFocusState.slug = preSlug;
+            routeFocusState.filtersPrepared = true;
+            hasPreRoute = true;
+            // Resolve the actual entity name so the forced-search query matches exactly
+            if (preEntityType === 'fornecedor') {
+                const resolvedLabel = await resolveFornecedorLabelFromDatabaseBySlug(preSlug);
+                routeFocusState.searchTerm = resolvedLabel || preSlug.replace(/-/g, ' ').trim();
+            } else {
+                // Strip party suffix (last token) so the search matches the deputado name only
+                const nameSlug = getDeputadoNameOnlySlugFromRoute(preSlug);
+                routeFocusState.searchTerm = nameSlug.replace(/-/g, ' ').trim();
             }
         }
 
@@ -491,9 +518,7 @@ async function loadData() {
         // Handle URL routing for direct node linking (supports both paths and fragments).
         // When route focus was pre-initialized, use a short delay since the focused view
         // is already rendered; we only need to open the detail panel.
-        setTimeout(() => {
-            handleUrlRouting();
-        }, hasPreRoute ? 100 : 1500);
+        setTimeout(() => void handleUrlRouting(), hasPreRoute ? 100 : 1500);
         
     } catch (error) {
         console.error('❌ Erro:', error);
@@ -547,6 +572,7 @@ async function populateFilters() {
         const option = document.createElement('option');
         option.value = party;
         option.textContent = party;
+        if (party === 'PSDB') option.selected = true;
         partySelect.appendChild(option);
     });
     
@@ -564,7 +590,7 @@ async function processData() {
     const partyFilter = document.getElementById('partyFilter').value;
     const categoryFilter = document.getElementById('categoryFilter').value;
     const uiSearchFilter = document.getElementById('searchBox').value.trim();
-    const searchFilter = forcedRouteSearchTerm || uiSearchFilter;
+    const searchFilter = routeFocusState.searchTerm || uiSearchFilter;
     
     // Processing data with filters
     
@@ -623,8 +649,8 @@ async function processData() {
     
     // Query DuckDB with all filters including the current minimum value
     const sliderMinValue = parseFloat(document.getElementById('minValue').value) || 0;
-    const actualMinValue = forcedRouteSearchTerm ? 0 : sliderMinValue;
-    const applyDefaultMinFloor = !forcedRouteSearchTerm;
+    const actualMinValue = routeFocusState.searchTerm ? 0 : sliderMinValue;
+    const applyDefaultMinFloor = !routeFocusState.searchTerm;
     let aggregatedData = await window.duckdbAPI.queryAggregatedData(
         actualMinValue,
         partyFilter,
@@ -673,10 +699,10 @@ function calculateNodeDensity(data) {
     
     // Simple connection count method
     data.links.forEach(link => {
-        const sourceId = typeof link.source === 'object' ? link.source.id : link.source.toString();
-        const targetId = typeof link.target === 'object' ? link.target.id : link.target.toString();
-        densityScores.set(sourceId, (densityScores.get(sourceId) || 0) + 1);
-        densityScores.set(targetId, (densityScores.get(targetId) || 0) + 1);
+        const src = linkEndpointId(link.source);
+        const tgt = linkEndpointId(link.target);
+        densityScores.set(src, (densityScores.get(src) || 0) + 1);
+        densityScores.set(tgt, (densityScores.get(tgt) || 0) + 1);
     });
     
     return densityScores;
@@ -695,13 +721,6 @@ function filterNodesByDensity(densityScores) {
     return new Set(sortedNodes.map(([nodeId]) => nodeId));
 }
 
-function updateDensityStats() {
-    // Simplified: just log density info for debugging
-    if (window.densityInfo) {
-        // const percentage = ((window.densityInfo.filteredNodes / window.densityInfo.totalNodes) * 100).toFixed(1);
-        // Density info updated
-    }
-}
 
 function applyGraphFilters() {
     if (!processedData.nodes || !processedData.links) return processedData;
@@ -721,11 +740,9 @@ function applyGraphFilters() {
         };
         
         filteredNodes = processedData.nodes.filter(node => filteredNodeIds.has(node.id));
-        filteredLinks = processedData.links.filter(link => {
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source.toString();
-            const targetId = typeof link.target === 'object' ? link.target.id : link.target.toString();
-            return filteredNodeIds.has(sourceId) && filteredNodeIds.has(targetId);
-        });
+        filteredLinks = processedData.links.filter(link =>
+            filteredNodeIds.has(linkEndpointId(link.source)) && filteredNodeIds.has(linkEndpointId(link.target))
+        );
         
         // Density filter applied
     }
@@ -740,10 +757,8 @@ function applyGraphFilters() {
         // Get nodes involved in top links
         const topNodeIds = new Set();
         topLinks.forEach(link => {
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source.toString();
-            const targetId = typeof link.target === 'object' ? link.target.id : link.target.toString();
-            topNodeIds.add(sourceId);
-            topNodeIds.add(targetId);
+            topNodeIds.add(linkEndpointId(link.source));
+            topNodeIds.add(linkEndpointId(link.target));
         });
         
         filteredNodes = filteredNodes.filter(node => topNodeIds.has(node.id));
@@ -754,15 +769,15 @@ function applyGraphFilters() {
     const focusedNode = getRouteFocusedNode();
     if (focusedNode) {
         const focusedLinks = filteredLinks.filter(link => {
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source.toString();
-            const targetId = typeof link.target === 'object' ? link.target.id : link.target.toString();
-            return sourceId === focusedNode.id || targetId === focusedNode.id;
+            const src = linkEndpointId(link.source);
+            const tgt = linkEndpointId(link.target);
+            return src === focusedNode.id || tgt === focusedNode.id;
         });
 
         const relatedNodeIds = new Set([focusedNode.id]);
         focusedLinks.forEach(link => {
-            relatedNodeIds.add(typeof link.source === 'object' ? link.source.id : link.source.toString());
-            relatedNodeIds.add(typeof link.target === 'object' ? link.target.id : link.target.toString());
+            relatedNodeIds.add(linkEndpointId(link.source));
+            relatedNodeIds.add(linkEndpointId(link.target));
         });
 
         filteredNodes = filteredNodes.filter(node => relatedNodeIds.has(node.id));
@@ -771,12 +786,6 @@ function applyGraphFilters() {
     
     return { nodes: filteredNodes, links: filteredLinks };
 }
-
-// Removed duplicate updateStatisticsForFilteredData function - using StatisticsCharts class instead
-
-// Removed duplicate createCategoryPieChart - using StatisticsCharts class instead
-
-// Removed duplicate chart implementation - using StatisticsCharts class instead
 
 function initializeVisualization() {
     // Clear loading message
@@ -897,20 +906,8 @@ function initializeVisualization() {
             }
             return 'rgb(196, 82, 17)';
         })
-        .attr("stroke", d => {
-            // Special stroke for search matches
-            if (searchFilter && d.label.toLowerCase().includes(searchFilter)) {
-                return "#fff";
-            }
-            return "#fff";
-        })
-        .attr("stroke-width", d => {
-            // Thicker stroke for search matches
-            if (searchFilter && d.label.toLowerCase().includes(searchFilter)) {
-                return 3;
-            }
-            return 1.5;
-        })
+        .attr("stroke", "#fff")
+        .attr("stroke-width", d => (searchFilter && d.label.toLowerCase().includes(searchFilter)) ? 3 : 1.5)
         .style("cursor", "pointer")
         .on("click", (event, d) => {
             event.stopPropagation();
@@ -1166,13 +1163,8 @@ async function handleUrlRouting(retryCount = 0) {
             ? stripBasePath(routedPath)
             : routedPath;
         const routePath = normalizedNodePath || (normalizedRoutedPath && normalizedRoutedPath.startsWith('/') ? normalizedRoutedPath : pathname);
-        if (routePath.startsWith('/deputado-')) {
-            entityType = 'deputado';
-            slug = routePath.replace('/deputado-', '');
-        } else if (routePath.startsWith('/empresa-')) {
-            entityType = 'fornecedor';
-            slug = routePath.replace('/empresa-', '');
-        } else {
+        ({ entityType, slug } = parseEntityFromPath(routePath));
+        if (!entityType) {
             // Fall back to fragment-based routing for backward compatibility
             const fragment = window.location.hash.slice(1); // Remove #
             if (fragment.startsWith('parlamentar-')) {
@@ -1228,22 +1220,18 @@ async function handleUrlRouting(retryCount = 0) {
         }
         
         if (!slug || !entityType) {
-            routeFocusState.active = false;
-            routeFocusState.entityType = '';
-            routeFocusState.slug = '';
-            routeFocusState.filtersPrepared = false;
-            routeFocusState.forcedSearchApplied = false;
-            routeFocusState.subgraphFallbackApplied = false;
-            forcedRouteSearchTerm = '';
+            resetRouteFocusState();
         }
         
         // If target is still missing from base aggregated sample, do one internal route-only search pass.
         if (!targetNode && slug && entityType && !routeFocusState.forcedSearchApplied) {
             if (entityType === 'fornecedor') {
                 const resolvedLabel = await resolveFornecedorLabelFromDatabaseBySlug(slug);
-                forcedRouteSearchTerm = resolvedLabel || slug.replace(/-/g, ' ').trim();
+                routeFocusState.searchTerm = resolvedLabel || slug.replace(/-/g, ' ').trim();
             } else {
-                forcedRouteSearchTerm = slug.replace(/-/g, ' ').trim();
+                // Strip party suffix so the search matches the deputado name only
+                const nameSlug = getDeputadoNameOnlySlugFromRoute(slug);
+                routeFocusState.searchTerm = nameSlug.replace(/-/g, ' ').trim();
             }
             routeFocusState.forcedSearchApplied = true;
             updateVisualization()
@@ -1269,7 +1257,7 @@ async function handleUrlRouting(retryCount = 0) {
 
         // If we found a matching node, select it
         if (targetNode) {
-            forcedRouteSearchTerm = '';
+            routeFocusState.searchTerm = '';
             initializeVisualization();
             setTimeout(() => {
                 showNodeInfo(targetNode);
@@ -1291,13 +1279,8 @@ function showUrlRoutingFallback() {
     let entityName = '';
     let entityType = '';
     
-    if (routePath.startsWith('/deputado-')) {
-        entityType = 'deputado';
-        entityName = routePath.replace('/deputado-', '').replace(/-/g, ' ');
-    } else if (routePath.startsWith('/empresa-')) {
-        entityType = 'empresa';
-        entityName = routePath.replace('/empresa-', '').replace(/-/g, ' ');
-    }
+    ({ entityType, slug: entityName } = parseEntityFromPath(routePath));
+    entityName = entityName.replace(/-/g, ' ');
     
     if (entityName && entityType) {
         // Update the page title to show what the user was looking for
@@ -1333,29 +1316,8 @@ async function showNodeInfo(nodeData) {
     // Generate and update URL fragment for sharing
     updateUrlForNode(nodeData);
     
-    // Reset all nodes to normal appearance first
-    const svg = d3.select('#graph-svg');
-    const searchFilter = document.getElementById('searchBox').value.trim().toLowerCase();
-    svg.selectAll('circle')
-        .attr("stroke-width", d => {
-            // Keep search highlights if they exist
-            return (searchFilter && d.label.toLowerCase().includes(searchFilter)) ? 3 : 1.5;
-        })
-        .attr("stroke", d => {
-            // Reset to normal stroke colors
-            if (searchFilter && d.label.toLowerCase().includes(searchFilter)) {
-                return "#fff"; // Keep white stroke for search matches
-            }
-            return "#fff"; // Normal white stroke
-        })
-        .attr("r", d => d.type === 'deputado' ? 8 : 6); // Reset to normal radius
-    
-    // Highlight the selected node
-    svg.selectAll('circle')
-        .filter(d => d.id === nodeData.id)
-        .attr("stroke-width", 4)
-        .attr("stroke", "#FFD700") // Gold highlight for selection
-        .attr("r", d => (d.type === 'deputado' ? 8 : 6) + 2); // Slightly larger
+    resetNodeAppearance();
+    highlightNode(nodeData.id);
     
     // Slide in the right panel
     rightPanel.classList.remove('translate-x-full');
@@ -1603,25 +1565,9 @@ function highlightNodeInVisualization(entityName, entityType) { // Used in HTML 
     
     if (!targetNode) return;
     
-    // Get the current D3 selection for nodes
     const svg = d3.select("#graph-svg");
-    const nodes = svg.selectAll("circle");
-    
-    // Reset all nodes to normal appearance
-    nodes
-        .attr("stroke-width", d => {
-            const searchFilter = document.getElementById('searchBox').value.trim().toLowerCase();
-            return (searchFilter && d.label.toLowerCase().includes(searchFilter)) ? 3 : 1.5;
-        })
-        .attr("stroke", "#fff") // Reset stroke color to default white
-        .attr("r", d => d.type === 'deputado' ? 8 : 6);
-    
-    // Highlight the target node
-    nodes
-        .filter(d => d.id === targetNode.id)
-        .attr("stroke-width", 4)
-        .attr("stroke", "#FFD700") // Gold highlight
-        .attr("r", d => (d.type === 'deputado' ? 8 : 6) + 2);
+    resetNodeAppearance();
+    highlightNode(targetNode.id);
     
     // Smooth pan to the node
     const transform = d3.zoomTransform(svg.node());
@@ -1675,30 +1621,9 @@ function hideNodeInfo() {
     }
 
     const hadRouteFocus = routeFocusState.active;
-    routeFocusState.active = false;
-    routeFocusState.entityType = '';
-    routeFocusState.slug = '';
-    routeFocusState.filtersPrepared = false;
-    routeFocusState.forcedSearchApplied = false;
-    routeFocusState.subgraphFallbackApplied = false;
-    forcedRouteSearchTerm = '';
+    resetRouteFocusState();
     
-    // Reset all nodes to normal appearance when hiding panel
-    const svg = d3.select('#graph-svg');
-    const searchFilter = document.getElementById('searchBox').value.trim().toLowerCase();
-    svg.selectAll('circle')
-        .attr("stroke-width", d => {
-            // Keep search highlights if they exist
-            return (searchFilter && d.label.toLowerCase().includes(searchFilter)) ? 3 : 1.5;
-        })
-        .attr("stroke", d => {
-            // Reset to normal stroke colors
-            if (searchFilter && d.label.toLowerCase().includes(searchFilter)) {
-                return "#fff"; // Keep white stroke for search matches
-            }
-            return "#fff"; // Normal white stroke
-        })
-        .attr("r", d => d.type === 'deputado' ? 8 : 6); // Reset to normal radius
+    resetNodeAppearance();
     
     // Slide out the right panel
     rightPanel.classList.add('translate-x-full');
@@ -1720,7 +1645,6 @@ function hideNodeInfo() {
 async function updateVisualization() {
     await processData();
     initializeVisualization();
-    updateDensityStats(); // Update density stats after visualization
 }
 
 function setupEventListeners() {
