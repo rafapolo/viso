@@ -991,9 +991,132 @@ LIMIT 50" data-id="concentracao-fornecedores">
                             </div>
                         </div>
                     </div>
+
+                    <!-- De Olho em Você — Ciência de Dados Cívica -->
+                    <div class="category-section" data-category="civica">
+                        <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors" data-category='civica'>
+                            <span class="text-xs font-medium text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">👁️ De Olho em Você</span>
+                            <svg class="category-chevron w-4 h-4 text-indigo-500 transition-transform" style="transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div class="category-content category-civica space-y-1" style="display: none;">
+                            <div class="sample-query" data-query="WITH totais AS (
+    SELECT nome_parlamentar, sigla_partido,
+           SUM(valor_liquido) AS total_gasto
+    FROM despesas
+    WHERE valor_liquido IS NOT NULL
+    GROUP BY nome_parlamentar, sigla_partido
+),
+stats AS (
+    SELECT AVG(total_gasto) AS media, STDDEV(total_gasto) AS desvio
+    FROM totais
+)
+SELECT t.nome_parlamentar, t.sigla_partido, t.total_gasto,
+       ROUND(s.media, 2) AS media_nacional,
+       ROUND((t.total_gasto - s.media) / NULLIF(s.desvio, 0), 2) AS z_score
+FROM totais t CROSS JOIN stats s
+ORDER BY z_score DESC
+LIMIT 30" data-id="escore-z-por-deputado">
+                                📐 Escore Z por deputado
+                            </div>
+                            <div class="sample-query" data-query="WITH totais AS (
+    SELECT nome_parlamentar, sigla_partido,
+           SUM(valor_liquido) AS total_gasto
+    FROM despesas
+    WHERE valor_liquido IS NOT NULL
+    GROUP BY nome_parlamentar, sigla_partido
+),
+stats AS (
+    SELECT AVG(total_gasto) AS media, STDDEV(total_gasto) AS desvio
+    FROM totais
+),
+z_scores AS (
+    SELECT t.nome_parlamentar, t.sigla_partido, t.total_gasto,
+           s.media, s.desvio,
+           (t.total_gasto - s.media) / NULLIF(s.desvio, 0) AS z_score
+    FROM totais t CROSS JOIN stats s
+)
+SELECT nome_parlamentar, sigla_partido, total_gasto,
+       ROUND(media, 2) AS media_nacional,
+       ROUND(desvio, 2) AS desvio_padrao,
+       ROUND(z_score, 2) AS z_score,
+       CASE WHEN z_score >= 2 THEN 'Acima (>=2σ)'
+            WHEN z_score <= -2 THEN 'Abaixo (<=-2σ)' END AS posicao
+FROM z_scores
+WHERE ABS(z_score) >= 2
+ORDER BY z_score DESC" data-id="deputados-fora-do-padrao">
+                                🔔 Deputados fora do padrão (≥2σ)
+                            </div>
+                            <div class="sample-query" data-query="WITH totais AS (
+    SELECT nome_parlamentar, sigla_partido,
+           SUM(valor_liquido) AS total_gasto,
+           COUNT(*) AS num_despesas
+    FROM despesas
+    WHERE valor_liquido IS NOT NULL
+    GROUP BY nome_parlamentar, sigla_partido
+)
+SELECT nome_parlamentar, sigla_partido, total_gasto, num_despesas,
+       ROUND(PERCENT_RANK() OVER (ORDER BY total_gasto) * 100, 1) AS percentil_nacional,
+       ROUND(PERCENT_RANK() OVER (PARTITION BY sigla_partido ORDER BY total_gasto) * 100, 1) AS percentil_no_partido
+FROM totais
+ORDER BY total_gasto DESC
+LIMIT 30" data-id="percentil-nacional-por-partido">
+                                📊 Ranking percentil nacional e por partido
+                            </div>
+                            <div class="sample-query" data-query="WITH totais AS (
+    SELECT nome_parlamentar, sigla_partido,
+           SUM(valor_liquido) AS total_gasto
+    FROM despesas
+    WHERE valor_liquido IS NOT NULL
+    GROUP BY nome_parlamentar, sigla_partido
+),
+stats_partido AS (
+    SELECT sigla_partido,
+           AVG(total_gasto) AS media_partido,
+           STDDEV(total_gasto) AS desvio_partido,
+           COUNT(*) AS num_deputados
+    FROM totais
+    GROUP BY sigla_partido
+)
+SELECT t.nome_parlamentar, t.sigla_partido, t.total_gasto,
+       ROUND(p.media_partido, 2) AS media_do_partido,
+       ROUND((t.total_gasto - p.media_partido) / NULLIF(p.desvio_partido, 0), 2) AS z_score_intrapartido,
+       p.num_deputados AS deputados_no_partido
+FROM totais t
+JOIN stats_partido p ON t.sigla_partido = p.sigla_partido
+ORDER BY ABS((t.total_gasto - p.media_partido) / NULLIF(p.desvio_partido, 0)) DESC
+LIMIT 30" data-id="z-score-intrapartido">
+                                🏛️ Z-score intrapartido
+                            </div>
+                            <div class="sample-query" data-query="WITH totais AS (
+    SELECT nome_parlamentar, sigla_partido,
+           COUNT(*) AS num_despesas,
+           COUNT(DISTINCT categoria_despesa) AS categorias_utilizadas,
+           COUNT(DISTINCT fornecedor) AS fornecedores_distintos,
+           SUM(valor_liquido) AS total_gasto
+    FROM despesas
+    WHERE valor_liquido IS NOT NULL
+    GROUP BY nome_parlamentar, sigla_partido
+),
+maximos AS (
+    SELECT MAX(num_despesas) AS max_despesas
+    FROM totais
+)
+SELECT t.nome_parlamentar, t.sigla_partido,
+       t.num_despesas, t.categorias_utilizadas,
+       t.fornecedores_distintos, t.total_gasto,
+       ROUND(t.num_despesas * 100.0 / m.max_despesas, 1) AS indice_atividade_pct
+FROM totais t CROSS JOIN maximos m
+ORDER BY t.num_despesas DESC
+LIMIT 30" data-id="indice-engajamento-legislativo">
+                                🎯 Índice de engajamento legislativo
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
+
         </div>
 
         <!-- Main Content -->

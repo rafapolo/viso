@@ -357,6 +357,31 @@ class DatabaseApp {
         category: 'risk',
         query: `-- Análise de Evolução Líquido vs Retido\n-- Analisa evolução de valores para detectar padrões de uso indevido (simulação)\n\nWITH monthly_ratios AS (\n    SELECT \n        nome_parlamentar as deputado,\n        date_part('year', data_emissao) * 100 + date_part('month', data_emissao) AS ano_mes,\n        SUM(valor_liquido) AS valor_total_mes,\n        COUNT(*) AS transacoes_mes,\n        AVG(valor_liquido) AS valor_medio_mes\n    FROM despesas \n    WHERE data_emissao IS NOT NULL \n    AND valor_liquido IS NOT NULL\n    AND nome_parlamentar IS NOT NULL\n    GROUP BY nome_parlamentar, ano_mes\n),\ndeputado_stats AS (\n    SELECT \n        deputado,\n        AVG(valor_medio_mes) AS media_deputado,\n        STDDEV(valor_medio_mes) AS desvio_deputado,\n        COUNT(*) AS meses_atividade\n    FROM monthly_ratios\n    GROUP BY deputado\n    HAVING COUNT(*) >= 6  -- Pelo menos 6 meses de atividade\n),\nz_scores AS (\n    SELECT \n        mr.deputado,\n        mr.ano_mes,\n        mr.valor_total_mes,\n        mr.valor_medio_mes,\n        ds.media_deputado,\n        ds.desvio_deputado,\n        CASE \n            WHEN ds.desvio_deputado > 0 THEN \n                (mr.valor_medio_mes - ds.media_deputado) / ds.desvio_deputado\n            ELSE 0 \n        END AS z_score\n    FROM monthly_ratios mr\n    JOIN deputado_stats ds ON mr.deputado = ds.deputado\n)\nSELECT \n    deputado,\n    ano_mes,\n    valor_total_mes,\n    valor_medio_mes,\n    ROUND(z_score, 2) AS z_score,\n    CASE WHEN ABS(z_score) >= 2 THEN 1 ELSE 0 END AS flag_outlier\nFROM z_scores\nWHERE ABS(z_score) >= 2\nORDER BY ABS(z_score) DESC\nLIMIT 50`
       },
+      'escore-z-por-deputado': {
+        title: 'Escore Z por deputado',
+        category: 'civica',
+        query: `WITH totais AS (\n    SELECT nome_parlamentar, sigla_partido,\n           SUM(valor_liquido) AS total_gasto\n    FROM despesas\n    WHERE valor_liquido IS NOT NULL\n    GROUP BY nome_parlamentar, sigla_partido\n),\nstats AS (\n    SELECT AVG(total_gasto) AS media, STDDEV(total_gasto) AS desvio\n    FROM totais\n)\nSELECT t.nome_parlamentar, t.sigla_partido, t.total_gasto,\n       ROUND(s.media, 2) AS media_nacional,\n       ROUND((t.total_gasto - s.media) / NULLIF(s.desvio, 0), 2) AS z_score\nFROM totais t CROSS JOIN stats s\nORDER BY z_score DESC\nLIMIT 30`
+      },
+      'deputados-fora-do-padrao': {
+        title: 'Deputados fora do padrão (≥2σ)',
+        category: 'civica',
+        query: `WITH totais AS (\n    SELECT nome_parlamentar, sigla_partido,\n           SUM(valor_liquido) AS total_gasto\n    FROM despesas\n    WHERE valor_liquido IS NOT NULL\n    GROUP BY nome_parlamentar, sigla_partido\n),\nstats AS (\n    SELECT AVG(total_gasto) AS media, STDDEV(total_gasto) AS desvio\n    FROM totais\n),\nz_scores AS (\n    SELECT t.nome_parlamentar, t.sigla_partido, t.total_gasto,\n           s.media, s.desvio,\n           (t.total_gasto - s.media) / NULLIF(s.desvio, 0) AS z_score\n    FROM totais t CROSS JOIN stats s\n)\nSELECT nome_parlamentar, sigla_partido, total_gasto,\n       ROUND(media, 2) AS media_nacional,\n       ROUND(desvio, 2) AS desvio_padrao,\n       ROUND(z_score, 2) AS z_score,\n       CASE WHEN z_score >= 2 THEN 'Acima (>=2σ)'\n            WHEN z_score <= -2 THEN 'Abaixo (<=-2σ)' END AS posicao\nFROM z_scores\nWHERE ABS(z_score) >= 2\nORDER BY z_score DESC`
+      },
+      'percentil-nacional-por-partido': {
+        title: 'Ranking percentil nacional e por partido',
+        category: 'civica',
+        query: `WITH totais AS (\n    SELECT nome_parlamentar, sigla_partido,\n           SUM(valor_liquido) AS total_gasto,\n           COUNT(*) AS num_despesas\n    FROM despesas\n    WHERE valor_liquido IS NOT NULL\n    GROUP BY nome_parlamentar, sigla_partido\n)\nSELECT nome_parlamentar, sigla_partido, total_gasto, num_despesas,\n       ROUND(PERCENT_RANK() OVER (ORDER BY total_gasto) * 100, 1) AS percentil_nacional,\n       ROUND(PERCENT_RANK() OVER (PARTITION BY sigla_partido ORDER BY total_gasto) * 100, 1) AS percentil_no_partido\nFROM totais\nORDER BY total_gasto DESC\nLIMIT 30`
+      },
+      'z-score-intrapartido': {
+        title: 'Z-score intrapartido',
+        category: 'civica',
+        query: `WITH totais AS (\n    SELECT nome_parlamentar, sigla_partido,\n           SUM(valor_liquido) AS total_gasto\n    FROM despesas\n    WHERE valor_liquido IS NOT NULL\n    GROUP BY nome_parlamentar, sigla_partido\n),\nstats_partido AS (\n    SELECT sigla_partido,\n           AVG(total_gasto) AS media_partido,\n           STDDEV(total_gasto) AS desvio_partido,\n           COUNT(*) AS num_deputados\n    FROM totais\n    GROUP BY sigla_partido\n)\nSELECT t.nome_parlamentar, t.sigla_partido, t.total_gasto,\n       ROUND(p.media_partido, 2) AS media_do_partido,\n       ROUND((t.total_gasto - p.media_partido) / NULLIF(p.desvio_partido, 0), 2) AS z_score_intrapartido,\n       p.num_deputados AS deputados_no_partido\nFROM totais t\nJOIN stats_partido p ON t.sigla_partido = p.sigla_partido\nORDER BY ABS((t.total_gasto - p.media_partido) / NULLIF(p.desvio_partido, 0)) DESC\nLIMIT 30`
+      },
+      'indice-engajamento-legislativo': {
+        title: 'Índice de engajamento legislativo',
+        category: 'civica',
+        query: `WITH totais AS (\n    SELECT nome_parlamentar, sigla_partido,\n           COUNT(*) AS num_despesas,\n           COUNT(DISTINCT categoria_despesa) AS categorias_utilizadas,\n           COUNT(DISTINCT fornecedor) AS fornecedores_distintos,\n           SUM(valor_liquido) AS total_gasto\n    FROM despesas\n    WHERE valor_liquido IS NOT NULL\n    GROUP BY nome_parlamentar, sigla_partido\n),\nmaximos AS (\n    SELECT MAX(num_despesas) AS max_despesas\n    FROM totais\n)\nSELECT t.nome_parlamentar, t.sigla_partido,\n       t.num_despesas, t.categorias_utilizadas,\n       t.fornecedores_distintos, t.total_gasto,\n       ROUND(t.num_despesas * 100.0 / m.max_despesas, 1) AS indice_atividade_pct\nFROM totais t CROSS JOIN maximos m\nORDER BY t.num_despesas DESC\nLIMIT 30`
+      },
       'concentracao-fornecedores': {
         title: 'Concentração de Fornecedores',
         category: 'risk',
