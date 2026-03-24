@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viso ↦ DB ↦ Despesas</title>
-    
+
     <!-- PWA Meta Tags -->
     <meta name="description" content="Advanced data visualization platform with OPFS storage and offline capabilities">
     <meta name="theme-color" content="#1e40af">
@@ -14,19 +14,19 @@
     <meta name="apple-mobile-web-app-title" content="Viso DB">
     <meta name="msapplication-TileColor" content="#1e40af">
     <meta name="msapplication-tap-highlight" content="no">
-    
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="%BASE_URL%manifest.json">
-    
+
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMzIiIGZpbGw9IiMxZTQwYWYiLz4KPGVsbGlwc2UgY3g9Ijk2IiBjeT0iNjQiIHJ4PSI0OCIgcnk9IjE2IiBmaWxsPSJ3aGl0ZSIvPgo8cmVjdCB4PSI0OCIgeT0iNjQiIHdpZHRoPSI5NiIgaGVpZ2h0PSI2NCIgZmlsbD0id2hpdGUiLz4KPGVsbGlwc2UgY3g9Ijk2IiBjeT0iMTI4IiByeD0iNDgiIHJ5PSIxNiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cg==">
-    
+
     <!-- Font Preloading for Performance -->
     <link rel="preload" href="%BASE_URL%vendor/fonts/monda-regular.ttf" as="font" type="font/ttf" crossorigin>
     <link rel="preload" href="%BASE_URL%vendor/fonts/monda-bold.ttf" as="font" type="font/ttf" crossorigin>
     <link href="%BASE_URL%vendor/css/google-fonts.css" rel="stylesheet">
     <link rel="shortcut icon" type="image/x-icon" href="https://extrapolo.com/favicon.ico">
-    
+
     <link rel="stylesheet" href="src/styles/common.css">
     <link rel="stylesheet" href="src/styles/db.css">
     <link rel="stylesheet" href="%BASE_URL%vendor/css/tailwindcss.min.css">
@@ -45,7 +45,7 @@
     <script type="module" src="./src/db/category-toggle.js"></script>
     <script type="module" src="./src/db-api.js"></script>
     <!-- db-config.js will be loaded by Vite build process -->
-    
+
 </head>
 <body class="font-sans bg-white dark:bg-gray-950 text-gray-900 dark:text-white h-screen">
     <div class="flex h-screen">
@@ -61,22 +61,22 @@
                     <span>Ver Grafo</span>
                 </button>
             </div>
-            
+
             <div class="p-4 border-b border-gray-300 dark:border-gray-700">
                 <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">ANÁLISES</div>
-                
+
                 <!-- Search Box -->
                 <div class="mb-3">
-                    <input type="text" id="query-search" 
-                           placeholder="🔍 Buscar análises..." 
+                    <input type="text" id="query-search"
+                           placeholder="🔍 Buscar análises..."
                            class="w-full px-3 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-duckdb-500 focus:border-transparent">
                 </div>
-                
+
                 <!-- Fluxos Button -->
                 <div class="mb-3">
-                    
+
                 </div>
-                
+
                 <div id="sample-queries-list" class="space-y-1">
                     <!-- Exemplos -->
                     <div class="category-section" data-category="exemplos">
@@ -134,7 +134,7 @@ LIMIT 15" data-id="fornecedores-multi-deputados">
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Temporal Analysis -->
                     <div class="category-section" data-category="temporal">
                         <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" data-category='temporal'>
@@ -155,38 +155,38 @@ ORDER BY ano DESC, mes DESC
 LIMIT 24" data-id="tendencias-mensais-2-anos">
                         📅 Tendências mensais (2 anos)
                     </div>
-                    <div class="sample-query" data-query="SELECT 
-    CASE EXTRACT(DOW FROM data_emissao) 
-        WHEN 0 THEN 'Domingo' 
-        WHEN 1 THEN 'Segunda' 
-        WHEN 2 THEN 'Terça' 
-        WHEN 3 THEN 'Quarta' 
-        WHEN 4 THEN 'Quinta' 
-        WHEN 5 THEN 'Sexta' 
-        WHEN 6 THEN 'Sábado' 
+                    <div class="sample-query" data-query="SELECT
+    CASE EXTRACT(DOW FROM data_emissao)
+        WHEN 0 THEN 'Domingo'
+        WHEN 1 THEN 'Segunda'
+        WHEN 2 THEN 'Terça'
+        WHEN 3 THEN 'Quarta'
+        WHEN 4 THEN 'Quinta'
+        WHEN 5 THEN 'Sexta'
+        WHEN 6 THEN 'Sábado'
     END AS dia_semana,
     COUNT(*) AS total_despesas,
     SUM(valor_liquido) AS valor_total,
     AVG(valor_liquido) AS valor_medio
-FROM despesas 
-WHERE data_emissao IS NOT NULL 
-GROUP BY EXTRACT(DOW FROM data_emissao) 
+FROM despesas
+WHERE data_emissao IS NOT NULL
+GROUP BY EXTRACT(DOW FROM data_emissao)
 ORDER BY EXTRACT(DOW FROM data_emissao)" data-id="padrao-por-dia-da-semana">
                         📊 Padrão por dia da semana
                     </div>
-                    <div class="sample-query" data-query="SELECT 
+                    <div class="sample-query" data-query="SELECT
     EXTRACT(YEAR FROM data_emissao) AS ano,
     SUM(valor_liquido) AS total_ano,
     COUNT(*) AS transacoes
-FROM despesas 
-WHERE data_emissao IS NOT NULL 
-GROUP BY ano 
+FROM despesas
+WHERE data_emissao IS NOT NULL
+GROUP BY ano
 ORDER BY ano DESC" data-id="comparacao-ano-a-ano">
                         📈 Comparação ano a ano
                     </div>
                         </div>
                     </div>
-                    
+
                     <!-- Advanced Category Analysis -->
                     <div class="category-section" data-category="category">
                         <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-md hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors" data-category='category'>
@@ -196,44 +196,44 @@ ORDER BY ano DESC" data-id="comparacao-ano-a-ano">
                             </svg>
                         </div>
                         <div class="category-content category-category space-y-1" style="display: none;">
-                    <div class="sample-query" data-query="SELECT 
+                    <div class="sample-query" data-query="SELECT
     nome_parlamentar,
     sigla_partido,
     categoria_despesa,
     valor_liquido,
     fornecedor,
     data_emissao
-FROM despesas 
-ORDER BY valor_liquido DESC 
+FROM despesas
+ORDER BY valor_liquido DESC
 LIMIT 20" data-id="top-transacoes-mais-caras">
                         💰 Top transações mais caras
                     </div>
-                    <div class="sample-query" data-query="SELECT 
+                    <div class="sample-query" data-query="SELECT
     categoria_despesa,
     subcategoria_despesa,
     COUNT(*) AS total_transacoes,
     SUM(valor_liquido) AS total_valor,
     AVG(valor_liquido) AS valor_medio
-FROM despesas 
-GROUP BY categoria_despesa, subcategoria_despesa 
-ORDER BY total_valor DESC 
+FROM despesas
+GROUP BY categoria_despesa, subcategoria_despesa
+ORDER BY total_valor DESC
 LIMIT 30" data-id="categorias-e-subcategorias">
                         🏛️ Categorias e subcategorias
                     </div>
-                    <div class="sample-query" data-query="SELECT 
+                    <div class="sample-query" data-query="SELECT
     categoria_despesa,
     MAX(valor_liquido) AS maior_valor,
     AVG(valor_liquido) AS valor_medio,
     MIN(valor_liquido) AS menor_valor,
     COUNT(*) AS total
-FROM despesas 
-GROUP BY categoria_despesa 
+FROM despesas
+GROUP BY categoria_despesa
 ORDER BY maior_valor DESC" data-id="estatisticas-por-categoria">
                         📊 Estatísticas por categoria
                     </div>
                         </div>
                     </div>
-                    
+
                     <!-- Travel & Expense Analysis -->
                     <div class="category-section" data-category="travel">
                         <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-md hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors" data-category='travel'>
@@ -243,59 +243,59 @@ ORDER BY maior_valor DESC" data-id="estatisticas-por-categoria">
                             </svg>
                         </div>
                         <div class="category-content category-travel space-y-1" style="display: none;">
-                    <div class="sample-query" data-query="SELECT 
+                    <div class="sample-query" data-query="SELECT
     categoria_despesa,
     COUNT(*) AS total,
     SUM(valor_liquido) AS valor
-FROM despesas 
-WHERE categoria_despesa ILIKE '%PASSAGEM%' 
-   OR categoria_despesa ILIKE '%VEÍCULOS%' 
-   OR categoria_despesa ILIKE '%COMBUSTÍVEIS%' 
-   OR categoria_despesa ILIKE '%HOSPEDAGEM%' 
-   OR categoria_despesa ILIKE '%LOCAÇÃO%' 
-   OR categoria_despesa ILIKE '%TÁXI%' 
-GROUP BY categoria_despesa 
+FROM despesas
+WHERE categoria_despesa ILIKE '%PASSAGEM%'
+   OR categoria_despesa ILIKE '%VEÍCULOS%'
+   OR categoria_despesa ILIKE '%COMBUSTÍVEIS%'
+   OR categoria_despesa ILIKE '%HOSPEDAGEM%'
+   OR categoria_despesa ILIKE '%LOCAÇÃO%'
+   OR categoria_despesa ILIKE '%TÁXI%'
+GROUP BY categoria_despesa
 ORDER BY valor DESC" data-id="gastos-relacionados-a-viagens">
                         ✈️ Gastos relacionados a viagens
                     </div>
-                    <div class="sample-query" data-query="SELECT 
+                    <div class="sample-query" data-query="SELECT
     ano_competencia,
     COUNT(*) AS total_despesas,
     SUM(valor_liquido) AS valor_total,
     AVG(valor_liquido) AS valor_medio
-FROM despesas 
-WHERE ano_competencia IS NOT NULL 
-GROUP BY ano_competencia 
+FROM despesas
+WHERE ano_competencia IS NOT NULL
+GROUP BY ano_competencia
 ORDER BY ano_competencia DESC" data-id="despesas-por-ano-de-competencia">
                         📅 Despesas por ano de competência
                     </div>
-                    <div class="sample-query" data-query="SELECT 
+                    <div class="sample-query" data-query="SELECT
     nome_parlamentar,
     sigla_partido,
     SUM(valor_liquido) AS total_gastos,
     COUNT(*) AS num_despesas
-FROM despesas 
-GROUP BY nome_parlamentar, sigla_partido 
-ORDER BY total_gastos DESC 
+FROM despesas
+GROUP BY nome_parlamentar, sigla_partido
+ORDER BY total_gastos DESC
 LIMIT 25" data-id="top-gastos-por-deputado">
                         📍 Top gastos por deputado
                     </div>
-                    <div class="sample-query" data-query="SELECT 
+                    <div class="sample-query" data-query="SELECT
     sigla_partido,
     MIN(valor_liquido) AS gasto_minimo,
     AVG(valor_liquido) AS gasto_medio,
     MAX(valor_liquido) AS gasto_maximo,
     COUNT(*) AS total_despesas,
     SUM(valor_liquido) AS valor_total
-FROM despesas 
+FROM despesas
 WHERE categoria_despesa ILIKE '%HOSPEDAGEM%'
-GROUP BY sigla_partido 
+GROUP BY sigla_partido
 ORDER BY gasto_medio DESC" data-id="gasto-hospedagem-por-partido">
                         🏨 Gastos por partido
                     </div>
                         </div>
                     </div>
-                    
+
                     <!-- Vendor Intelligence -->
                     <div class="category-section" data-category="vendor">
                         <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-md hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors" data-category='vendor'>
@@ -305,76 +305,76 @@ ORDER BY gasto_medio DESC" data-id="gasto-hospedagem-por-partido">
                             </svg>
                         </div>
                         <div class="category-content category-vendor space-y-1" style="display: none;">
-                    <div class="sample-query" data-query="SELECT 
+                    <div class="sample-query" data-query="SELECT
     fornecedor,
     SUM(valor_liquido) AS receita_total,
     COUNT(*) AS total_transacoes,
     COUNT(DISTINCT nome_parlamentar) AS deputados_atendidos,
     AVG(valor_liquido) AS valor_medio
-FROM despesas 
-GROUP BY fornecedor 
-ORDER BY receita_total DESC 
+FROM despesas
+GROUP BY fornecedor
+ORDER BY receita_total DESC
 LIMIT 20" data-id="top-fornecedores-por-receita">
                         💼 Top fornecedores por receita
                     </div>
                     <div class="sample-query" data-query="WITH market_share AS (
-    SELECT 
+    SELECT
         fornecedor,
         SUM(valor_liquido) AS receita,
         (SUM(valor_liquido) * 100.0 / (
             SELECT SUM(valor_liquido) FROM despesas
         )) AS participacao
-    FROM despesas 
-    GROUP BY fornecedor 
+    FROM despesas
+    GROUP BY fornecedor
     ORDER BY receita DESC
 )
-SELECT 
+SELECT
     fornecedor,
     receita,
     ROUND(participacao, 2) AS participacao_pct
-FROM market_share 
+FROM market_share
 LIMIT 15" data-id="concentracao-do-mercado">
                         📈 Concentração do mercado (%)
                     </div>
-                    <div class="sample-query" data-query="SELECT 
+                    <div class="sample-query" data-query="SELECT
     fornecedor,
     nome_parlamentar,
     sigla_partido,
     SUM(valor_liquido) AS total_gasto,
     COUNT(*) AS transacoes
-FROM despesas 
-GROUP BY fornecedor, nome_parlamentar, sigla_partido 
-HAVING SUM(valor_liquido) > 50000 
-ORDER BY total_gasto DESC 
+FROM despesas
+GROUP BY fornecedor, nome_parlamentar, sigla_partido
+HAVING SUM(valor_liquido) > 50000
+ORDER BY total_gasto DESC
 LIMIT 30" data-id="relacionamentos-de-alto-valor">
                         🤝 Relacionamentos de alto valor
                     </div>
                     <div class="sample-query" data-query="WITH fornecedor_categoria AS (
-    SELECT 
+    SELECT
         categoria_despesa,
         fornecedor,
         COUNT(*) AS num_transacoes,
         SUM(valor_liquido) AS gasto_total,
         ROW_NUMBER() OVER (
-            PARTITION BY categoria_despesa 
+            PARTITION BY categoria_despesa
             ORDER BY COUNT(*) DESC, SUM(valor_liquido) DESC
         ) AS rank_transacoes
-    FROM despesas 
+    FROM despesas
     GROUP BY categoria_despesa, fornecedor
 )
-SELECT 
+SELECT
     categoria_despesa,
     fornecedor AS principal_fornecedor,
     num_transacoes,
     gasto_total
-FROM fornecedor_categoria 
-WHERE rank_transacoes = 1 
+FROM fornecedor_categoria
+WHERE rank_transacoes = 1
 ORDER BY num_transacoes DESC" data-id="principal-fornecedor-por-categoria">
                         👑 Principal fornecedor por categoria
                     </div>
                         </div>
                     </div>
-                    
+
                     <!-- Parliamentary Insights -->
                     <div class="category-section" data-category="parliamentary">
                         <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-md hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors" data-category='parliamentary'>
@@ -384,63 +384,63 @@ ORDER BY num_transacoes DESC" data-id="principal-fornecedor-por-categoria">
                             </svg>
                         </div>
                         <div class="category-content category-parliamentary space-y-1" style="display: none;">
-                            <div class="sample-query" data-query="SELECT 
+                            <div class="sample-query" data-query="SELECT
     nome_parlamentar,
     sigla_partido,
     SUM(valor_liquido) AS total_gasto,
     COUNT(*) AS num_transacoes,
     AVG(valor_liquido) AS gasto_medio
-FROM despesas 
-GROUP BY nome_parlamentar, sigla_partido 
-ORDER BY total_gasto DESC 
+FROM despesas
+GROUP BY nome_parlamentar, sigla_partido
+ORDER BY total_gasto DESC
 LIMIT 20" data-id="ranking-de-gastos-por-deputado">
                                 📊 Ranking de gastos por deputado
                             </div>
                             <div class="sample-query" data-query="WITH activity_stats AS (
-    SELECT 
+    SELECT
         nome_parlamentar,
         sigla_partido,
         COUNT(*) AS num_transacoes,
         SUM(valor_liquido) AS total_gasto
-    FROM despesas 
+    FROM despesas
     GROUP BY nome_parlamentar, sigla_partido
 ),
 top_active AS (
-    SELECT 
+    SELECT
         'Mais ativos' AS tipo,
         nome_parlamentar,
         sigla_partido,
         num_transacoes,
         total_gasto
-    FROM activity_stats 
-    ORDER BY num_transacoes DESC 
+    FROM activity_stats
+    ORDER BY num_transacoes DESC
     LIMIT 10
 ),
 least_active AS (
-    SELECT 
+    SELECT
         'Menos ativos' AS tipo,
         nome_parlamentar,
         sigla_partido,
         num_transacoes,
         total_gasto
-    FROM activity_stats 
-    ORDER BY num_transacoes ASC 
+    FROM activity_stats
+    ORDER BY num_transacoes ASC
     LIMIT 10
 )
-SELECT * 
+SELECT *
 FROM (
-    SELECT * FROM top_active 
-    UNION ALL 
+    SELECT * FROM top_active
+    UNION ALL
     SELECT * FROM least_active
-) 
-ORDER BY 
+)
+ORDER BY
     CASE WHEN tipo = 'Mais ativos' THEN 1 ELSE 2 END,
     num_transacoes DESC" data-id="deputados-mais-menos-ativos">
                                 🎯 Deputados mais/menos ativos
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Data Quality & Audit -->
                     <div class="category-section" data-category="audit">
                         <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors" data-category='audit'>
@@ -450,7 +450,7 @@ ORDER BY
                             </svg>
                         </div>
                         <div class="category-content category-audit space-y-1" style="display: none;">
-                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT 
+                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT
     nome_parlamentar,
     sigla_partido,
     categoria_despesa,
@@ -458,41 +458,41 @@ ORDER BY
     valor_liquido,
     data_emissao,
     COUNT(*) AS duplicatas
-FROM despesas 
-GROUP BY 
+FROM despesas
+GROUP BY
     nome_parlamentar,
     sigla_partido,
     categoria_despesa,
     fornecedor,
     valor_liquido,
-    data_emissao 
-HAVING COUNT(*) > 1 
-ORDER BY duplicatas DESC, valor_liquido DESC 
+    data_emissao
+HAVING COUNT(*) > 1
+ORDER BY duplicatas DESC, valor_liquido DESC
 LIMIT 20" data-id="possiveis-despesas-duplicadas">
                                 🔄 Possíveis despesas duplicadas
                             </div>
-                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT 
+                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT
     valor_liquido,
     COUNT(*) AS frequencia
-FROM despesas 
-WHERE valor_liquido % 100 = 0 
-  AND valor_liquido >= 1000 
-GROUP BY valor_liquido 
-ORDER BY frequencia DESC 
+FROM despesas
+WHERE valor_liquido % 100 = 0
+  AND valor_liquido >= 1000
+GROUP BY valor_liquido
+ORDER BY frequencia DESC
 LIMIT 20" data-id="valores-redondos-suspeitos">
                                 🎯 Valores redondos suspeitos
                             </div>
-                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT 
+                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT
     nome_parlamentar,
     sigla_partido,
     categoria_despesa,
     valor_liquido,
     fornecedor,
     data_emissao
-FROM despesas 
-WHERE EXTRACT(DOW FROM data_emissao) IN (0, 6) 
-  AND valor_liquido > 5000 
-ORDER BY valor_liquido DESC 
+FROM despesas
+WHERE EXTRACT(DOW FROM data_emissao) IN (0, 6)
+  AND valor_liquido > 5000
+ORDER BY valor_liquido DESC
 LIMIT 25" data-id="gastos-altos-em-fins-de-semana">
                                 🏖️ Gastos altos em fins de semana
                             </div>
@@ -503,45 +503,45 @@ LIMIT 25" data-id="gastos-altos-em-fins-de-semana">
         )) / STDDEV(valor_liquido) OVER (
             PARTITION BY categoria_despesa
         ) AS z_score
-    FROM despesas 
+    FROM despesas
     WHERE valor_liquido IS NOT NULL
 )
-SELECT 
+SELECT
     nome_parlamentar,
     sigla_partido,
     categoria_despesa,
     valor_liquido,
     fornecedor,
     ROUND(z_score, 2) AS desvio_padrao
-FROM outliers 
-WHERE ABS(z_score) > 3 
-ORDER BY ABS(z_score) DESC 
+FROM outliers
+WHERE ABS(z_score) > 3
+ORDER BY ABS(z_score) DESC
 LIMIT 30" data-id="outliers-estatisticos">
                                 📊 Outliers estatísticos (Z > 3)
                             </div>
-                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT 
+                            <div class="sample-query mb-0.5 rounded cursor-pointer text-xs transition-all hover:shadow-md" data-query="SELECT
     nome_parlamentar,
     sigla_partido,
     categoria_despesa,
     valor_liquido,
     fornecedor,
     COUNT(*) AS frequencia
-FROM despesas 
-WHERE valor_liquido > 50000 
-GROUP BY 
+FROM despesas
+WHERE valor_liquido > 50000
+GROUP BY
     nome_parlamentar,
     sigla_partido,
     categoria_despesa,
     valor_liquido,
-    fornecedor 
-HAVING COUNT(*) > 1 
-ORDER BY valor_liquido DESC 
+    fornecedor
+HAVING COUNT(*) > 1
+ORDER BY valor_liquido DESC
 LIMIT 20" data-id="valores-altos-duplicados">
                                 ⚖️ Valores altos duplicados
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Risk Detection Analysis -->
                     <div class="category-section" data-category="risk">
                         <div class="category-header cursor-pointer flex items-center justify-between py-2 px-3 mt-3 mb-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors" data-category='risk'>
@@ -555,7 +555,7 @@ LIMIT 20" data-id="valores-altos-duplicados">
 -- Detecta restituições/retidos acima do normal que podem indicar inflação ou erro sistemático
 
 WITH monthly_stats AS (
-    SELECT 
+    SELECT
         nome_parlamentar as deputado,
         fornecedor,
         categoria_despesa,
@@ -563,19 +563,19 @@ WITH monthly_stats AS (
         COUNT(*) AS total_transacoes,
         SUM(valor_liquido) AS valor_total,
         AVG(valor_liquido) AS valor_medio
-    FROM despesas 
-    WHERE data_emissao IS NOT NULL 
+    FROM despesas
+    WHERE data_emissao IS NOT NULL
     AND valor_liquido IS NOT NULL
     GROUP BY nome_parlamentar, fornecedor, categoria_despesa, ano_mes
 ),
 percentiles AS (
-    SELECT 
+    SELECT
         categoria_despesa,
         PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY valor_medio) AS p90_valor_medio
-    FROM monthly_stats 
+    FROM monthly_stats
     GROUP BY categoria_despesa
 )
-SELECT 
+SELECT
     ms.deputado,
     ms.fornecedor,
     ms.categoria_despesa,
@@ -596,7 +596,7 @@ LIMIT 50" data-id="padroes-restituicao">
 -- Identifica notas fracionadas em muitas parcelas para disfarçar grandes despesas
 
 WITH fornecedor_mensal AS (
-    SELECT 
+    SELECT
         nome_parlamentar as deputado,
         fornecedor,
         date_part('year', data_emissao) * 100 + date_part('month', data_emissao) AS ano_mes,
@@ -606,8 +606,8 @@ WITH fornecedor_mensal AS (
         STDDEV(valor_liquido) AS desvio_padrao,
         MIN(data_emissao) AS primeira_data,
         MAX(data_emissao) AS ultima_data
-    FROM despesas 
-    WHERE data_emissao IS NOT NULL 
+    FROM despesas
+    WHERE data_emissao IS NOT NULL
     AND valor_liquido IS NOT NULL
     GROUP BY nome_parlamentar, fornecedor, ano_mes
 ),
@@ -619,7 +619,7 @@ suspeitos AS (
     FROM fornecedor_mensal
     WHERE num_transacoes >= 3
 )
-SELECT 
+SELECT
     deputado,
     fornecedor,
     ano_mes,
@@ -640,31 +640,31 @@ LIMIT 50" data-id="parcelamento-artificial">
 -- Localiza fornecedores que aparecem só uma vez ou em um único mês com valor alto
 
 WITH fornecedor_stats AS (
-    SELECT 
+    SELECT
         fornecedor,
         COUNT(*) AS total_transacoes,
         COUNT(DISTINCT date_part('year', data_emissao) * 100 + date_part('month', data_emissao)) AS meses_distintos,
         SUM(valor_liquido) AS valor_total,
         MAX(valor_liquido) AS valor_maximo,
         categoria_despesa
-    FROM despesas 
-    WHERE data_emissao IS NOT NULL 
+    FROM despesas
+    WHERE data_emissao IS NOT NULL
     AND valor_liquido IS NOT NULL
     AND fornecedor IS NOT NULL
     GROUP BY fornecedor, categoria_despesa
 ),
 categoria_percentiles AS (
-    SELECT 
+    SELECT
         categoria_despesa,
         PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY valor_maximo) AS p90_categoria
-    FROM fornecedor_stats 
+    FROM fornecedor_stats
     GROUP BY categoria_despesa
 ),
 one_hit_candidates AS (
-    SELECT 
+    SELECT
         fs.*,
         cp.p90_categoria,
-        CASE 
+        CASE
             WHEN fs.total_transacoes = 1 THEN 'strict'
             WHEN fs.meses_distintos = 1 AND fs.total_transacoes <= 2 THEN 'temporal'
             ELSE 'normal'
@@ -673,7 +673,7 @@ one_hit_candidates AS (
     FROM fornecedor_stats fs
     JOIN categoria_percentiles cp ON fs.categoria_despesa = cp.categoria_despesa
 )
-SELECT 
+SELECT
     fornecedor,
     categoria_despesa,
     total_transacoes,
@@ -683,7 +683,7 @@ SELECT
     tipo_one_hit,
     flag_valor_suspeito
 FROM one_hit_candidates
-WHERE (tipo_one_hit IN ('strict', 'temporal')) 
+WHERE (tipo_one_hit IN ('strict', 'temporal'))
 AND flag_valor_suspeito = 1
 ORDER BY valor_maximo DESC
 LIMIT 50" data-id="one-hit-wonder">
@@ -693,20 +693,20 @@ LIMIT 50" data-id="one-hit-wonder">
 -- Encontra empresas ligadas a várias categorias de despesa fora do esperado
 
 WITH fornecedor_diversidade AS (
-    SELECT 
+    SELECT
         fornecedor,
         COUNT(DISTINCT categoria_despesa) AS num_categorias,
         COUNT(DISTINCT subcategoria_despesa) AS num_subcategorias,
         SUM(valor_liquido) AS valor_total,
         STRING_AGG(DISTINCT categoria_despesa, ', ' ORDER BY categoria_despesa) AS categorias_atendidas
-    FROM despesas 
-    WHERE fornecedor IS NOT NULL 
+    FROM despesas
+    WHERE fornecedor IS NOT NULL
     AND categoria_despesa IS NOT NULL
     AND valor_liquido IS NOT NULL
     GROUP BY fornecedor
 ),
 categoria_shares AS (
-    SELECT 
+    SELECT
         fd.fornecedor,
         fd.num_categorias,
         fd.num_subcategorias,
@@ -715,26 +715,26 @@ categoria_shares AS (
         SUM(POWER(d.share_categoria, 2)) AS hhi_categorias
     FROM fornecedor_diversidade fd
     JOIN (
-        SELECT 
+        SELECT
             fornecedor,
             categoria_despesa,
             SUM(valor_liquido) / SUM(SUM(valor_liquido)) OVER (PARTITION BY fornecedor) AS share_categoria
-        FROM despesas 
+        FROM despesas
         WHERE fornecedor IS NOT NULL AND categoria_despesa IS NOT NULL
         GROUP BY fornecedor, categoria_despesa
     ) d ON fd.fornecedor = d.fornecedor
     GROUP BY fd.fornecedor, fd.num_categorias, fd.num_subcategorias, fd.valor_total, fd.categorias_atendidas
 )
-SELECT 
+SELECT
     fornecedor,
     num_categorias,
     num_subcategorias,
     valor_total,
     categorias_atendidas,
     ROUND(1 - hhi_categorias, 3) AS indice_diversidade,
-    CASE 
-        WHEN num_categorias >= 3 OR (num_categorias >= 2 AND num_subcategorias >= 4) THEN 1 
-        ELSE 0 
+    CASE
+        WHEN num_categorias >= 3 OR (num_categorias >= 2 AND num_subcategorias >= 4) THEN 1
+        ELSE 0
     END AS flag_multiuso
 FROM categoria_shares
 WHERE num_categorias >= 3 OR (num_categorias >= 2 AND num_subcategorias >= 4)
@@ -746,19 +746,19 @@ LIMIT 50" data-id="fornecedor-multiuso">
 -- Verifica se fornecedores são usados de forma desproporcional por um partido específico
 
 WITH fornecedor_partido AS (
-    SELECT 
+    SELECT
         fornecedor,
         sigla_partido,
         SUM(valor_liquido) AS valor_partido_fornecedor,
         COUNT(*) AS transacoes_partido_fornecedor
-    FROM despesas 
-    WHERE fornecedor IS NOT NULL 
-    AND sigla_partido IS NOT NULL 
+    FROM despesas
+    WHERE fornecedor IS NOT NULL
+    AND sigla_partido IS NOT NULL
     AND valor_liquido IS NOT NULL
     GROUP BY fornecedor, sigla_partido
 ),
 fornecedor_totals AS (
-    SELECT 
+    SELECT
         fornecedor,
         SUM(valor_partido_fornecedor) AS valor_total_fornecedor,
         SUM(transacoes_partido_fornecedor) AS transacoes_total_fornecedor
@@ -766,20 +766,20 @@ fornecedor_totals AS (
     GROUP BY fornecedor
 ),
 partido_totals AS (
-    SELECT 
+    SELECT
         sigla_partido,
         SUM(valor_liquido) AS valor_total_partido
-    FROM despesas 
+    FROM despesas
     WHERE sigla_partido IS NOT NULL AND valor_liquido IS NOT NULL
     GROUP BY sigla_partido
 ),
 global_total AS (
     SELECT SUM(valor_liquido) AS valor_total_geral
-    FROM despesas 
+    FROM despesas
     WHERE valor_liquido IS NOT NULL
 ),
 preferencia_analysis AS (
-    SELECT 
+    SELECT
         fp.fornecedor,
         fp.sigla_partido,
         fp.valor_partido_fornecedor,
@@ -788,10 +788,10 @@ preferencia_analysis AS (
         gt.valor_total_geral,
         fp.valor_partido_fornecedor / NULLIF(ft.valor_total_fornecedor, 0) AS share_partido_fornecedor,
         pt.valor_total_partido / gt.valor_total_geral AS base_rate_partido,
-        (fp.valor_partido_fornecedor / NULLIF(ft.valor_total_fornecedor, 0)) / 
+        (fp.valor_partido_fornecedor / NULLIF(ft.valor_total_fornecedor, 0)) /
         NULLIF(pt.valor_total_partido / gt.valor_total_geral, 0) AS lift_ratio
     FROM fornecedor_partido fp
-    JOIN fornecedor_totals ft ON fp.fornecedor = ft.fornecedor  
+    JOIN fornecedor_totals ft ON fp.fornecedor = ft.fornecedor
     JOIN partido_totals pt ON fp.sigla_partido = pt.sigla_partido
     CROSS JOIN global_total gt
 ),
@@ -799,7 +799,7 @@ percentile_75 AS (
     SELECT PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY valor_total_fornecedor) AS p75_fornecedor
     FROM fornecedor_totals
 )
-SELECT 
+SELECT
     pa.fornecedor,
     pa.sigla_partido,
     pa.valor_partido_fornecedor,
@@ -819,20 +819,20 @@ LIMIT 50" data-id="preferencia-politica">
 -- Analisa evolução de valores para detectar padrões de uso indevido (simulação)
 
 WITH monthly_ratios AS (
-    SELECT 
+    SELECT
         nome_parlamentar as deputado,
         date_part('year', data_emissao) * 100 + date_part('month', data_emissao) AS ano_mes,
         SUM(valor_liquido) AS valor_total_mes,
         COUNT(*) AS transacoes_mes,
         AVG(valor_liquido) AS valor_medio_mes
-    FROM despesas 
-    WHERE data_emissao IS NOT NULL 
+    FROM despesas
+    WHERE data_emissao IS NOT NULL
     AND valor_liquido IS NOT NULL
     AND nome_parlamentar IS NOT NULL
     GROUP BY nome_parlamentar, ano_mes
 ),
 deputado_stats AS (
-    SELECT 
+    SELECT
         deputado,
         AVG(valor_medio_mes) AS media_deputado,
         STDDEV(valor_medio_mes) AS desvio_deputado,
@@ -842,22 +842,22 @@ deputado_stats AS (
     HAVING COUNT(*) >= 6  -- Pelo menos 6 meses de atividade
 ),
 z_scores AS (
-    SELECT 
+    SELECT
         mr.deputado,
         mr.ano_mes,
         mr.valor_total_mes,
         mr.valor_medio_mes,
         ds.media_deputado,
         ds.desvio_deputado,
-        CASE 
-            WHEN ds.desvio_deputado > 0 THEN 
+        CASE
+            WHEN ds.desvio_deputado > 0 THEN
                 (mr.valor_medio_mes - ds.media_deputado) / ds.desvio_deputado
-            ELSE 0 
+            ELSE 0
         END AS z_score
     FROM monthly_ratios mr
     JOIN deputado_stats ds ON mr.deputado = ds.deputado
 )
-SELECT 
+SELECT
     deputado,
     ano_mes,
     valor_total_mes,
@@ -874,7 +874,7 @@ LIMIT 50" data-id="evolucao-liquido-retido">
 -- Checa notas semelhantes entre deputados diferentes que podem ser replicadas
 
 WITH duplicatas_candidatas AS (
-    SELECT 
+    SELECT
         d1.fornecedor,
         d1.valor_liquido,
         d1.data_emissao,
@@ -886,9 +886,9 @@ WITH duplicatas_candidatas AS (
     JOIN despesas d2 ON d1.fornecedor = d2.fornecedor
         AND ABS(d1.valor_liquido - d2.valor_liquido) / GREATEST(d1.valor_liquido, d2.valor_liquido) <= 0.01  -- Diferença <= 1%
         AND d1.nome_parlamentar != d2.nome_parlamentar
-        AND d1.data_emissao IS NOT NULL 
+        AND d1.data_emissao IS NOT NULL
         AND d2.data_emissao IS NOT NULL
-    WHERE d1.fornecedor IS NOT NULL 
+    WHERE d1.fornecedor IS NOT NULL
     AND d1.valor_liquido IS NOT NULL
     AND d2.valor_liquido IS NOT NULL
 ),
@@ -898,7 +898,7 @@ duplicatas_filtradas AS (
     WHERE diferenca_dias <= 3  -- Mesmo dia ou ±3 dias
 ),
 agrupadas AS (
-    SELECT 
+    SELECT
         fornecedor,
         valor_liquido,
         data_emissao,
@@ -910,7 +910,7 @@ agrupadas AS (
     FROM duplicatas_filtradas
     GROUP BY fornecedor, valor_liquido, data_emissao, categoria_despesa
 )
-SELECT 
+SELECT
     fornecedor,
     valor_liquido,
     strftime(data_emissao, '%d/%m/%Y') as data_emissao,
@@ -930,25 +930,25 @@ LIMIT 50" data-id="duplicacao-indireta">
 -- Mede dependência de poucos fornecedores por deputado via índice de concentração
 
 WITH deputado_fornecedor AS (
-    SELECT 
+    SELECT
         nome_parlamentar as deputado,
         fornecedor,
         SUM(valor_liquido) AS valor_fornecedor
-    FROM despesas 
-    WHERE nome_parlamentar IS NOT NULL 
-    AND fornecedor IS NOT NULL 
+    FROM despesas
+    WHERE nome_parlamentar IS NOT NULL
+    AND fornecedor IS NOT NULL
     AND valor_liquido IS NOT NULL
     GROUP BY nome_parlamentar, fornecedor
 ),
 deputado_totals AS (
-    SELECT 
+    SELECT
         deputado,
         SUM(valor_fornecedor) AS valor_total_deputado
     FROM deputado_fornecedor
     GROUP BY deputado
 ),
 shares_calculadas AS (
-    SELECT 
+    SELECT
         df.deputado,
         df.fornecedor,
         df.valor_fornecedor,
@@ -958,29 +958,29 @@ shares_calculadas AS (
     JOIN deputado_totals dt ON df.deputado = dt.deputado
 ),
 concentracao_metrics AS (
-    SELECT 
+    SELECT
         deputado,
         valor_total_deputado,
         COUNT(*) AS num_fornecedores,
         MAX(share_fornecedor) AS top1_share,
         SUM(POWER(share_fornecedor, 2)) AS hhi,
         STRING_AGG(
-            fornecedor || ' (' || ROUND(share_fornecedor * 100, 1) || '%)', 
-            ', ' 
+            fornecedor || ' (' || ROUND(share_fornecedor * 100, 1) || '%)',
+            ', '
             ORDER BY share_fornecedor DESC
         ) AS top_fornecedores
     FROM shares_calculadas
     GROUP BY deputado, valor_total_deputado
 )
-SELECT 
+SELECT
     deputado,
     valor_total_deputado,
     num_fornecedores,
     ROUND(top1_share, 3) AS participacao_top1,
     ROUND(hhi, 3) AS indice_hhi,
-    CASE 
-        WHEN hhi >= 0.25 OR top1_share >= 0.6 THEN 1 
-        ELSE 0 
+    CASE
+        WHEN hhi >= 0.25 OR top1_share >= 0.6 THEN 1
+        ELSE 0
     END AS flag_concentracao,
     SUBSTR(top_fornecedores, 1, 200) AS principais_fornecedores
 FROM concentracao_metrics
@@ -1062,7 +1062,7 @@ SELECT nome_parlamentar, sigla_partido, total_gasto, num_despesas,
 FROM totais
 ORDER BY total_gasto DESC
 LIMIT 30" data-id="percentil-nacional-por-partido">
-                                📊 Ranking percentil nacional e por partido
+                                📊 Ranking % nacional e por partido
                             </div>
                             <div class="sample-query" data-query="WITH totais AS (
     SELECT nome_parlamentar, sigla_partido,
@@ -1124,7 +1124,7 @@ LIMIT 30" data-id="indice-engajamento-legislativo">
             <div class="h-16 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-5 justify-between">
                 <div class="flex items-center gap-3">
                 </div>
-                
+
                 <div class="flex items-center gap-3">
                     <button id="share-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded text-xs hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors flex items-center gap-2" data-action="share">
                         🔗 Compartilhar
@@ -1134,14 +1134,14 @@ LIMIT 30" data-id="indice-engajamento-legislativo">
                     </button>
                 </div>
             </div>
-            
+
             <div class="flex-1 flex flex-col min-h-0 min-w-0 w-full">
                 <div class="flex-1 flex flex-col min-h-0 min-w-0 w-full">
                     <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 justify-between">
                         <span class="font-medium text-sm">Resultados</span>
                         <div id="result-stats" class="text-xs text-gray-500 dark:text-gray-400"></div>
                     </div>
-                    
+
                     <div class="flex-1 bg-gray-50 dark:bg-gray-950 min-h-0 flex flex-col min-w-0 w-full">
                         <div id="results-container" class="flex-1 overflow-auto min-w-0 w-full">
                             <div id="results" class="h-full flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 gap-2">
@@ -1149,7 +1149,7 @@ LIMIT 30" data-id="indice-engajamento-legislativo">
                                 <div>Execute uma consulta para ver os resultados</div>
                             </div>
                         </div>
-                        
+
                         <!-- Sankey Diagram Container -->
                         <div id="sankey-container" class="flex-1 overflow-auto min-w-0 w-full hidden">
                             <div class="p-4">
@@ -1157,7 +1157,7 @@ LIMIT 30" data-id="indice-engajamento-legislativo">
                                 <svg id="sankey" width="100%" height="600" class="border border-gray-300 dark:border-gray-600 rounded"></svg>
                             </div>
                         </div>
-                        
+
                         <!-- Pagination Controls -->
                         <div id="pagination-container" class="border-t border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 hidden flex-shrink-0 min-w-0">
                             <div class="flex items-center justify-between">
@@ -1191,13 +1191,13 @@ LIMIT 30" data-id="indice-engajamento-legislativo">
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="resize-handle bg-gray-300 dark:bg-gray-700 hover:bg-duckdb-500 transition-colors" id="resize-handle" title="Arraste para redimensionar"></div>
 
                 <div class="editor-container h-80 border-b border-gray-300 dark:border-gray-700 min-w-0 w-full">
                     <div class="h-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center px-3 gap-2">
                         <button id="run-query-btn" class="px-3 py-1.5 bg-duckdb-500 text-black rounded text-xs hover:bg-duckdb-600 transition-colors disabled:opacity-50 flex items-center gap-1.5" disabled>
-                            ▶️ 
+                            ▶️
                         </button>
                         <button id="clear-btn" class="px-3 py-1.5 border border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded text-xs hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5">
                             🗑️
@@ -1215,13 +1215,13 @@ LIMIT 30" data-id="indice-engajamento-legislativo">
                     </div>
                 </div>
             </div>
-            
+
             <div class="h-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-300 dark:border-gray-700 flex items-center px-3 text-xs text-gray-500 dark:text-gray-400 justify-between">
                 <div id="execution-stats">despesas</div>
                 <div id="row-count"></div>
             </div>
         </div>
-        
+
         <!-- Right Sidebar - Schema Panel -->
         <div id="right-panel" class="w-80 bg-gray-100 dark:bg-gray-900 border-l border-gray-300 dark:border-gray-700 flex flex-col transition-all duration-300">
             <div class="p-4 border-b border-gray-300 dark:border-gray-700">
@@ -1237,7 +1237,7 @@ LIMIT 30" data-id="indice-engajamento-legislativo">
                     </button>
                 </div>
             </div>
-            
+
             <div id="panel-content" class="px-4 pb-2 flex-1 overflow-y-auto min-h-0">
                 <div id="schema-tree">
                     <div class="text-gray-500 dark:text-gray-400 text-xs text-center">Carregando...</div>
