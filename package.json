@@ -38,7 +38,6 @@
     "postinstall": "npm run security:audit || true"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "^1.28.0",
     "apache-arrow": "^21.0.0",
     "claude": "^0.1.1",
     "claude-code": "^0.0.2",
@@ -50,10 +49,12 @@
   "devDependencies": {
     "@babel/core": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
+    "@duckdb/duckdb-wasm": "^1.33.1-dev20.0",
     "@jest/globals": "^29.7.0",
     "@playwright/test": "^1.40.0",
     "babel-jest": "^30.0.5",
     "cssnano": "^7.1.0",
+    "dotenv": "^17.3.1",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-jest": "^27.6.0",

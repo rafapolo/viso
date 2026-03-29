@@ -169,6 +169,11 @@ export default defineConfig(({ command, mode }) => ({
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '1.0.0'),
     __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
     __BUILD_ENV__: JSON.stringify(process.env.NODE_ENV || 'development'),
+    // S3 Configuration from environment
+    __S3_ACCESS_KEY_ID__: JSON.stringify(process.env.AWS_ACCESS_KEY_ID || ''),
+    __S3_SECRET_ACCESS_KEY__: JSON.stringify(process.env.AWS_SECRET_ACCESS_KEY || ''),
+    __S3_BUCKET__: JSON.stringify(process.env.HETZNER_S3_BUCKET || 'baseldosdados'),
+    __S3_ENDPOINT__: JSON.stringify(process.env.HETZNER_S3_ENDPOINT || 'https://hel1.your-objectstorage.com'),
   },
   
   // CSS configuration

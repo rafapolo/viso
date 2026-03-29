@@ -112,37 +112,56 @@ class DuckDBManager {
         }
     }
 
-    async loadParquetData(parquetPath = './despesas.parquet') {
+    async loadParquetData() {
         try {
-            this.updateConnectionStatus('connecting', 'Carregando dados...');
+            this.updateConnectionStatus('connecting', 'Carregando dados do S3...');
             
-            const response = await fetch(parquetPath);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const arrayBuffer = await response.arrayBuffer();
-            
-            this.updateConnectionStatus('connecting', 'Processando dados...');
-            
-            await this.db.registerFileBuffer('despesas.parquet', new Uint8Array(arrayBuffer));
+            await this.configureS3();
             
             await this.conn.query(`
                 CREATE OR REPLACE VIEW despesas AS 
-                SELECT * FROM read_parquet('despesas.parquet')
+                SELECT 
+                    nome_parlamentar,
+                    sigla_partido,
+                    sigla_uf,
+                    fornecedor,
+                    cnpj_cpf_fornecedor,
+                    categoria_despesa,
+                    subcategoria_despesa,
+                    tipo_documento,
+                    valor_documento,
+                    valor_retido,
+                    valor_liquido,
+                    data_emissao
+                FROM read_parquet('s3://baseldosdados/br_camara_dados_abertos/despesa/*.parquet')
             `);
             
             const countResult = await this.conn.query("SELECT COUNT(*) as total FROM despesas");
             const totalRecords = countResult.toArray()[0].total;
             
-            this.updateConnectionStatus('connected', `✅ despesas • ${FormatUtils.formatNumberAbbreviated(totalRecords)} records`);
+            this.updateConnectionStatus('connected', `✅ S3 • ${FormatUtils.formatNumberAbbreviated(totalRecords)} records`);
             return totalRecords;
             
         } catch (error) {
             console.error('❌ Error loading parquet:', error);
-            this.updateConnectionStatus('error', 'Erro ao carregar dados');
+            this.updateConnectionStatus('error', 'Erro ao carregar dados do S3');
             throw error;
         }
+    }
+    
+    async configureS3() {
+        const accessKeyId = window.__S3_ACCESS_KEY_ID__ || '';
+        const secretAccessKey = window.__S3_SECRET_ACCESS_KEY__ || '';
+        const endpoint = window.__S3_ENDPOINT__ || 'https://hel1.your-objectstorage.com';
+        
+        await this.conn.query(`
+            SET s3_access_key_id = '${accessKeyId}';
+            SET s3_secret_access_key = '${secretAccessKey}';
+            SET s3_endpoint = '${endpoint.replace('https://', '')}';
+            SET s3_use_ssl = true;
+            SET s3_url_style = 'path';
+            SET s3_region = 'us-east-1';
+        `);
     }
 
     async checkConnectionHealth() {

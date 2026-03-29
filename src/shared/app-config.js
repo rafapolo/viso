@@ -4,14 +4,24 @@ import { APP_CONSTANTS, COLORS } from '../core/config.js';
 export const APP_CONFIG = {
   // Database Configuration
   database: {
-    parquetUrl: 'https://rafapolo.github.io/transparencia-dados/despesas_publicas_deputados.parquet',
+    // S3 Hetzner - Base dos Dados bucket
+    s3: {
+      bucket: 'baseldosdados',
+      endpoint: 'https://hel1.your-objectstorage.com',
+      region: 'us-east-1',
+      path: 'br_camara_dados_abertos/despesa/'
+    },
+    // Columns available in view (optimized projection):
+    // nome_parlamentar, sigla_partido, sigla_uf, fornecedor, cnpj_cpf_fornecedor,
+    // categoria_despesa, subcategoria_despesa, tipo_documento, valor_documento,
+    // valor_retido, valor_liquido, data_emissao
     defaultQuery: `SELECT 
       nome_parlamentar,
       sigla_partido,
       fornecedor,
       categoria_despesa,
       valor_liquido,
-      strftime(data_emissao, '%d/%m/%Y') as data_emissao
+      data_emissao
     FROM despesas 
     WHERE valor_liquido > 500
     ORDER BY valor_liquido DESC 
