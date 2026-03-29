@@ -147,30 +147,81 @@ export class DatabaseService {
         }
     }
 
-    async loadData(parquetPath = null) {
+    async loadData() {
         try {
-            const dataPath = parquetPath || this.config.parquetPath;
-            this.updateConnectionStatus('connecting', 'Carregando dados...');
+            const endpoint = window.__S3_ENDPOINT__ || 'https://hel1.your-objectstorage.com';
+            const bucket = 'baseldosdados';
+            const prefix = 'br_camara_dados_abertos/despesa/';
             
-            const response = await fetch(dataPath);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            this.updateConnectionStatus('connecting', 'Baixando parquets do S3...');
+            
+            // List of parquet files
+            const files = [
+                '000000000000.parquet', '000000000001.parquet', '000000000002.parquet',
+                '000000000003.parquet', '000000000004.parquet', '000000000005.parquet',
+                '000000000006.parquet', '000000000007.parquet', '000000000008.parquet',
+                '000000000009.parquet', '000000000010.parquet', '000000000011.parquet',
+                '000000000012.parquet', '000000000013.parquet', '000000000014.parquet',
+                '000000000015.parquet', '000000000016.parquet', '000000000017.parquet',
+                '000000000018.parquet', '000000000019.parquet', '000000000020.parquet',
+                '000000000021.parquet'
+            ];
+            
+            this.updateConnectionStatus('connecting', `Baixando ${files.length} arquivos...`);
+            
+            // Download and register each file
+            const buffers = [];
+            for (let i = 0; i < files.length; i++) {
+                const filename = files[i];
+                const url = `${endpoint}/${bucket}/${prefix}${filename}`;
+                
+                this.updateConnectionStatus('connecting', `Baixando ${i + 1}/${files.length}...`);
+                
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        console.warn(`Failed to fetch ${filename}: ${response.status}`);
+                        continue;
+                    }
+                    
+                    const buffer = await response.arrayBuffer();
+                    const localName = `despesas_${i}.parquet`;
+                    await this.db.registerFileBuffer(localName, new Uint8Array(buffer));
+                    buffers.push(localName);
+                } catch (fetchError) {
+                    console.warn(`Error fetching ${filename}:`, fetchError.message);
+                }
             }
             
-            const arrayBuffer = await response.arrayBuffer();
+            if (buffers.length === 0) {
+                throw new Error('Nenhum arquivo foi baixado');
+            }
+            
             this.updateConnectionStatus('connecting', 'Processando dados...');
             
-            // Register parquet file in DuckDB
-            const fileName = `${this.config.tableName}.parquet`;
-            await this.db.registerFileBuffer(fileName, new Uint8Array(arrayBuffer));
+            // Create view from all local files
+            const unionQueries = buffers.map(name => 
+                `SELECT * FROM read_parquet('${name}')`
+            ).join(' UNION ALL ');
             
-            // Create view
             await this.conn.query(`
                 CREATE OR REPLACE VIEW ${this.config.tableName} AS 
-                SELECT * FROM read_parquet('${fileName}')
+                SELECT 
+                    nome_parlamentar,
+                    sigla_partido,
+                    sigla_uf,
+                    fornecedor,
+                    cnpj_cpf_fornecedor,
+                    categoria_despesa,
+                    subcategoria_despesa,
+                    tipo_documento,
+                    valor_documento,
+                    valor_retido,
+                    valor_liquido,
+                    data_emissao
+                FROM (${unionQueries})
             `);
             
-            // Get record count
             const countResult = await this.conn.query(`SELECT COUNT(*) as total FROM ${this.config.tableName}`);
             const totalRecords = countResult.toArray()[0].total;
             
@@ -180,7 +231,7 @@ export class DatabaseService {
             return totalRecords;
             
         } catch (error) {
-            this.updateConnectionStatus('error', 'Erro ao carregar dados');
+            this.updateConnectionStatus('error', `Erro: ${error.message}`);
             throw ErrorHandler.handleError(error, 'DatabaseService Data Loading');
         }
     }

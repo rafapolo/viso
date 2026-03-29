@@ -17,6 +17,10 @@ export default defineConfig(({ command, mode }) => ({
         {
           src: 'vendor/**/*',
           dest: 'vendor'
+        },
+        {
+          src: 'manifest.json',
+          dest: '.'
         }
       ]
     }),
