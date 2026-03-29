@@ -129,9 +129,57 @@ export class DatabaseService {
 
     async loadParquetData() {
         try {
-            this.updateConnectionStatus('connecting', 'Carregando dados do S3...');
+            const endpoint = window.__S3_ENDPOINT__ || 'https://hel1.your-objectstorage.com';
+            const bucket = 'baseldosdados';
+            const prefix = 'br_camara_dados_abertos/despesa/';
             
-            await this.configureS3();
+            this.updateConnectionStatus('connecting', 'Baixando parquets do S3...');
+            
+            const files = [
+                '000000000000.parquet', '000000000001.parquet', '000000000002.parquet',
+                '000000000003.parquet', '000000000004.parquet', '000000000005.parquet',
+                '000000000006.parquet', '000000000007.parquet', '000000000008.parquet',
+                '000000000009.parquet', '000000000010.parquet', '000000000011.parquet',
+                '000000000012.parquet', '000000000013.parquet', '000000000014.parquet',
+                '000000000015.parquet', '000000000016.parquet', '000000000017.parquet',
+                '000000000018.parquet', '000000000019.parquet', '000000000020.parquet',
+                '000000000021.parquet'
+            ];
+            
+            this.updateConnectionStatus('connecting', `Baixando ${files.length} arquivos...`);
+            
+            const buffers = [];
+            for (let i = 0; i < files.length; i++) {
+                const filename = files[i];
+                const url = `${endpoint}/${bucket}/${prefix}${filename}`;
+                
+                this.updateConnectionStatus('connecting', `Baixando ${i + 1}/${files.length}...`);
+                
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        console.warn(`Failed to fetch ${filename}: ${response.status}`);
+                        continue;
+                    }
+                    
+                    const buffer = await response.arrayBuffer();
+                    const localName = `despesas_${i}.parquet`;
+                    await this.db.registerFileBuffer(localName, new Uint8Array(buffer));
+                    buffers.push(localName);
+                } catch (fetchError) {
+                    console.warn(`Error fetching ${filename}:`, fetchError.message);
+                }
+            }
+            
+            if (buffers.length === 0) {
+                throw new Error('Nenhum arquivo foi baixado');
+            }
+            
+            this.updateConnectionStatus('connecting', 'Processando dados...');
+            
+            const unionQueries = buffers.map(name => 
+                `SELECT * FROM read_parquet('${name}')`
+            ).join(' UNION ALL ');
             
             await this.conn.query(`
                 CREATE OR REPLACE VIEW despesas AS 
@@ -148,18 +196,18 @@ export class DatabaseService {
                     valor_retido,
                     valor_liquido,
                     data_emissao
-                FROM read_parquet('s3://baseldosdados/br_camara_dados_abertos/despesa/*.parquet')
+                FROM (${unionQueries})
             `);
             
             const countResult = await this.conn.query("SELECT COUNT(*) as total FROM despesas");
             const totalRecords = countResult.toArray()[0].total;
             
-            this.updateConnectionStatus('connected', `✅ S3 • ${FormatUtils.formatNumberAbbreviated(totalRecords)} records`);
+            this.updateConnectionStatus('connected', `✅ ${FormatUtils.formatNumberAbbreviated(totalRecords)} records`);
             return totalRecords;
             
         } catch (error) {
             console.error('❌ Error loading parquet:', error);
-            this.updateConnectionStatus('error', 'Erro ao carregar dados do S3');
+            this.updateConnectionStatus('error', `Erro: ${error.message}`);
             throw error;
         }
     }
