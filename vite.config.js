@@ -21,6 +21,26 @@ export default defineConfig(({ command, mode }) => ({
         {
           src: 'manifest.json',
           dest: '.'
+        },
+        {
+          src: 'src/shared/arrow-status.js',
+          dest: 'src/shared'
+        },
+        {
+          src: 'src/shared/amd-handler.js',
+          dest: 'src/shared'
+        },
+        {
+          src: 'src/shared/amd-restore.js',
+          dest: 'src/shared'
+        },
+        {
+          src: 'src/shared/arrow-loader.js',
+          dest: 'src/shared'
+        },
+        {
+          src: 'src/shared/navigation.js',
+          dest: 'src/shared'
         }
       ]
     }),
