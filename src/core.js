@@ -117,8 +117,6 @@ class DuckDBManager {
             const bucket = 'baseldosdados';
             const prefix = 'br_camara_dados_abertos/despesa/';
             const endpoint = window.__S3_ENDPOINT__ || 'https://hel1.your-objectstorage.com';
-            const accessKey = window.__S3_ACCESS_KEY_ID__ || '';
-            const secretKey = window.__S3_SECRET_ACCESS_KEY__ || '';
             
             this.updateConnectionStatus('connecting', 'Gerando URLs assinadas...');
             
