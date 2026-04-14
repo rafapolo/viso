@@ -7,6 +7,14 @@ export default {
 
   // Module transformation
   transform: {
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: {
+        allowJs: true,
+        esModuleInterop: true,
+        module: 'commonjs',
+        rootDir: '.'
+      }
+    }],
     '^.+\\.js$': ['babel-jest', {
       presets: [
         ['@babel/preset-env', {
@@ -24,27 +32,32 @@ export default {
 
   // Test file patterns
   testMatch: [
-    '<rootDir>/tests/unit/**/*.test.js',
-    '<rootDir>/tests/integration/**/*.test.js'
+    '<rootDir>/tests/unit/**/*.test.[jt]s',
+    '<rootDir>/tests/integration/**/*.test.[jt]s'
   ],
 
-  // Module resolution
+  // Module resolution — strip .js extension so ts-jest resolves .ts files
   moduleNameMapper: {
+    '^../../src/(.*)\\.js$': '<rootDir>/src/$1',
+    '^../src/(.*)\\.js$': '<rootDir>/src/$1',
     '^../../src/(.*)$': '<rootDir>/src/$1',
-    '^../src/(.*)$': '<rootDir>/src/$1'
+    '^../src/(.*)$': '<rootDir>/src/$1',
+    '^../fixtures/(.*)\\.js$': '<rootDir>/tests/fixtures/$1',
+    '^../mocks/(.*)\\.js$': '<rootDir>/tests/mocks/$1',
+    '^../utils/(.*)\\.js$': '<rootDir>/tests/utils/$1'
   },
 
   // Setup files
   setupFilesAfterEnv: [
-    '<rootDir>/tests/setup.js'
+    '<rootDir>/tests/setup.ts'
   ],
 
   // Coverage configuration
   collectCoverageFrom: [
-    'src/**/*.js',
-    'tests/**/*.js',
-    '!tests/**/*.test.js',
-    '!tests/setup.js',
+    'src/**/*.ts',
+    'tests/**/*.ts',
+    '!tests/**/*.test.ts',
+    '!tests/setup.ts',
     '!tests/mocks/**',
     '!tests/fixtures/**',
     '!tests/debug/**',
@@ -66,7 +79,7 @@ export default {
   moduleDirectories: ['node_modules', '<rootDir>'],
 
   // File extensions Jest will process
-  moduleFileExtensions: ['js', 'json'],
+  moduleFileExtensions: ['ts', 'js', 'json'],
 
   // Error handling
   errorOnDeprecated: true
