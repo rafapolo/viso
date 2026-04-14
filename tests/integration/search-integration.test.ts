@@ -2,13 +2,6 @@
 import { jest } from '@jest/globals';
 
 // Mock DOM for testing
-Object.defineProperty(window, 'location', {
-  value: {
-    search: '',
-    href: 'http://localhost:3001/db.html'
-  },
-  writable: true
-});
 
 global.document = {
   documentElement: { classList: { add: jest.fn(), remove: jest.fn(), contains: jest.fn() } },

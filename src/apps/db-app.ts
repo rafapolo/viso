@@ -91,7 +91,7 @@ class DatabaseApp {
           sankeyButton.classList.add('selected');
         }
 
-        await this.executeDefaultQuery();
+        await this.showSankey();
       }
     } catch (error) {
       ErrorHandler.handleError(error as Error, 'Initial Data Load');
@@ -803,6 +803,22 @@ LIMIT 500`;
     DOMUtils.updateContent(container, errorHTML, true);
   }
 
+  collapseEditor(): void {
+    const editorContainer = document.querySelector<HTMLElement>('.editor-container');
+    const queryPanelToggle = DOMUtils.getElementById('query-panel-toggle');
+    if (!editorContainer) return;
+    editorContainer.classList.remove('h-80');
+    editorContainer.classList.add('h-10');
+    const editor = DOMUtils.getElementById('editor');
+    if (editor) editor.classList.add('hidden');
+    if (queryPanelToggle) {
+      (queryPanelToggle as HTMLElement).title = 'Expandir painel de consulta';
+      const arrow = (queryPanelToggle as HTMLElement).querySelector('svg');
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+    }
+    this.editorManager?.layout();
+  }
+
   async showSankey(): Promise<void> {
     try {
       const resultsContainer = DOMUtils.getElementById('results-container');
@@ -825,6 +841,7 @@ LIMIT 500`;
       }
 
       sankeyContent.classList.remove('hidden');
+      this.collapseEditor();
 
       if (this.sankeyTab) {
         await this.sankeyTab.render(sankeyContent as HTMLElement);

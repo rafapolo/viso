@@ -447,9 +447,9 @@ export class SankeyVisualization {
     const nodeStats = new Map<string, NodeStats>();
 
     type ColorFn = (val: unknown) => string;
-    const partyColors = d3['scaleOrdinal'](d3['schemeCategory10']()) as unknown as ColorFn;
-    const categoryColors = d3['scaleOrdinal'](d3['schemeSet3']()) as unknown as ColorFn;
-    const supplierColors = d3['scaleOrdinal'](d3['schemeDark2']()) as unknown as ColorFn;
+    const partyColors = d3['scaleOrdinal'](d3['schemeCategory10']) as unknown as ColorFn;
+    const categoryColors = d3['scaleOrdinal'](d3['schemeSet3']) as unknown as ColorFn;
+    const supplierColors = d3['scaleOrdinal'](d3['schemeDark2']) as unknown as ColorFn;
 
     const parties = new Set<string>();
     const categories = new Set<string>();
