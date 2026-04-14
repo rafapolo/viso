@@ -65,7 +65,23 @@ module.exports = {
   },
   overrides: [
     {
-      files: ['tests/**/*.js'],
+      files: ['**/*.ts'],
+      parser: '@typescript-eslint/parser',
+      plugins: ['@typescript-eslint'],
+      extends: ['plugin:@typescript-eslint/recommended'],
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module'
+      },
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'warn',
+        '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+        'no-unused-vars': 'off',
+        'no-undef': 'off'
+      }
+    },
+    {
+      files: ['tests/**/*.js', 'tests/**/*.ts'],
       env: {
         jest: true
       },
@@ -74,7 +90,7 @@ module.exports = {
       }
     },
     {
-      files: ['src/shared/**/*.js'],
+      files: ['src/shared/**/*.js', 'src/shared/**/*.ts'],
       rules: {
         'no-console': ['error', { allow: ['warn', 'error'] }]
       }
